@@ -1,0 +1,9 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // 全パスに対して読み書きを許可（Tyson専用環境）
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+  }
+}

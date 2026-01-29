@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 全コレクションに対して読み書きを許可（Tyson専用環境）
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
