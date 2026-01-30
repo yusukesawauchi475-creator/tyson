@@ -18,6 +18,7 @@
     "verify:keys": "node scripts/verify-ceo-keys.js",
     "verify:reset": "node scripts/verify-reset-bulletproof.js",
     "verify:analyze": "node scripts/verify-analyze-ceo.js",
+    "verify:deploy": "node scripts/verify-deploy-health.js",
     "kill-orange": "node scripts/kill-orange.js"
   },
   "dependencies": {

@@ -2,12 +2,14 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { execSync } from 'child_process'
 
-// Gitコミットハッシュとビルド日時を取得
-let gitCommit = 'unknown'
+// Gitコミットハッシュとビルド日時を取得（物理仕様: VERCEL_GIT_COMMIT_SHA 優先）
+let gitCommit = process.env.VERCEL_GIT_COMMIT_SHA || 'unknown'
 let buildTime = new Date().toISOString()
 
 try {
-  gitCommit = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim()
+  if (gitCommit === 'unknown') {
+    gitCommit = execSync('git rev-parse HEAD', { encoding: 'utf-8' }).trim()
+  }
 } catch (e) {
   // Gitがない場合は無視
 }

@@ -26,11 +26,6 @@ if (typeof window !== 'undefined' && !skipReload) {
   window.__SYNC_BLOCKED_UNTIL = Date.now() + 5000
 }
 
-// Temporal Truth: 画面に出るまで成功と認めない [cite: 2026-01-29]
-if (typeof window !== 'undefined') {
-  window.__BUILD_TIME = '2026-01-29T08:30:00Z'
-}
-
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'

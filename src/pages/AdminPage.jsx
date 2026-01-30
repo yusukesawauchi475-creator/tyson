@@ -5,6 +5,7 @@ import { ref, uploadBytes, deleteObject } from 'firebase/storage'
 import { Link, useSearchParams } from 'react-router-dom'
 import AdminAuth from '../components/AdminAuth'
 import { getAllSavedAudio, deleteAudioFromIndexedDB } from '../lib/indexedDB'
+import { checkDeployHealth } from '../lib/deployHealthCheck'
 import './AdminPage.css'
 
 function AdminPage() {
@@ -16,6 +17,7 @@ function AdminPage() {
   const [playingAudioId, setPlayingAudioId] = useState(null)
   const [healthCheckResult, setHealthCheckResult] = useState(null)
   const [isCheckingHealth, setIsCheckingHealth] = useState(false)
+  const [deployHealth, setDeployHealth] = useState(null)
   const [storageTestResult, setStorageTestResult] = useState(null)
   const [isTestingStorage, setIsTestingStorage] = useState(false)
   const [indexedDBSyncTestResult, setIndexedDBSyncTestResult] = useState(null)
@@ -25,6 +27,15 @@ function AdminPage() {
   const [notificationError, setNotificationError] = useState(false)
   const audioRef = useRef(null)
   
+  // デプロイ健全性チェック（起動時）
+  useEffect(() => {
+    const health = checkDeployHealth()
+    setDeployHealth(health)
+    if (!health.healthy) {
+      console.warn('[DeployHealthCheck] warnings:', health.warnings)
+    }
+  }, [])
+
   // ディープリンク: 通知から来た場合、自動ログインして該当レコードを表示
   useEffect(() => {
     const recordId = searchParams.get('recordId')
@@ -678,12 +689,27 @@ function AdminPage() {
         </div>
       )}
 
-      {/* ビルド情報の可視化 */}
-      <div className="build-info">
-        Build: {(typeof window !== 'undefined' && window.__BUILD_TIME) || import.meta.env.VITE_BUILD_TIME || new Date().toISOString().split('T')[0]}
-        {import.meta.env.VITE_GIT_COMMIT && ` | ${import.meta.env.VITE_GIT_COMMIT.substring(0, 7)}`}
-        {import.meta.env.VITE_FIREBASE_PROJECT_ID && ` | Project: ${import.meta.env.VITE_FIREBASE_PROJECT_ID}`}
+      {/* デプロイ健全性インジケーター */}
+      <div className={`build-info ${deployHealth && !deployHealth.healthy ? 'unhealthy' : ''}`}>
+        <span className="build-time">
+          {deployHealth ? deployHealth.buildTime.split('T')[0] : '...'}
+        </span>
+        {deployHealth && deployHealth.gitCommit && deployHealth.gitCommit !== 'unknown' && (
+          <span className="git-commit"> | {deployHealth.gitCommit.substring(0, 7)}</span>
+        )}
+        {deployHealth && !deployHealth.healthy && (
+          <span className="deploy-warning" title={deployHealth.warnings.join('\n')}>
+            ⚠️
+          </span>
+        )}
       </div>
+      {deployHealth && !deployHealth.healthy && (
+        <div className="deploy-alert">
+          {deployHealth.warnings.map((w, i) => (
+            <div key={i}>{w}</div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -4,12 +4,14 @@ import { db } from '../lib/firebase'
 import { collection, doc, updateDoc, query, orderBy, getDocs, limit, getDoc } from 'firebase/firestore'
 import { Link } from 'react-router-dom'
 import { saveAudioToIndexedDB, getSavedAudioCount, getAllSavedAudio, deleteAudioFromIndexedDB, markAsSynced, addPendingDiagnosis, getAllPendingDiagnosis, removePendingDiagnosis, clearAllPendingDiagnosis } from '../lib/indexedDB'
+import { checkDeployHealth } from '../lib/deployHealthCheck'
 
 function HomePage() {
   const [isRecording, setIsRecording] = useState(false)
   const [isComplete, setIsComplete] = useState(false)
   const [streak, setStreak] = useState(0)
   const [lastRecordDate, setLastRecordDate] = useState(null)
+  const [deployHealth, setDeployHealth] = useState(null)
   const [userName, setUserName] = useState('')
   const [isUploading, setIsUploading] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -470,6 +472,15 @@ function HomePage() {
       })
     return () => { done = true }
   }, [envParseError])
+
+  // デプロイ健全性チェック（起動時）
+  useEffect(() => {
+    const health = checkDeployHealth()
+    setDeployHealth(health)
+    if (!health.healthy) {
+      console.warn('[DeployHealthCheck] warnings:', health.warnings)
+    }
+  }, [])
 
   // アプリ起動時とネットワーク復帰時に同期（起動後 5 秒間はブロック [cite: 2026-01-28]）
   useEffect(() => {
@@ -1984,12 +1995,27 @@ function HomePage() {
         </div>
       )}
 
-      {/* ビルド情報の可視化 */}
-      <div className="build-info">
-        Build: {(typeof window !== 'undefined' && window.__BUILD_TIME) || import.meta.env.VITE_BUILD_TIME || new Date().toISOString().split('T')[0]}
-        {import.meta.env.VITE_GIT_COMMIT && import.meta.env.VITE_GIT_COMMIT !== 'unknown' && ` | ${import.meta.env.VITE_GIT_COMMIT.substring(0, 7)}`}
-        {import.meta.env.VITE_FIREBASE_PROJECT_ID && ` | Project: ${import.meta.env.VITE_FIREBASE_PROJECT_ID}`}
+      {/* デプロイ健全性インジケーター */}
+      <div className={`build-info ${deployHealth && !deployHealth.healthy ? 'unhealthy' : ''}`}>
+        <span className="build-time">
+          {deployHealth ? deployHealth.buildTime.split('T')[0] : '...'}
+        </span>
+        {deployHealth && deployHealth.gitCommit && deployHealth.gitCommit !== 'unknown' && (
+          <span className="git-commit"> | {deployHealth.gitCommit.substring(0, 7)}</span>
+        )}
+        {deployHealth && !deployHealth.healthy && (
+          <span className="deploy-warning" title={deployHealth.warnings.join('\n')}>
+            ⚠️
+          </span>
+        )}
       </div>
+      {deployHealth && !deployHealth.healthy && (
+        <div className="deploy-alert">
+          {deployHealth.warnings.map((w, i) => (
+            <div key={i}>{w}</div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
