@@ -5,6 +5,8 @@ import { parseFirebaseServiceAccount } from './lib/parseFirebaseServiceAccount.j
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 const gemini = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
 
+const EXPECTED_ENV_ANALYZE = ['FIREBASE_SERVICE_ACCOUNT', 'OPENAI_API_KEY', 'GEMINI_API_KEY', 'AI_PROVIDER'];
+
 function toDetail(e) {
   return (e && e.stack) ? String(e.stack) : String(e);
 }
@@ -14,11 +16,66 @@ function detailBrokenFields(broken) {
   return `壊れている項目: ${list}`;
 }
 
-async function downloadAudioFromStorage(audioURL) {
-  const response = await fetch(audioURL);
-  if (!response.ok) throw new Error(`Failed to download audio: ${response.statusText}`);
-  const arrayBuffer = await response.arrayBuffer();
-  return Buffer.from(arrayBuffer);
+const STORAGE_HINT_403 =
+  'Storage 403: Signed URL 期限切れの可能性。CORS 設定・Storage Rules（allow read）を確認してください。';
+
+async function downloadAudioFromStorage(audioURL, fetchFn = typeof fetch !== 'undefined' ? fetch : null) {
+  const doFetch = fetchFn || (typeof fetch !== 'undefined' ? fetch : null);
+  if (!doFetch) {
+    return { ok: false, step: 'Storage download', subStep: 'connection', status: null, error: 'fetch unavailable', detail: 'fetch unavailable', hint: null };
+  }
+  let response;
+  try {
+    response = await doFetch(audioURL);
+  } catch (e) {
+    return {
+      ok: false,
+      step: 'Storage download',
+      subStep: 'connection',
+      status: null,
+      error: (e && e.message) || String(e),
+      detail: toDetail(e),
+      hint: '音声URLへの接続に失敗しました。ネットワーク・URLを確認してください。',
+    };
+  }
+  if (!response.ok) {
+    const status = response.status;
+    let subStep = 'dl';
+    let hint = null;
+    if (status === 401) {
+      subStep = 'auth';
+      hint = 'Storage 401: 認証エラー。Signed URL または Service Account を確認してください。';
+    } else if (status === 403) {
+      subStep = 'forbidden';
+      hint = STORAGE_HINT_403;
+    } else if (status === 404) {
+      subStep = 'existence';
+      hint = 'Storage 404: オブジェクトが存在しません。audioURL を確認してください。';
+    }
+    return {
+      ok: false,
+      step: 'Storage download',
+      subStep,
+      status,
+      error: `Failed to download audio: ${response.status} ${response.statusText}`,
+      detail: `audioURL fetch ${status} ${response.statusText}`,
+      hint,
+    };
+  }
+  try {
+    const arrayBuffer = await response.arrayBuffer();
+    return { ok: true, buffer: Buffer.from(arrayBuffer) };
+  } catch (e) {
+    return {
+      ok: false,
+      step: 'Storage download',
+      subStep: 'dl',
+      status: response.status,
+      error: (e && e.message) || String(e),
+      detail: toDetail(e),
+      hint: 'レスポンスの読み込みに失敗しました。',
+    };
+  }
 }
 
 async function transcribeAudio(audioBuffer) {
@@ -123,11 +180,14 @@ export default async function handler(req, res) {
     const e = envParse.error;
     const detail = detailBrokenFields(e.brokenFields) + (e.message ? ` | ${e.message}` : '');
     console.error('[/api/analyze] FIREBASE_SERVICE_ACCOUNT パース失敗:', detail);
-    return res.status(500).json({
+    const payload = {
       success: false,
       error: e.message || 'FIREBASE_SERVICE_ACCOUNT の設定に問題があります。',
       detail,
-    });
+      expectedEnv: EXPECTED_ENV_ANALYZE,
+    };
+    if (e.vercelHint) payload.vercelHint = e.vercelHint;
+    return res.status(500).json(payload);
   }
 
   let body;
@@ -147,17 +207,22 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'audioURL is required' });
   }
 
-  let audioBuffer;
-  try {
-    audioBuffer = await downloadAudioFromStorage(audioURL);
-  } catch (e) {
-    console.error('[/api/analyze] Storage download:', e);
-    return res.status(500).json({
+  const downloadResult = await downloadAudioFromStorage(audioURL, undefined);
+  if (!downloadResult.ok) {
+    console.error('[/api/analyze] Storage download:', downloadResult.step, downloadResult.subStep, downloadResult.status, downloadResult.error);
+    const payload = {
       success: false,
-      error: `Storage download failed: ${e?.message ?? String(e)}`,
-      detail: toDetail(e),
-    });
+      step: downloadResult.step,
+      subStep: downloadResult.subStep,
+      status: downloadResult.status,
+      error: downloadResult.error,
+      detail: downloadResult.detail,
+      expectedEnv: EXPECTED_ENV_ANALYZE,
+    };
+    if (downloadResult.hint) payload.hint = downloadResult.hint;
+    return res.status(500).json(payload);
   }
+  const audioBuffer = downloadResult.buffer;
 
   let transcription;
   try {
@@ -166,8 +231,10 @@ export default async function handler(req, res) {
     console.error('[/api/analyze] Whisper transcribe:', e);
     return res.status(500).json({
       success: false,
+      step: 'Transcribe',
       error: `Transcribe failed: ${e?.message ?? String(e)}`,
       detail: toDetail(e),
+      expectedEnv: EXPECTED_ENV_ANALYZE,
     });
   }
 
@@ -179,8 +246,10 @@ export default async function handler(req, res) {
     console.error('[/api/analyze] LLM analyze:', e);
     return res.status(500).json({
       success: false,
+      step: 'LLM analyze',
       error: `LLM analyze failed: ${e?.message ?? String(e)}`,
       detail: toDetail(e),
+      expectedEnv: EXPECTED_ENV_ANALYZE,
     });
   }
 
@@ -190,3 +259,5 @@ export default async function handler(req, res) {
     analysis: analysisResult,
   });
 }
+
+export { downloadAudioFromStorage };

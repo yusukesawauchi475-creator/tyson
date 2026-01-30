@@ -956,18 +956,25 @@ function HomePage() {
           errorMessage = errorData.error || errorMessage
           rawDetail = errorData.detail || ''
           if (rawDetail) console.error('[/api/analyze] detail:', rawDetail)
+          let debug = rawDetail
+          if (errorData.expectedEnv && Array.isArray(errorData.expectedEnv)) {
+            debug += `\n[expectedEnv] ${errorData.expectedEnv.join(', ')}`
+          }
+          if (errorData.vercelHint) debug += `\n${errorData.vercelHint}`
+          if (errorData.hint) debug += `\n${errorData.hint}`
+          if (errorData.step) debug += `\n[step] ${errorData.step}${errorData.subStep ? ` / ${errorData.subStep}` : ''}`
           if (response.status === 500 && errorMessage.includes('OpenAI API key')) {
             const err = new Error('OpenAI API keyが設定されていません')
-            err.detail = rawDetail
+            err.detail = debug
             throw err
           }
           if (response.status === 403) {
             const err = new Error('アクセスが拒否されました。CORS設定を確認してください。')
-            err.detail = rawDetail
+            err.detail = debug
             throw err
           }
           const err = new Error(errorMessage)
-          err.detail = rawDetail
+          err.detail = debug
           throw err
         } catch (parseError) {
           if (parseError instanceof Error && (parseError.message.includes('OpenAI') || parseError.message.includes('CORS'))) {
