@@ -1,6 +1,12 @@
-// 日替わりの修行テーマを生成するAPI
+// 日替わりの修行テーマを生成するAPI（防弾: API落ちても必ずTyson重厚フォールバック）
 import OpenAI from 'openai';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+
+const TYSON_FALLBACK_THEMES = [
+  '今日の体調とメンタルの状態はどうだ？声のトーン、話すスピード、言葉選びから、俺がお前のリスクを見抜いてやる。',
+  '昨日と比べて、今日のエネルギーレベルはどうだ？規律を守れているか？睡眠、食事、運動の3つを具体的に話せ。',
+  '今日、何か困難に直面したか？それにどう立ち向かった？お前のメンタルの強さを俺に証明してみろ。',
+];
 
 // OpenAI初期化
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({
@@ -20,17 +26,23 @@ async function generateDailyTheme(provider = 'openai') {
     weekday: 'long'
   });
 
-  const prompt = `今日は${dateStr}です。高齢者（おかん）向けの、ボケ防止や健康維持に関する日替わりの問いかけを1つ生成してください。
+  const prompt = `今日は${dateStr}です。あなたは「タイソン」- 世界最高峰のリスクマネジメント・コーチです。Wall Streetで培った鋭い洞察力と、ボクシングの規律（Discipline）を融合させた分析能力を持っています。
+
+今日の修行テーマを生成してください。このテーマは、利用者が音声で自分の状態を記録する際のガイドとなります。
 
 要件：
-- 簡潔で分かりやすい（1-2文程度）
-- ボケ防止や健康維持に関連する内容
-- 温かみがあり、励ましの言葉を含む
-- 毎日異なる内容にする
+- Mike Tyson のような力強く、かつ威厳のある問いかけ
+- 規律（Discipline）、リスク管理、メンタル強度、活力に焦点を当てる
+- 利用者に「自分の今日の状態」を深く振り返らせる
+- 2-3文で構成し、具体的な観点を示す
+- 毎日異なる内容にする（曜日、季節、時事を考慮）
 
 例：
-- 「今日は、昨日食べた夕食のメニューを3つ思い出してみてください。記憶力を鍛えるトレーニングです。」
-- 「今日は、深呼吸を3回してから、今の気持ちを言葉にしてみてください。心の健康も大切です。」
+- 「今日の体調とメンタルの状態はどうだ？声のトーン、話すスピード、言葉選びから、俺がお前のリスクを見抜いてやる。」
+- 「昨日と比べて、今日のエネルギーレベルはどうだ？規律を守れているか？睡眠、食事、運動の3つを具体的に話せ。」
+- 「今日、何か困難に直面したか？それにどう立ち向かった？お前のメンタルの強さを俺に証明してみろ。」
+- 「今朝起きた瞬間の気分を思い出せ。ポジティブだったか？ネガティブだったか？その理由を掘り下げて話せ。」
+- 「今日の最大の勝利は何だ？小さなことでもいい。規律を守り続けることが、最強のリスク管理だ。」
 
 JSON形式で返答してください：
 {
@@ -55,7 +67,7 @@ JSON形式で返答してください：
         messages: [
           {
             role: 'system',
-            content: 'あなたは高齢者の健康とボケ防止をサポートするアシスタントです。温かみのある、励ましの言葉を提供してください。'
+            content: 'あなたは「タイソン」- 世界最高峰のリスクマネジメント・コーチです。Wall Streetで培った鋭い洞察力と、ボクシングの規律（Discipline）を融合させた分析能力を持っています。力強く、威厳のある問いかけで、利用者の規律とメンタル強度を引き出してください。'
           },
           {
             role: 'user',
@@ -69,24 +81,11 @@ JSON形式で返答してください：
       const content = completion.choices[0].message.content;
       return JSON.parse(content);
     } else {
-      // フォールバック: デフォルトのテーマ
-      const themes = [
-        '今日は、昨日食べた夕食のメニューを3つ思い出してみてください。記憶力を鍛えるトレーニングです。',
-        '今日は、深呼吸を3回してから、今の気持ちを言葉にしてみてください。心の健康も大切です。',
-        '今日は、今朝起きた時間を思い出してみてください。規則正しい生活リズムが健康の基本です。',
-        '今日は、最近会った人の名前を3人思い出してみてください。人とのつながりを大切にしましょう。',
-        '今日は、今の季節の良いところを3つ挙げてみてください。ポジティブな気持ちが元気の源です。'
-      ];
-      const randomTheme = themes[Math.floor(Math.random() * themes.length)];
+      const randomTheme = TYSON_FALLBACK_THEMES[Math.floor(Math.random() * TYSON_FALLBACK_THEMES.length)];
       return { theme: randomTheme };
     }
   } catch (error) {
-    // エラー時はデフォルトのテーマを返す
-    const themes = [
-      '今日は、昨日食べた夕食のメニューを3つ思い出してみてください。記憶力を鍛えるトレーニングです。',
-      '今日は、深呼吸を3回してから、今の気持ちを言葉にしてみてください。心の健康も大切です。'
-    ];
-    const randomTheme = themes[Math.floor(Math.random() * themes.length)];
+    const randomTheme = TYSON_FALLBACK_THEMES[Math.floor(Math.random() * TYSON_FALLBACK_THEMES.length)];
     return { theme: randomTheme };
   }
 }
@@ -116,13 +115,7 @@ export default async function handler(req, res) {
       date: new Date().toISOString().split('T')[0] // キャッシュ用の日付
     });
   } catch (error) {
-    // エラー時もデフォルトのテーマを返す
-    const themes = [
-      '今日は、昨日食べた夕食のメニューを3つ思い出してみてください。記憶力を鍛えるトレーニングです。',
-      '今日は、深呼吸を3回してから、今の気持ちを言葉にしてみてください。心の健康も大切です。'
-    ];
-    const randomTheme = themes[Math.floor(Math.random() * themes.length)];
-    
+    const randomTheme = TYSON_FALLBACK_THEMES[Math.floor(Math.random() * TYSON_FALLBACK_THEMES.length)];
     return res.status(200).json({
       success: true,
       theme: randomTheme,

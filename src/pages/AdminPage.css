@@ -33,6 +33,28 @@
   opacity: 0.8;
 }
 
+.admin-error-timeout {
+  background: rgba(255, 152, 0, 0.25);
+  border-color: #ff9800;
+}
+
+.admin-retry-btn {
+  padding: 10px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  background: #64ffda;
+  color: #0a0a0a;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.admin-retry-btn:hover {
+  background: #4dd4b8;
+  transform: scale(1.02);
+}
+
 /* 浮遊ボタン - 最新の修行を一撃で再生 */
 .floating-play-button {
   position: fixed;

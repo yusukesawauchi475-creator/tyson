@@ -19,6 +19,9 @@
     "verify:reset": "node scripts/verify-reset-bulletproof.js",
     "verify:analyze": "node scripts/verify-analyze-ceo.js",
     "verify:deploy": "node scripts/verify-deploy-health.js",
+    "verify:streak": "node scripts/verify-streak-theme.js",
+    "verify:admin": "node scripts/verify-admin.js",
+    "verify:audio": "node scripts/verify-audio-bulletproof.js",
     "kill-orange": "node scripts/kill-orange.js"
   },
   "dependencies": {

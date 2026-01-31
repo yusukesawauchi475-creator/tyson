@@ -220,7 +220,8 @@ export default async function handler(req, res) {
       expectedEnv: EXPECTED_ENV_ANALYZE,
     };
     if (downloadResult.hint) payload.hint = downloadResult.hint;
-    return res.status(500).json(payload);
+    payload.userAction = '権限設定を確認してください。Firebase Storage の CORS 設定および Storage Rules を確認し、gsutil cors set cors.json gs://BUCKET を実行してください。';
+    return res.status(downloadResult.status === 403 ? 403 : 500).json(payload);
   }
   const audioBuffer = downloadResult.buffer;
 

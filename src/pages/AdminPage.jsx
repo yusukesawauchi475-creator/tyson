@@ -6,6 +6,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import AdminAuth from '../components/AdminAuth'
 import { getAllSavedAudio, deleteAudioFromIndexedDB } from '../lib/indexedDB'
 import { checkDeployHealth } from '../lib/deployHealthCheck'
+import { formatDateJST, formatTodayJST } from '../lib/dateFormat'
 import './AdminPage.css'
 
 function AdminPage() {
@@ -18,6 +19,7 @@ function AdminPage() {
   const [healthCheckResult, setHealthCheckResult] = useState(null)
   const [isCheckingHealth, setIsCheckingHealth] = useState(false)
   const [deployHealth, setDeployHealth] = useState(null)
+  const [loadTimeout, setLoadTimeout] = useState(false)
   const [storageTestResult, setStorageTestResult] = useState(null)
   const [isTestingStorage, setIsTestingStorage] = useState(false)
   const [indexedDBSyncTestResult, setIndexedDBSyncTestResult] = useState(null)
@@ -254,24 +256,30 @@ function AdminPage() {
     }
   }
 
+  const FIRESTORE_FETCH_TIMEOUT_MS = 5000
+
   const loadRecords = async () => {
     try {
       setLoading(true)
       setError(null)
+      setLoadTimeout(false)
       
       // Firebase接続確認
       if (!db) {
         throw new Error('Firebaseが初期化されていません。環境変数を確認してください。')
       }
       
-      // Firestore導通テストを実行
-      const connectionTest = await testFirestoreConnection()
-      if (!connectionTest.success) {
-        throw new Error(connectionTest.message)
-      }
-      
-      const q = query(collection(db, 'shugyo'), orderBy('timestamp', 'desc'))
-      const querySnapshot = await getDocs(q)
+      // 防弾: 5秒タイムアウト（読み込み中放置の根絶）- 導通テスト＋本取得を一体で
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('FIRESTORE_TIMEOUT')), FIRESTORE_FETCH_TIMEOUT_MS)
+      })
+      const workPromise = (async () => {
+        const connectionTest = await testFirestoreConnection()
+        if (!connectionTest.success) throw new Error(connectionTest.message)
+        const q = query(collection(db, 'shugyo'), orderBy('timestamp', 'desc'))
+        return await getDocs(q)
+      })()
+      const querySnapshot = await Promise.race([workPromise, timeoutPromise])
       
       const recordsData = querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -312,20 +320,25 @@ function AdminPage() {
       
       setRecords(recordsData)
     } catch (error) {
-      // エラーメッセージを具体的に生成
-      let errorMessage = '記録の取得に失敗しました'
-      
-      if (error.code === 'permission-denied') {
-        errorMessage = '接続エラー：Firestoreへのアクセスが拒否されました。セキュリティルールを確認してください。'
-      } else if (error.code === 'unavailable') {
-        errorMessage = '接続エラー：Firestoreサービスが利用できません。しばらくしてから再度お試しください。'
-      } else if (error.message && error.message.includes('network') || error.message.includes('Network')) {
-        errorMessage = '接続エラー：ネットワークエラーが発生しました。インターネット接続を確認してください。'
-      } else if (error.message) {
-        errorMessage = `接続エラー：${error.message}`
+      // 防弾: タイムアウト時は専用メッセージと再試行促進
+      if (error?.message === 'FIRESTORE_TIMEOUT') {
+        setLoadTimeout(true)
+        setError(`通信遅延：${FIRESTORE_FETCH_TIMEOUT_MS / 1000}秒以内に応答がありません。ネットワーク状況を確認し、下の「再読み込み」ボタンで再試行してください。`)
+      } else {
+        setLoadTimeout(false)
+        // エラーメッセージを具体的に生成
+        let errorMessage = '記録の取得に失敗しました'
+        if (error.code === 'permission-denied') {
+          errorMessage = '接続エラー：Firestoreへのアクセスが拒否されました。セキュリティルールを確認してください。'
+        } else if (error.code === 'unavailable') {
+          errorMessage = '接続エラー：Firestoreサービスが利用できません。しばらくしてから再度お試しください。'
+        } else if (error.message && (error.message.includes('network') || error.message.includes('Network'))) {
+          errorMessage = '接続エラー：ネットワークエラーが発生しました。インターネット接続を確認してください。'
+        } else if (error.message) {
+          errorMessage = `接続エラー：${error.message}`
+        }
+        setError(errorMessage)
       }
-      
-      setError(errorMessage)
       
       // エラーの詳細をログに出力（開発環境のみ）
       if (import.meta.env.DEV) {
@@ -412,17 +425,7 @@ function AdminPage() {
     }
   }, [])
 
-  const formatDate = (timestamp) => {
-    if (!timestamp) return '-'
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp)
-    return date.toLocaleString('ja-JP', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
+  const formatDate = (timestamp) => formatDateJST(timestamp)
 
   const formatScore = (score) => {
     if (typeof score === 'object' && score.score !== undefined) {
@@ -518,12 +521,25 @@ function AdminPage() {
         </div>
       </div>
 
-      {/* エラー表示 */}
+      {/* エラー表示（防弾: 再試行ボタン付き） */}
       {error && (
-        <div className="admin-error">
-          <strong>エラー:</strong> {error}
+        <div className={`admin-error ${loadTimeout ? 'admin-error-timeout' : ''}`}>
+          <strong>{loadTimeout ? '通信遅延' : 'エラー'}:</strong> {error}
           <br />
-          <small>Firebase接続を確認してください。環境変数が正しく設定されているか確認してください。</small>
+          <small>
+            {loadTimeout
+              ? 'ネットワーク状況を確認し、下のボタンで再試行してください。'
+              : 'Firebase接続を確認してください。環境変数が正しく設定されているか確認してください。'}
+          </small>
+          <div style={{ marginTop: '12px' }}>
+            <button
+              type="button"
+              className="admin-retry-btn"
+              onClick={() => { setError(null); setLoadTimeout(false); loadRecords(); }}
+            >
+              再読み込み
+            </button>
+          </div>
         </div>
       )}
 
@@ -604,8 +620,20 @@ function AdminPage() {
             <div className="admin-empty">
               <p>記録がありません</p>
               <p style={{ fontSize: '18px', color: '#999', marginTop: '10px' }}>
-                {error ? 'Firebase接続エラーの可能性があります。' : '録音データがまだ保存されていません。'}
+                {error
+                  ? 'Firestore接続エラーの可能性があります。上の「再読み込み」ボタンを試してください。'
+                  : '録音を完了後、/api/upload が Firestore の shugyo コレクションに書き込むまでお待ちください。'}
               </p>
+              {!loading && (
+                <button
+                  type="button"
+                  className="admin-retry-btn"
+                  style={{ marginTop: '16px' }}
+                  onClick={() => loadRecords()}
+                >
+                  再読み込み
+                </button>
+              )}
             </div>
           ) : (
             records.map((record) => (
@@ -691,9 +719,8 @@ function AdminPage() {
 
       {/* デプロイ健全性インジケーター */}
       <div className={`build-info ${deployHealth && !deployHealth.healthy ? 'unhealthy' : ''}`}>
-        <span className="build-time">
-          {deployHealth ? deployHealth.buildTime.split('T')[0] : '...'}
-        </span>
+        <span className="today-jst">今日: {formatTodayJST()}</span>
+        <span className="build-time"> | Build: {deployHealth ? deployHealth.buildTime.split('T')[0] : '...'}</span>
         {deployHealth && deployHealth.gitCommit && deployHealth.gitCommit !== 'unknown' && (
           <span className="git-commit"> | {deployHealth.gitCommit.substring(0, 7)}</span>
         )}

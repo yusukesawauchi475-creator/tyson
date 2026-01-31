@@ -525,8 +525,13 @@
   font-size: clamp(28px, 6vw, 48px);
   font-weight: 700;
   color: #64ffda;
-  margin: 0 0 clamp(15px, 3vh, 25px) 0;
-  text-shadow: 0 0 20px rgba(100, 255, 218, 0.5);
+}
+
+.completion-sub {
+  font-size: clamp(14px, 2.5vw, 18px);
+  color: rgba(255, 255, 255, 0.9);
+  margin: 12px 0 clamp(15px, 3vh, 25px) 0;
+  text-shadow: 0 0 20px rgba(100, 255, 218, 0.3);
 }
 
 .analysis-results {

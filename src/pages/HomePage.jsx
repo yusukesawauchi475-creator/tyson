@@ -5,6 +5,8 @@ import { collection, doc, updateDoc, query, orderBy, getDocs, limit, getDoc } fr
 import { Link } from 'react-router-dom'
 import { saveAudioToIndexedDB, getSavedAudioCount, getAllSavedAudio, deleteAudioFromIndexedDB, markAsSynced, addPendingDiagnosis, getAllPendingDiagnosis, removePendingDiagnosis, clearAllPendingDiagnosis } from '../lib/indexedDB'
 import { checkDeployHealth } from '../lib/deployHealthCheck'
+import { TYSON_DEFAULT_THEME, TYSON_FALLBACK_THEMES, isTysonTheme } from '../lib/tysonThemes'
+import { formatTodayJST } from '../lib/dateFormat'
 
 function HomePage() {
   const [isRecording, setIsRecording] = useState(false)
@@ -16,7 +18,7 @@ function HomePage() {
   const [isUploading, setIsUploading] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [showPaywall, setShowPaywall] = useState(false)
-  const [dailyTheme, setDailyTheme] = useState('今日の体調はどうですか？')
+  const [dailyTheme, setDailyTheme] = useState(TYSON_DEFAULT_THEME)
   const [analysisResult, setAnalysisResult] = useState(null)
   const [sonMessage, setSonMessage] = useState('')
   const [fogCleared, setFogCleared] = useState(false)
@@ -119,7 +121,7 @@ function HomePage() {
     return jstTime
   }
 
-  // 連続日数の計算と検証を強化（JST基準）
+  // 連続日数の計算と検証を強化（JST基準、防弾化）
   const calculateStreak = () => {
     const savedStreak = localStorage.getItem('tyson_streak')
     const savedLastDate = localStorage.getItem('tyson_lastDate')
@@ -130,7 +132,12 @@ function HomePage() {
     }
 
     const streakNum = parseInt(savedStreak, 10)
-    const lastDate = new Date(savedLastDate)
+    
+    // savedLastDate を JST 日付として解釈（UTC ISO 文字列として保存されている場合も JST に変換）
+    const savedDate = new Date(savedLastDate)
+    const jstOffset = 9 * 60 * 60 * 1000
+    const utcTime = savedDate.getTime() + (savedDate.getTimezoneOffset() * 60 * 1000)
+    const lastDate = new Date(utcTime + jstOffset)
     lastDate.setHours(0, 0, 0, 0)
     
     const daysDiff = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24))
@@ -146,7 +153,7 @@ function HomePage() {
     }
   }
 
-  // Firestoreから最新の記録を取得して連続日数を検証
+  // Firestoreから最新の記録を取得して連続日数を検証（防弾化：JST 基準）
   const verifyStreakFromFirestore = async () => {
     try {
       const q = query(
@@ -158,24 +165,32 @@ function HomePage() {
       
       if (!querySnapshot.empty) {
         const latestDoc = querySnapshot.docs[0].data()
-        const latestDate = latestDoc.timestamp?.toDate() || new Date(latestDoc.createdAt?.toDate())
+        const latestTimestamp = latestDoc.timestamp?.toDate() || new Date(latestDoc.createdAt?.toDate())
         const latestStreak = latestDoc.streakCount || 0
         
         const today = getJSTDate()
-        const latestJST = new Date(latestDate)
+        
+        // latestTimestamp を JST 日付に変換
+        const jstOffset = 9 * 60 * 60 * 1000
+        const utcTime = latestTimestamp.getTime() + (latestTimestamp.getTimezoneOffset() * 60 * 1000)
+        const latestJST = new Date(utcTime + jstOffset)
         latestJST.setHours(0, 0, 0, 0)
         
         const daysDiff = Math.floor((today - latestJST) / (1000 * 60 * 60 * 24))
         
+        // localStorage には JST 日付を YYYY-MM-DD 文字列で保存（ISO ではなく）
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+        const latestStr = `${latestJST.getFullYear()}-${String(latestJST.getMonth() + 1).padStart(2, '0')}-${String(latestJST.getDate()).padStart(2, '0')}`
+        
         if (daysDiff === 0) {
           setStreak(latestStreak)
           localStorage.setItem('tyson_streak', latestStreak.toString())
-          localStorage.setItem('tyson_lastDate', today.toISOString())
+          localStorage.setItem('tyson_lastDate', todayStr)
           setLastRecordDate(today)
         } else if (daysDiff === 1) {
           setStreak(latestStreak)
           localStorage.setItem('tyson_streak', latestStreak.toString())
-          localStorage.setItem('tyson_lastDate', latestJST.toISOString())
+          localStorage.setItem('tyson_lastDate', latestStr)
           setLastRecordDate(latestJST)
         } else {
           setStreak(0)
@@ -191,31 +206,22 @@ function HomePage() {
     }
   }
 
-  // 日替わりの修行テーマを取得（500ミリ秒タイムアウト、即座にフォールバック）
+  // 日替わりの修行テーマを取得（防弾: API落ちても必ずTyson重厚フォールバック）
   const fetchDailyTheme = async () => {
-    // 即座にフォールバックテーマを表示
-    const fallbackThemes = [
-      '今日食べた美味しいものは？',
-      '今日の気分を一言で表すと？',
-      '今日見た面白いものは？',
-      '今日の天気を感じたことは？',
-      '今日の修行テーマ：笑顔で一日を過ごそう！'
-    ]
-    const randomFallback = fallbackThemes[Math.floor(Math.random() * fallbackThemes.length)]
-    setDailyTheme(randomFallback)
+    const tysonFallback = () => TYSON_FALLBACK_THEMES[Math.floor(Math.random() * TYSON_FALLBACK_THEMES.length)]
+    setDailyTheme(tysonFallback())
     
     try {
       const cachedTheme = localStorage.getItem('daily_theme')
       const cachedDate = localStorage.getItem('daily_theme_date')
       const today = new Date().toISOString().split('T')[0]
       
-      // 今日のテーマがキャッシュされている場合はそれを使用
-      if (cachedTheme && cachedDate === today) {
+      // キャッシュはTysonテーマの場合のみ使用（平凡な旧キャッシュを破棄）
+      if (cachedTheme && cachedDate === today && isTysonTheme(cachedTheme)) {
         setDailyTheme(cachedTheme)
         return
       }
       
-      // 500ミリ秒タイムアウトで取得
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 500)
       
@@ -225,22 +231,19 @@ function HomePage() {
         
         if (response.ok) {
           const data = await response.json()
-          setDailyTheme(data.theme)
-          localStorage.setItem('daily_theme', data.theme)
-          localStorage.setItem('daily_theme_date', today)
+          const theme = data?.theme || ''
+          if (isTysonTheme(theme)) {
+            setDailyTheme(theme)
+            localStorage.setItem('daily_theme', theme)
+            localStorage.setItem('daily_theme_date', today)
+          }
         }
       } catch (fetchError) {
         clearTimeout(timeoutId)
-        // タイムアウトまたはエラー時はフォールバックテーマを維持
-        if (import.meta.env.DEV) {
-          console.log('テーマ取得タイムアウト、フォールバックを使用:', fetchError)
-        }
+        setDailyTheme(tysonFallback())
       }
     } catch (error) {
-      // エラー時はフォールバックテーマを維持
-      if (import.meta.env.DEV) {
-        console.log('テーマ取得エラー、フォールバックを使用:', error)
-      }
+      setDailyTheme(tysonFallback())
     }
   }
 
@@ -346,20 +349,16 @@ function HomePage() {
           console.log(`✅ IndexedDB同期成功: ID ${record.id}`)
         } catch (error) {
           if (error?.code && error?.vercelHint) {
-            const raw = error?.detail ? `${error?.message ?? ''}\n${error.detail}` : (error?.message ?? String(error))
-            showApiError(raw)
             setEnvParseError({ vercelHint: error.vercelHint })
-            setToast({ type: 'error', message: '環境変数エラーのため送信できませんでした。Vercelの設定を確認してください。' })
-            setTimeout(() => setToast(null), 6000)
+            if (import.meta.env.DEV) console.error('IndexedDB同期: 環境変数エラー', error)
             return
           }
-          console.error(`❌ IndexedDB同期失敗: ID ${record.id}`, error)
+          if (import.meta.env.DEV) console.error(`IndexedDB同期失敗: ID ${record.id}`, error)
           syncFailCount += 1
         }
       }
-      if (syncFailCount > 0) {
-        setToast({ type: 'error', message: `${syncFailCount}件の送信に失敗しました。詳細はコンソールを確認してください。` })
-        setTimeout(() => setToast(null), 5000)
+      if (syncFailCount > 0 && import.meta.env.DEV) {
+        console.warn(`${syncFailCount}件の送信に失敗。再接続時に自動再試行します。`)
       }
       
       // 同期完了通知
@@ -372,17 +371,8 @@ function HomePage() {
       const remainingCount = await getSavedAudioCount()
       setHasBackupData(remainingCount > 0)
     } catch (error) {
-      const raw = error?.detail ? `${error?.message ?? ''}\n${error.detail}` : (error?.message ?? String(error))
-      showApiError(raw)
-      if (error?.code && error?.vercelHint) {
-        setEnvParseError({ vercelHint: error.vercelHint })
-        setToast({ type: 'error', message: '環境変数エラーのため送信できませんでした。Vercelの設定を確認してください。' })
-        setTimeout(() => setToast(null), 6000)
-      } else {
-        setToast({ type: 'error', message: `同期エラー: ${error?.message ?? String(error)}` })
-        setTimeout(() => setToast(null), 5000)
-      }
-      console.error('❌ IndexedDB同期エンジンエラー:', error)
+      if (error?.code && error?.vercelHint) setEnvParseError({ vercelHint: error.vercelHint })
+      if (import.meta.env.DEV) console.error('IndexedDB同期エンジンエラー:', error)
     }
   }
 
@@ -924,7 +914,7 @@ function HomePage() {
     }
   }
 
-  // AI分析を実行
+  // AI分析を実行（防弾: 403/500時も必ずフリーズさせない）
   const analyzeAudio = async (audioURL, docId) => {
     try {
       setIsAnalyzing(true)
@@ -979,13 +969,16 @@ function HomePage() {
             err.detail = debug
             throw err
           }
-          if (response.status === 403) {
-            const err = new Error('アクセスが拒否されました。CORS設定を確認してください。')
+          if (response.status === 403 || errorData?.subStep === 'forbidden' || errorData?.status === 403) {
+            const action = errorData?.userAction || '権限設定を確認してください。Firebase Storage の CORS 設定および Storage Rules を確認し、gsutil cors set cors.json gs://BUCKET を実行してください。'
+            const err = new Error(`403 Forbidden (audioURL fetch)。${action}`)
             err.detail = debug
+            err.userAction = action
             throw err
           }
           const err = new Error(errorMessage)
           err.detail = debug
+          if (errorData?.userAction) err.userAction = errorData.userAction
           throw err
         } catch (parseError) {
           if (parseError instanceof Error && (parseError.message.includes('OpenAI') || parseError.message.includes('CORS'))) {
@@ -1284,28 +1277,25 @@ function HomePage() {
 
           // 連続日数はローカルで即時反映
           setStreak(newStreak)
+          // JST 日付を YYYY-MM-DD 文字列で保存（ISO ではなく）
+          const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
           localStorage.setItem('tyson_streak', newStreak.toString())
-          localStorage.setItem('tyson_lastDate', today.toISOString())
+          localStorage.setItem('tyson_lastDate', todayStr)
           setLastRecordDate(today)
-
-          // ユーザーには即座に完了を見せる（0.5秒以内）
-          setIsComplete(true)
-          setIsUploading(false)
-          isProcessing = false
-          setToast({ type: 'success', message: '保存完了 ✅（裏で送信中）' })
-          setTimeout(() => setToast(null), 3000)
 
           audioChunksRef.current = []
           setDebugInfo(null)
 
-          // Wake Lock はサーバー送信完了時 or エラー時に解放
+          // 防弾: Firestore書き込み成功まで「保存完了」を出さない。送信中は明確に表示
+          setToast({ type: 'info', message: 'Firestoreへ送信中...' })
+          // isUploading は true のまま（API成功まで維持）
 
           // コスト・セーフガード: 1日3回まで解析制限
           const todayKey = `tyson_analysis_count_${today.toISOString().split('T')[0]}`
           const analysisCount = parseInt(localStorage.getItem(todayKey) || '0', 10)
           const canAnalyze = analysisCount < 3 && isOpenAIConfigured
 
-          // 非同期でAPIに送信（ゾンビ送信のオンライン版）
+          // 非同期でAPIに送信（防弾: 成功時のみ「保存完了」を表示）
           ;(async () => {
             try {
               const result = await uploadRecordViaApi(audioBlob, {
@@ -1316,7 +1306,19 @@ function HomePage() {
                 streakCount: newStreak
               })
 
-              // API成功時に同期フラグを更新
+              // 防弾: Firestore書き込み成功を確認してから完了表示
+              if (!result?.shugyoId) {
+                throw new Error('API応答にshugyoIdが含まれていません。Firestoreへの書き込みが失敗した可能性があります。')
+              }
+
+              // 防弾: Storage+Firestore 成功時点で「送信完了」、画面を即遷移（霧を晴らす）
+              isProcessing = false
+              setIsComplete(true)
+              setFogCleared(true)
+              setIsUploading(false)
+              setToast({ type: 'success', message: '送信完了 ✅ 親は管理画面で再生できます' })
+              setTimeout(() => setToast(null), 4000)
+
               if (localId != null) {
                 await markAsSynced(localId)
                 await deleteAudioFromIndexedDB(localId)
@@ -1324,65 +1326,53 @@ function HomePage() {
                 setHasBackupData(remaining > 0)
               }
 
-              // Wake Lock を解放
               await releaseWakeLock()
 
-              // AI分析（制限内かつOpenAI設定済みの場合のみ）
-              if (canAnalyze && result && result.audioURL && result.shugyoId) {
+              // AI解析は裏側で非同期実行。失敗しても音声は死守、ポップアップ禁止
+              if (canAnalyze && result?.audioURL && result?.shugyoId) {
                 const todayForLimit = getJSTDate()
                 const limitKey = `tyson_analysis_count_${todayForLimit.toISOString().split('T')[0]}`
                 const current = parseInt(localStorage.getItem(limitKey) || '0', 10)
                 localStorage.setItem(limitKey, String(current + 1))
 
-                setToast({ type: 'info', message: 'タイソンが解析しています' })
-
-                try {
-                  await analyzeAudio(result.audioURL, result.shugyoId)
-                  setTimeout(() => setToast(null), 5000)
-                } catch (error) {
-                  const raw = error?.detail ? `${error?.message ?? ''}\n${error.detail}` : (error?.message ?? String(error))
-                  showApiError(raw)
+                void (async () => {
                   try {
-                    await addPendingDiagnosis({ audioURL: result.audioURL, docId: result.shugyoId })
-                    await refreshPendingDiagnosis()
-                  } catch (e) {
-                    console.error('❌ addPendingDiagnosis:', e)
-                    setToast({ type: 'error', message: `診断待ち保存エラー: ${e?.message ?? String(e)}` })
+                    await analyzeAudio(result.audioURL, result.shugyoId)
+                    setToast({ type: 'success', message: 'AI診断完了 ✅' })
                     setTimeout(() => setToast(null), 5000)
+                  } catch (error) {
+                    if (import.meta.env.DEV) console.error('AI分析（裏側）失敗:', error)
+                    try {
+                      await addPendingDiagnosis({ audioURL: result.audioURL, docId: result.shugyoId })
+                      await refreshPendingDiagnosis()
+                    } catch (e) {
+                      if (import.meta.env.DEV) console.error('addPendingDiagnosis:', e)
+                    }
                   }
-                  let errorMessage = 'AI診断のみ失敗しました。設定を確認してください。音声は保存済みです。再試行できます。'
-                  if (error.message && error.message.includes('OpenAI API key')) {
-                    errorMessage = 'AI診断のみ失敗しました。OpenAI API keyが設定されていません。音声は保存済みです。再試行できます。'
-                  } else if (error.message && error.message.includes('タイムアウト')) {
-                    errorMessage = 'AI診断のみ失敗しました。タイムアウトしました。音声は保存済みです。再試行できます。'
-                  } else if (error.message && error.message.includes('ネットワーク')) {
-                    errorMessage = 'AI診断のみ失敗しました。ネットワークエラーです。音声は保存済みです。再試行できます。'
-                  }
-                  setToast({ type: 'error', message: errorMessage })
-                  setTimeout(() => setToast(null), 8000)
-                  if (import.meta.env.DEV) {
-                    console.error('AI分析の実行に失敗しました:', error)
-                  }
-                }
-              } else {
-                // AI分析を行わない場合でもWake Lockは解放
-                await releaseWakeLock()
+                })()
               }
             } catch (error) {
+              isProcessing = false
+              setIsUploading(false)
+              setHasBackupData(true)
               const raw = error?.detail ? `${error?.message ?? ''}\n${error.detail}` : (error?.message ?? String(error))
+              console.error('❌ /api/upload 送信エラー:', error)
+              showRawErrorOverlay(
+                error?.code ?? 'UPLOAD_FAILED',
+                `Firestoreへの保存に失敗しました。音声はIndexedDBに退避済み。\n\n${raw}`,
+                'Firestore保存失敗'
+              )
               showApiError(raw)
               if (error?.code && error?.vercelHint) {
                 setEnvParseError({ vercelHint: error.vercelHint })
                 setToast({ type: 'error', message: '環境変数エラー。Vercelの設定を確認し、再試行してください。' })
-                setTimeout(() => setToast(null), 6000)
+                setTimeout(() => setToast(null), 8000)
               } else {
-                console.error('❌ /api/upload 送信エラー:', error)
-                setHasBackupData(true)
                 setToast({
-                  type: 'warning',
-                  message: 'ネットワーク不調のため、あとで自動再送します 💾'
+                  type: 'error',
+                  message: 'Firestore保存失敗。音声はローカルに退避済み。あとで自動再送を試みます。'
                 })
-                setTimeout(() => setToast(null), 5000)
+                setTimeout(() => setToast(null), 8000)
               }
               await releaseWakeLock()
             }
@@ -1917,7 +1907,7 @@ function HomePage() {
         {/* 霧の演出：録音完了まで画面全体をBlur */}
         <div className={`fog-overlay ${fogCleared ? 'cleared' : ''}`}>
           <div className={`reward-content ${isComplete && fogCleared ? 'revealed' : 'hidden'}`}>
-            {analysisResult && (
+            {analysisResult ? (
               <>
                 <h1 className="completion-title">修行完了！</h1>
                 <div className="analysis-results">
@@ -1943,6 +1933,11 @@ function HomePage() {
                     <div className="son-message-text">{sonMessage}</div>
                   </div>
                 )}
+              </>
+            ) : (
+              <>
+                <h1 className="completion-title">送信完了！</h1>
+                <p className="completion-sub">親は管理画面で再生できます。AI解析は裏側で進んでいます。</p>
               </>
             )}
             {isAnalyzing && (
@@ -1995,11 +1990,10 @@ function HomePage() {
         </div>
       )}
 
-      {/* デプロイ健全性インジケーター */}
+      {/* デプロイ健全性インジケーター（ビルド情報と今日の日付を混同しない） */}
       <div className={`build-info ${deployHealth && !deployHealth.healthy ? 'unhealthy' : ''}`}>
-        <span className="build-time">
-          {deployHealth ? deployHealth.buildTime.split('T')[0] : '...'}
-        </span>
+        <span className="today-jst">今日: {formatTodayJST()}</span>
+        <span className="build-time"> | Build: {deployHealth ? deployHealth.buildTime.split('T')[0] : '...'}</span>
         {deployHealth && deployHealth.gitCommit && deployHealth.gitCommit !== 'unknown' && (
           <span className="git-commit"> | {deployHealth.gitCommit.substring(0, 7)}</span>
         )}
