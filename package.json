@@ -22,6 +22,7 @@
     "verify:streak": "node scripts/verify-streak-theme.js",
     "verify:admin": "node scripts/verify-admin.js",
     "verify:audio": "node scripts/verify-audio-bulletproof.js",
+    "verify:date": "node scripts/verify-date-display.js",
     "kill-orange": "node scripts/kill-orange.js"
   },
   "dependencies": {

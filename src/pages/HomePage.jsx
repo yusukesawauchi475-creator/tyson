@@ -4,16 +4,14 @@ import { db } from '../lib/firebase'
 import { collection, doc, updateDoc, query, orderBy, getDocs, limit, getDoc } from 'firebase/firestore'
 import { Link } from 'react-router-dom'
 import { saveAudioToIndexedDB, getSavedAudioCount, getAllSavedAudio, deleteAudioFromIndexedDB, markAsSynced, addPendingDiagnosis, getAllPendingDiagnosis, removePendingDiagnosis, clearAllPendingDiagnosis } from '../lib/indexedDB'
-import { checkDeployHealth } from '../lib/deployHealthCheck'
 import { TYSON_DEFAULT_THEME, TYSON_FALLBACK_THEMES, isTysonTheme } from '../lib/tysonThemes'
-import { formatTodayJST } from '../lib/dateFormat'
+import { formatTodayJST, getBuildHash } from '../lib/dateFormat'
 
 function HomePage() {
   const [isRecording, setIsRecording] = useState(false)
   const [isComplete, setIsComplete] = useState(false)
   const [streak, setStreak] = useState(0)
   const [lastRecordDate, setLastRecordDate] = useState(null)
-  const [deployHealth, setDeployHealth] = useState(null)
   const [userName, setUserName] = useState('')
   const [isUploading, setIsUploading] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -61,6 +59,13 @@ function HomePage() {
   }
 
   const forceReload = () => {
+    try {
+      if (typeof localStorage !== 'undefined') localStorage.removeItem('APP_VERSION')
+      if (typeof indexedDB !== 'undefined') {
+        indexedDB.deleteDatabase('tyson-db')
+        indexedDB.deleteDatabase('TysonAudioBackup')
+      }
+    } catch (_) {}
     window.location.href = window.location.origin + '?v=' + Date.now()
   }
 
@@ -462,15 +467,6 @@ function HomePage() {
       })
     return () => { done = true }
   }, [envParseError])
-
-  // デプロイ健全性チェック（起動時）
-  useEffect(() => {
-    const health = checkDeployHealth()
-    setDeployHealth(health)
-    if (!health.healthy) {
-      console.warn('[DeployHealthCheck] warnings:', health.warnings)
-    }
-  }, [])
 
   // アプリ起動時とネットワーク復帰時に同期（起動後 5 秒間はブロック [cite: 2026-01-28]）
   useEffect(() => {
@@ -1990,26 +1986,11 @@ function HomePage() {
         </div>
       )}
 
-      {/* デプロイ健全性インジケーター（ビルド情報と今日の日付を混同しない） */}
-      <div className={`build-info ${deployHealth && !deployHealth.healthy ? 'unhealthy' : ''}`}>
+      {/* 右下: 今日の日付（new Date() でデバイス時刻、環境変数に非依存） */}
+      <div className="build-info">
         <span className="today-jst">今日: {formatTodayJST()}</span>
-        <span className="build-time"> | Build: {deployHealth ? deployHealth.buildTime.split('T')[0] : '...'}</span>
-        {deployHealth && deployHealth.gitCommit && deployHealth.gitCommit !== 'unknown' && (
-          <span className="git-commit"> | {deployHealth.gitCommit.substring(0, 7)}</span>
-        )}
-        {deployHealth && !deployHealth.healthy && (
-          <span className="deploy-warning" title={deployHealth.warnings.join('\n')}>
-            ⚠️
-          </span>
-        )}
+        {getBuildHash() && <span className="git-commit"> | {getBuildHash()}</span>}
       </div>
-      {deployHealth && !deployHealth.healthy && (
-        <div className="deploy-alert">
-          {deployHealth.warnings.map((w, i) => (
-            <div key={i}>{w}</div>
-          ))}
-        </div>
-      )}
     </div>
   )
 }
