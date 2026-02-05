@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getStorage } from "firebase/storage";
 import { getFirestore } from "firebase/firestore";
+import { getAuth, signInAnonymously } from "firebase/auth";
 
 // 環境変数の完全マッピングと検証
 const requiredEnvVars = [
@@ -64,20 +65,36 @@ if (missingEnvVars.length > 0) {
   });
 }
 
-// Tyson専用環境（tyson-3341f）: フォールバック値なし（環境変数必須）
+// DEV時: 未設定ならダミーで初期化（画面が開くように）。本番では必須
+const isDev = import.meta.env.DEV;
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || (isDev ? 'dev-dummy' : ''),
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || (isDev ? 'dev-dummy.firebaseapp.com' : ''),
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || (isDev ? 'dev-dummy' : ''),
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || (isDev ? 'dev-dummy.firebasestorage.app' : ''),
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || (isDev ? '0' : ''),
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || (isDev ? 'dev-dummy' : ''),
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || undefined
 };
 
 const app = initializeApp(firebaseConfig);
 export const storage = getStorage(app);
 export const db = getFirestore(app);
+export const auth = getAuth(app);
+
+/** Anonymous認証して idToken を取得。API呼び出し用。未設定時は null */
+export async function getIdTokenForApi() {
+  if (!isFirebaseConfigured) return null;
+  try {
+    const user = auth.currentUser;
+    if (user) return await user.getIdToken(true);
+    const { user: signedIn } = await signInAnonymously(auth);
+    return signedIn.getIdToken();
+  } catch (e) {
+    if (import.meta.env.DEV) console.warn('getIdTokenForApi failed:', e?.message);
+    return null;
+  }
+}
 
 // 環境変数の検証結果をエクスポート
 export const isFirebaseConfigured = missingEnvVars.length === 0;
