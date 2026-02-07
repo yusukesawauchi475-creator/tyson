@@ -31,6 +31,12 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
+console.log("ENV CHECK", {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+});
+
+
 if (!skipReload) {
   createRoot(document.getElementById('root')).render(
     <StrictMode>

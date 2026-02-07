@@ -123,13 +123,24 @@ async function handleGet(req, res) {
   const reqId = genRequestId();
   const pairId = req.query?.pairId || req.query?.pair_id;
   const dateKey = req.query?.dateKey || req.query?.date_key;
+  const listenRole = req.query?.listenRole || req.query?.listen_role; // 'parent' | 'child'
   const type = req.query?.type || 'audio';
   const mode = req.query?.mode || 'blob'; // 'blob' | 'signed'
+
+  console.log('[OBSERVE] handleGet entered:', { requestId: reqId, pairId, dateKey, listenRole, mode });
 
   if (!pairId || !dateKey) {
     return res.status(400).json({
       success: false,
       error: 'pairId and dateKey are required',
+      requestId: reqId,
+    });
+  }
+
+  if (!listenRole || (listenRole !== 'parent' && listenRole !== 'child')) {
+    return res.status(400).json({
+      success: false,
+      error: 'listenRole must be "parent" or "child"',
       requestId: reqId,
     });
   }
@@ -159,22 +170,50 @@ async function handleGet(req, res) {
     const metaRef = firestore.collection('pair_media').doc(pairId).collection('days').doc(dateKey);
     const metaSnap = await metaRef.get();
     if (!metaSnap.exists) {
+      console.log('[OBSERVE] handleGet: no doc exists:', { listenRole, pairId, dateKey, hasAudio: false });
       return res.status(404).json({
         success: false,
         error: 'No media for this date',
         requestId: reqId,
+        hasAudio: false,
       });
     }
 
     const meta = metaSnap.data();
-    const audioPath = meta?.audioPath;
-    if (!audioPath) {
-      return res.status(404).json({
-        success: false,
-        error: 'No audio for this date',
-        requestId: reqId,
-      });
+    const availableKeys = Object.keys(meta || {}).filter(k => k !== 'latestUpdatedAt');
+    const selectedKey = listenRole;
+    
+    // 新スキーマ優先: meta[listenRole] を取得
+    let roleData = meta?.[listenRole];
+    let isLegacy = false;
+    
+    // 旧スキーマフォールバック: 新スキーマが無く、meta.audioPath があれば旧スキーマとして扱う
+    if (!roleData || !roleData.audioPath) {
+      if (meta?.audioPath) {
+        isLegacy = true;
+        roleData = {
+          audioPath: meta.audioPath,
+          mimeType: meta.mimeType,
+          extension: meta.extension,
+          uploadedAt: meta.uploadedAt,
+          uploadedBy: meta.uploadedBy,
+          version: meta.uploadedAt?.toMillis?.() || Date.now(),
+        };
+        console.log('[OBSERVE] handleGet legacy meta used:', { listenRole, pairId, dateKey, resolvedAudioPath: roleData.audioPath });
+      } else {
+        console.log('[OBSERVE] handleGet: no audio for role:', { listenRole, pairId, dateKey, selectedKey, availableKeys, hasRoleData: !!roleData, hasAudio: false });
+        return res.status(404).json({
+          success: false,
+          error: 'No audio for this role and date',
+          requestId: reqId,
+          hasAudio: false,
+        });
+      }
     }
+
+    const audioPath = roleData.audioPath;
+    const version = roleData.version || roleData.uploadedAt?.toMillis?.() || Date.now();
+    console.log('[OBSERVE] handleGet: found audio:', { listenRole, pairId, dateKey, selectedKey, availableKeys, resolvedAudioPath: audioPath, resolvedVersion: version, isLegacy, hasAudio: true });
 
     const fileRef = storageBucket.file(audioPath);
 
@@ -187,18 +226,23 @@ async function handleGet(req, res) {
         success: true,
         mode: 'signed',
         url: signedUrl,
+        version,
+        audioPath,
         requestId: reqId,
+        hasAudio: true,
       });
     }
 
     const [contents] = await fileRef.download();
-    const mimeType = meta.mimeType || 'audio/mp4';
+    const mimeType = roleData.mimeType || 'audio/mp4';
     res.setHeader('Content-Type', mimeType);
-    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.setHeader('Cache-Control', 'private, max-age=0, must-revalidate');
+    res.setHeader('X-Audio-Version', String(version));
     return res.status(200).send(contents);
   } catch (e) {
     const code = e?.code || 'unknown';
     console.error(`[pair-media GET] ${reqId} error:`, code, e?.message);
+    console.log('[OBSERVE] handleGet error:', { errorName: e?.name, errorCode: code, errorMessage: e?.message?.substring(0, 100) });
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch media',
@@ -211,9 +255,11 @@ async function handleGet(req, res) {
 /** POST: upload audio */
 async function handlePost(req, res) {
   const reqId = genRequestId();
+  console.log('[OBSERVE] handlePost entered:', { requestId: reqId, method: req.method, url: req.url });
 
   const authHeader = req.headers.authorization || '';
   const idToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+  console.log('[OBSERVE] handlePost auth check:', { authHeaderPresent: !!idToken });
   if (!idToken) {
     return res.status(401).json({
       success: false,
@@ -223,6 +269,7 @@ async function handlePost(req, res) {
   }
 
   const contentType = req.headers['content-type'] || '';
+  console.log('[OBSERVE] handlePost content-type:', { contentType: contentType.substring(0, 50) });
   if (!contentType.startsWith('multipart/form-data')) {
     return res.status(400).json({
       success: false,
@@ -233,7 +280,26 @@ async function handlePost(req, res) {
 
   try {
     const { uid } = await verifyIdToken(idToken);
-    const { fields, file } = await parseMultipartFormData(req);
+    console.log('[OBSERVE] handlePost multipart parse start');
+    let fields, file;
+    try {
+      const parsed = await parseMultipartFormData(req);
+      fields = parsed.fields;
+      file = parsed.file;
+      console.log('[OBSERVE] handlePost multipart parsed:', {
+        success: true,
+        receivedFields: Object.keys(fields),
+        receivedRole: fields.role || 'missing',
+        receivedFileMeta: file ? { filename: file.filename, mimeType: file.mimeType, size: file.buffer?.length } : null,
+      });
+    } catch (parseErr) {
+      console.log('[OBSERVE] handlePost multipart parse failed:', {
+        success: false,
+        errorName: parseErr?.name,
+        errorMessage: parseErr?.message?.substring(0, 100),
+      });
+      throw parseErr;
+    }
 
     const audioFile = file?.fieldName === 'audio' ? file : null;
     if (!audioFile || !audioFile.buffer?.length) {
@@ -246,6 +312,18 @@ async function handlePost(req, res) {
 
     const pairId = fields.pairId || fields.pair_id || 'demo';
     const dateKey = fields.dateKey || fields.date_key;
+    const role = fields.role; // 'parent' | 'child' (必須)
+    
+    // role を最初にチェック（必須化）
+    if (!role || (role !== 'parent' && role !== 'child')) {
+      console.log('[OBSERVE] handlePost role validation failed:', { receivedRole: role || 'missing', receivedFields: Object.keys(fields) });
+      return res.status(400).json({
+        success: false,
+        error: 'role must be "parent" or "child"',
+        requestId: reqId,
+      });
+    }
+    
     if (!dateKey) {
       return res.status(400).json({
         success: false,
@@ -266,32 +344,72 @@ async function handlePost(req, res) {
 
     const mimeType = audioFile.mimeType || 'audio/mp4';
     const ext = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('m4a') ? 'm4a' : 'webm';
-    const objectPath = `pair-media/${pairId}/${dateKey}/recording.${ext}`;
+    const objectPath = `pair-media/${pairId}/${dateKey}/${role}/recording.${ext}`;
+    const version = Date.now();
 
-    const fileRef = storageBucket.file(objectPath);
-    await fileRef.save(audioFile.buffer, {
-      contentType: mimeType,
-      resumable: false,
-    });
+    console.log('[OBSERVE] handlePost firebase upload start:', { role, pairId, dateKey, objectPath, version });
+    try {
+      const fileRef = storageBucket.file(objectPath);
+      await fileRef.save(audioFile.buffer, {
+        contentType: mimeType,
+        resumable: false,
+      });
+      console.log('[OBSERVE] handlePost firebase upload success:', { objectPath });
+    } catch (uploadErr) {
+      console.log('[OBSERVE] handlePost firebase upload failed:', {
+        errorName: uploadErr?.name,
+        errorCode: uploadErr?.code,
+        errorMessage: uploadErr?.message?.substring(0, 100),
+      });
+      throw uploadErr;
+    }
 
-    const metaRef = firestore.collection('pair_media').doc(pairId).collection('days').doc(dateKey);
-    await metaRef.set({
-      audioPath: objectPath,
-      mimeType,
-      extension: ext,
-      uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
-      uploadedBy: uid,
-    });
+    console.log('[OBSERVE] handlePost firestore write start');
+    try {
+      const metaRef = firestore.collection('pair_media').doc(pairId).collection('days').doc(dateKey);
+      const roleData = {
+        audioPath: objectPath,
+        mimeType,
+        extension: ext,
+        uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
+        uploadedBy: uid,
+        version,
+      };
+      await metaRef.set({
+        [role]: roleData,
+        latestUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+      const docAfter = await metaRef.get();
+      const docData = docAfter.data() || {};
+      const writeKeys = Object.keys(docData).filter(k => k !== 'latestUpdatedAt');
+      console.log('[OBSERVE] handlePost firestore write success:', { role, pairId, dateKey, objectPath, version, firestoreDocPath: `pair_media/${pairId}/days/${dateKey}`, writeKeys });
+    } catch (firestoreErr) {
+      console.log('[OBSERVE] handlePost firestore write failed:', {
+        errorName: firestoreErr?.name,
+        errorCode: firestoreErr?.code,
+        errorMessage: firestoreErr?.message?.substring(0, 100),
+      });
+      throw firestoreErr;
+    }
 
-    return res.status(200).json({
+    const responseJson = {
       success: true,
       pairId,
       dateKey,
+      role,
+      version,
       requestId: reqId,
-    });
+    };
+    console.log('[OBSERVE] handlePost response:', { status: 200, role, version, responseKeys: Object.keys(responseJson) });
+    return res.status(200).json(responseJson);
   } catch (e) {
     const code = e?.code || 'unknown';
     console.error(`[pair-media POST] ${reqId} error:`, code, e?.message);
+    console.log('[OBSERVE] handlePost error summary:', {
+      errorName: e?.name,
+      errorCode: code,
+      errorMessage: e?.message?.substring(0, 100),
+    });
     return res.status(500).json({
       success: false,
       error: 'Upload failed',
@@ -302,6 +420,9 @@ async function handlePost(req, res) {
 }
 
 export default async function handler(req, res) {
+  const reqId = genRequestId();
+  console.log('[OBSERVE] pair-media handler called:', { requestId: reqId, method: req.method, url: req.url });
+  
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');

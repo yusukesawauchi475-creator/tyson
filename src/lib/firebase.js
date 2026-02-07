@@ -67,6 +67,7 @@ if (missingEnvVars.length > 0) {
 
 // DEV時: 未設定ならダミーで初期化（画面が開くように）。本番では必須
 const isDev = import.meta.env.DEV;
+
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || (isDev ? 'dev-dummy' : ''),
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || (isDev ? 'dev-dummy.firebaseapp.com' : ''),
@@ -74,8 +75,31 @@ const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || (isDev ? 'dev-dummy.firebasestorage.app' : ''),
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || (isDev ? '0' : ''),
   appId: import.meta.env.VITE_FIREBASE_APP_ID || (isDev ? 'dev-dummy' : ''),
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || undefined
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || undefined,
 };
+
+if (isDev) {
+  const fmt = (v) => {
+    const s = String(v ?? '');
+    if (!s) return '(empty)';
+    const len = s.length;
+    const head = s.slice(0, 8);
+    return len <= 8 ? `${head} (len=${len})` : `${head}...(len=${len})`;
+  };
+  const apiKeyRaw = import.meta.env.VITE_FIREBASE_API_KEY;
+  const apiKeyNote = apiKeyRaw === undefined || apiKeyRaw === null || String(apiKeyRaw).trim() === ''
+    ? ' ← .env.local 読めてない可能性'
+    : '';
+  console.log('[FirebaseConfig]', {
+    apiKey: fmt(firebaseConfig.apiKey) + apiKeyNote,
+    authDomain: fmt(firebaseConfig.authDomain),
+    projectId: fmt(firebaseConfig.projectId),
+    storageBucket: fmt(firebaseConfig.storageBucket),
+    messagingSenderId: fmt(firebaseConfig.messagingSenderId),
+    appId: fmt(firebaseConfig.appId),
+    measurementId: firebaseConfig.measurementId ? fmt(firebaseConfig.measurementId) : '(not set)',
+  });
+}
 
 const app = initializeApp(firebaseConfig);
 export const storage = getStorage(app);

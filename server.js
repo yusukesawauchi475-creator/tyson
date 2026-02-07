@@ -152,6 +152,23 @@ ${transcription}
   }
 }
 
+// /api/pair-media（Pair MVP: 録音→保存→再生）
+let pairMediaHandler = null;
+(async () => {
+  try {
+    pairMediaHandler = (await import('./api/pair-media.js')).default;
+    app.all('/api/pair-media', (req, res) => {
+      console.log('[OBSERVE] Express route /api/pair-media hit:', { method: req.method, url: req.url });
+      return pairMediaHandler(req, res);
+    });
+  } catch (err) {
+    console.error('[OBSERVE] Failed to load pair-media handler:', err?.message);
+    app.all('/api/pair-media', (req, res) => {
+      res.status(500).json({ success: false, error: 'pair-media handler not loaded', requestId: 'LOAD-ERR' });
+    });
+  }
+})();
+
 // /api/analyze エンドポイント
 app.post('/api/analyze', async (req, res) => {
   try {
@@ -198,7 +215,35 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.listen(PORT, () => {
+process.on('beforeExit', (code) => {
+  console.log('[OBSERVE] process.beforeExit:', code);
+});
+
+process.on('exit', (code) => {
+  console.log('[OBSERVE] process.exit:', code);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.log('[OBSERVE] process.unhandledRejection:', reason?.name, reason?.message?.substring(0, 100));
+});
+
+process.on('uncaughtException', (error) => {
+  console.log('[OBSERVE] process.uncaughtException:', error?.name, error?.message?.substring(0, 100));
+});
+
+const server = app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`AI Provider: ${process.env.AI_PROVIDER || 'openai'}`);
+});
+
+server.on('close', () => {
+  console.log('[OBSERVE] server.close event fired');
+});
+
+server.on('error', (err) => {
+  console.log('[OBSERVE] server.error:', err?.name, err?.message?.substring(0, 100));
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Port ${PORT} is already in use. Kill existing process or use different port.`);
+    process.exit(1);
+  }
 });

@@ -1,15 +1,23 @@
-import { useState, useRef } from 'react'
-import { uploadAudio } from '../lib/pairDaily'
+import { useState, useRef, useEffect } from 'react'
+import { uploadAudio, fetchAudioForPlayback, hasTodayAudio } from '../lib/pairDaily'
 
 export default function HomePage() {
   const [isRecording, setIsRecording] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [sentAt, setSentAt] = useState(null)
   const [errorLine, setErrorLine] = useState(null)
+  const [hasParentAudio, setHasParentAudio] = useState(null)
+  const [parentAudioUrl, setParentAudioUrl] = useState(null)
+  const [isLoadingParent, setIsLoadingParent] = useState(false)
+  const [isPlayingParent, setIsPlayingParent] = useState(false)
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
   const streamRef = useRef(null)
   const recordStartRef = useRef(null)
+  const parentAudioRef = useRef(null)
+
+  const ROLE_CHILD = 'child'
+  const LISTEN_ROLE_PARENT = 'parent'
 
   const startRecording = async () => {
     setErrorLine(null)
@@ -42,7 +50,7 @@ export default function HomePage() {
         }
 
         setIsUploading(true)
-        const result = await uploadAudio(blob)
+        const result = await uploadAudio(blob, ROLE_CHILD)
 
         if (result.success) {
           setSentAt(new Date())
@@ -78,6 +86,75 @@ export default function HomePage() {
     else startRecording()
   }
 
+  const refreshParentStatus = () => {
+    setHasParentAudio(null)
+    hasTodayAudio(LISTEN_ROLE_PARENT).then(setHasParentAudio)
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    hasTodayAudio(LISTEN_ROLE_PARENT).then((v) => {
+      if (!cancelled) setHasParentAudio(v)
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  const handlePlayParent = async () => {
+    if (hasParentAudio === false) return
+
+    setIsLoadingParent(true)
+    setErrorLine(null)
+    
+    // 古いObjectURLがあれば破棄（毎回最新を取得するため）
+    if (parentAudioUrl && parentAudioUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(parentAudioUrl)
+    }
+    setParentAudioUrl(null)
+    
+    const result = await fetchAudioForPlayback(LISTEN_ROLE_PARENT)
+
+    if (result.error) {
+      const reqId = result.requestId || 'REQ-XXXX'
+      setErrorLine(`うまくいきませんでした。もう一度お試しください（ID: ${reqId}）`)
+      if (import.meta.env.DEV) console.error('[HomePage]', result.requestId, result.errorCode, result.error)
+      setIsLoadingParent(false)
+      if (result.hasAudio === false) setHasParentAudio(false)
+      return
+    }
+
+    // 古いObjectURLがあれば破棄
+    if (parentAudioUrl && parentAudioUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(parentAudioUrl)
+    }
+
+    setParentAudioUrl(result.url)
+    setIsLoadingParent(false)
+    if (result.hasAudio !== undefined) setHasParentAudio(result.hasAudio)
+
+    try {
+      const el = parentAudioRef.current
+      if (el) {
+        el.src = result.url
+        el.currentTime = 0
+        await el.play()
+        setIsPlayingParent(true)
+      }
+    } catch (_) {
+      setErrorLine(`うまくいきませんでした。もう一度お試しください（ID: PLAY-ERR）`)
+    }
+  }
+
+  const handleParentEnded = () => setIsPlayingParent(false)
+
+  // unmount時にObjectURLを破棄
+  useEffect(() => {
+    return () => {
+      if (parentAudioUrl && parentAudioUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(parentAudioUrl)
+      }
+    }
+  }, [parentAudioUrl])
+
   const sentAtStr = sentAt
     ? sentAt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
     : ''
@@ -104,31 +181,94 @@ export default function HomePage() {
       </header>
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
-        <button
-          type="button"
-          onClick={handleClick}
-          disabled={isUploading}
-          style={{
-            width: '100%',
-            maxWidth: 320,
-            padding: '18px 24px',
-            fontSize: 18,
-            fontWeight: 500,
-            color: '#fff',
-            background: isUploading ? '#999' : isRecording ? '#c00' : '#4a90d9',
-            border: 'none',
-            borderRadius: 12,
-            cursor: isUploading ? 'wait' : 'pointer',
-          }}
-        >
-          {isUploading ? '送信中...' : isRecording ? '停止' : '録音'}
-        </button>
-
-        {sentAt && (
-          <p style={{ fontSize: 16, color: '#2e7d32', fontWeight: 500, margin: 0 }}>
-            送信完了（{sentAtStr}）
+        <section style={{ width: '100%', maxWidth: 320 }}>
+          <p style={{ fontSize: 14, color: '#666', margin: '0 0 8px', textAlign: 'center' }}>
+            相手（親）の音声
           </p>
-        )}
+          {hasParentAudio === true ? (
+            <>
+              <p style={{ fontSize: 14, color: '#2e7d32', textAlign: 'center', margin: '0 0 8px', fontWeight: 500 }}>
+                届いています
+              </p>
+              <button
+                type="button"
+                onClick={handlePlayParent}
+                disabled={isLoadingParent}
+                style={{
+                  width: '100%',
+                  padding: '12px 24px',
+                  fontSize: 16,
+                  fontWeight: 500,
+                  color: '#fff',
+                  background: isLoadingParent ? '#999' : '#4a90d9',
+                  border: 'none',
+                  borderRadius: 8,
+                  cursor: isLoadingParent ? 'wait' : 'pointer',
+                  marginBottom: 16,
+                }}
+              >
+                {isLoadingParent ? '読み込み中…' : isPlayingParent ? '再生中…' : '再生'}
+              </button>
+            </>
+          ) : hasParentAudio === false ? (
+            <p style={{ fontSize: 14, color: '#888', textAlign: 'center', margin: '0 0 16px' }}>
+              まだ届いていません
+            </p>
+          ) : (
+            <p style={{ fontSize: 14, color: '#888', textAlign: 'center', margin: '0 0 16px' }}>
+              確認中…
+            </p>
+          )}
+          {hasParentAudio !== null && (
+            <button
+              type="button"
+              onClick={refreshParentStatus}
+              style={{
+                padding: '4px 12px',
+                fontSize: 12,
+                color: '#4a90d9',
+                background: 'transparent',
+                border: '1px solid #4a90d9',
+                borderRadius: 6,
+                cursor: 'pointer',
+                marginBottom: 16,
+              }}
+            >
+              更新
+            </button>
+          )}
+        </section>
+
+        <section style={{ width: '100%', maxWidth: 320 }}>
+          <p style={{ fontSize: 14, color: '#666', margin: '0 0 8px', textAlign: 'center' }}>
+            自分の録音
+          </p>
+          <button
+            type="button"
+            onClick={handleClick}
+            disabled={isUploading}
+            style={{
+              width: '100%',
+              padding: '18px 24px',
+              fontSize: 18,
+              fontWeight: 500,
+              color: '#fff',
+              background: isUploading ? '#999' : isRecording ? '#c00' : '#4a90d9',
+              border: 'none',
+              borderRadius: 12,
+              cursor: isUploading ? 'wait' : 'pointer',
+              boxShadow: isRecording ? '0 0 0 4px rgba(200, 0, 0, 0.3)' : 'none',
+            }}
+          >
+            {isUploading ? '送信中…' : isRecording ? '録音中…' : '録音'}
+          </button>
+
+          {sentAt && (
+            <p style={{ fontSize: 16, color: '#2e7d32', fontWeight: 500, margin: '8px 0 0', textAlign: 'center' }}>
+              送信しました（{sentAtStr}）
+            </p>
+          )}
+        </section>
 
         {errorLine && (
           <p style={{ fontSize: 14, color: '#c00', textAlign: 'center', margin: 0 }}>
@@ -136,6 +276,13 @@ export default function HomePage() {
           </p>
         )}
       </main>
+
+      <audio
+        ref={parentAudioRef}
+        onEnded={handleParentEnded}
+        onPause={() => setIsPlayingParent(false)}
+        style={{ display: 'none' }}
+      />
     </div>
   )
 }
