@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { getDateKey, fetchAudioForPlayback, hasTodayAudio, uploadAudio } from '../lib/pairDaily'
+import { getDateKey, fetchAudioForPlayback, hasTodayAudio, uploadAudio, PAIR_ID_DEMO } from '../lib/pairDaily'
+import DailyPromptCard from '../components/DailyPromptCard'
 
 export default function PairDailyPage() {
   const [today, setToday] = useState('')
@@ -272,6 +273,8 @@ export default function PairDailyPage() {
               送信しました（{sentAtStr}）
             </p>
           )}
+
+          <DailyPromptCard pairId={PAIR_ID_DEMO} role={ROLE_PARENT} />
         </section>
 
         {errorLine && (

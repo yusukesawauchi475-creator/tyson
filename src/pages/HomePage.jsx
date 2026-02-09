@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-import { uploadAudio, fetchAudioForPlayback, hasTodayAudio } from '../lib/pairDaily'
+import { uploadAudio, fetchAudioForPlayback, hasTodayAudio, PAIR_ID_DEMO } from '../lib/pairDaily'
+import DailyPromptCard from '../components/DailyPromptCard'
 
 export default function HomePage() {
   const [isRecording, setIsRecording] = useState(false)
@@ -268,6 +269,8 @@ export default function HomePage() {
               送信しました（{sentAtStr}）
             </p>
           )}
+
+          <DailyPromptCard pairId={PAIR_ID_DEMO} role={ROLE_CHILD} />
         </section>
 
         {errorLine && (
