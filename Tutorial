@@ -191,5 +191,27 @@ VITE_FIREBASE_MEASUREMENT_ID=G-VL4GMBX48R
 ======================================================================
 12. メモ（次スレ持ち越し）
 ======================================================================
-- ここに短い注意点だけ追記（秘密は書かない）
+[2026-02-08] 双方向音声の不具合修正（同じ/昔の音が出る）
+
+原因：Firestore旧スキーマ（audioPath直下）と新スキーマ（parent/child）不一致 + クライアント側のblob使い回し
+
+対応：
+
+api/pair-media.js
+
+GET：新スキーマ優先、旧スキーマ互換は parent のみ（childへ旧音声を返さない）
+
+POST：role必須（parent|child）、role入りobjectPathを強制
+
+OBSERVEログで objectPath / resolvedAudioPath / isLegacy を出す（秘密値禁止）
+
+フロント
+
+fetchに cache buster（v=Date.now） + cache:'no-store'
+
+早期returnを削除し毎回最新取得、古いblob URLは revoke
+
+検証：
+
+2端末（親/#/、子/#/tyson）で互いに録音→更新→再生が成立
 """

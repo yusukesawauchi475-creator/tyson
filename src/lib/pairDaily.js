@@ -1,12 +1,24 @@
 import { getIdTokenForApi } from './firebase.js';
 
-/** JST で YYYY-MM-DD を返す */
+/** NY時間（America/New_York、DST対応）で YYYY-MM-DD を返す */
 export function getDateKey() {
   const now = new Date();
-  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-  const y = jst.getUTCFullYear();
-  const m = String(jst.getUTCMonth() + 1).padStart(2, '0');
-  const d = String(jst.getUTCDate()).padStart(2, '0');
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(now);
+
+    const get = (t) => parts.find((p) => p.type === t)?.value;
+    const y = get('year'), m = get('month'), d = get('day');
+    if (y && m && d) return `${y}-${m}-${d}`;
+  } catch {}
+  // フォールバック：端末ローカル日付（JST固定には戻さない）
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
 }
 
