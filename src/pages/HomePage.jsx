@@ -11,11 +11,15 @@ export default function HomePage() {
   const [parentAudioUrl, setParentAudioUrl] = useState(null)
   const [isLoadingParent, setIsLoadingParent] = useState(false)
   const [isPlayingParent, setIsPlayingParent] = useState(false)
+  const [oneLiner, setOneLiner] = useState('')
+  const [oneLinerStage, setOneLinerStage] = useState(null)
+  const [oneLinerVisible, setOneLinerVisible] = useState(false)
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
   const streamRef = useRef(null)
   const recordStartRef = useRef(null)
   const parentAudioRef = useRef(null)
+  const oneLinerTimerRef = useRef(null)
 
   const ROLE_CHILD = 'child'
   const LISTEN_ROLE_PARENT = 'parent'
@@ -23,6 +27,12 @@ export default function HomePage() {
   const startRecording = async () => {
     setErrorLine(null)
     setSentAt(null)
+    // 録音開始時に一言を非表示
+    setOneLinerVisible(false)
+    if (oneLinerTimerRef.current) {
+      clearTimeout(oneLinerTimerRef.current)
+      oneLinerTimerRef.current = null
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       streamRef.current = stream
@@ -54,8 +64,23 @@ export default function HomePage() {
         const result = await uploadAudio(blob, ROLE_CHILD)
 
         if (result.success) {
+          // 古いタイマーをクリア（連続録音対策）
+          if (oneLinerTimerRef.current) {
+            clearTimeout(oneLinerTimerRef.current)
+            oneLinerTimerRef.current = null
+          }
           setSentAt(new Date())
           setErrorLine(null)
+          // 一言表示開始（0-200msで即時表示）
+          setOneLiner('録音ありがとうございます！送信できました。')
+          setOneLinerStage('immediate')
+          setOneLinerVisible(true)
+          // 300ms後に汎用テンプレに差し替え
+          oneLinerTimerRef.current = setTimeout(() => {
+            setOneLiner('いいですね！今日のいちばんはどれでした？')
+            setOneLinerStage('final')
+            oneLinerTimerRef.current = null
+          }, 300)
         } else {
           const reqId = result.requestId || 'REQ-XXXX'
           setErrorLine(`うまくいきませんでした。もう一度お試しください（ID: ${reqId}）`)
@@ -152,6 +177,9 @@ export default function HomePage() {
     return () => {
       if (parentAudioUrl && parentAudioUrl.startsWith('blob:')) {
         URL.revokeObjectURL(parentAudioUrl)
+      }
+      if (oneLinerTimerRef.current) {
+        clearTimeout(oneLinerTimerRef.current)
       }
     }
   }, [parentAudioUrl])
@@ -271,6 +299,24 @@ export default function HomePage() {
           )}
 
           <DailyPromptCard pairId={PAIR_ID_DEMO} role={ROLE_CHILD} />
+
+          {oneLinerVisible && oneLiner && (
+            <div style={{
+              width: '100%',
+              maxWidth: 320,
+              marginTop: 16,
+              padding: '12px 16px',
+              background: '#e8f5e9',
+              border: '1px solid #c8e6c9',
+              borderRadius: 8,
+              fontSize: 14,
+              color: '#2e7d32',
+              textAlign: 'center',
+              lineHeight: 1.5,
+            }}>
+              {oneLiner}
+            </div>
+          )}
         </section>
 
         {errorLine && (
