@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { getDateKey, fetchAudioForPlayback, hasTodayAudio, uploadAudio, PAIR_ID_DEMO } from '../lib/pairDaily'
+import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import DailyPromptCard from '../components/DailyPromptCard'
+import { getIdTokenForApi } from '../lib/firebase'
 
 export default function PairDailyPage() {
   const [today, setToday] = useState('')
@@ -26,6 +28,8 @@ export default function PairDailyPage() {
   const oneLinerTimerRef = useRef(null)
   const topicRef = useRef(null)
   const analysisTimerRef = useRef(null)
+  const analysisFetchTimerRef = useRef(null)
+  const analysisReqSeqRef = useRef(0)
 
   const ROLE_PARENT = 'parent'
   const LISTEN_ROLE_CHILD = 'child'
@@ -114,6 +118,9 @@ export default function PairDailyPage() {
       if (analysisTimerRef.current) {
         clearTimeout(analysisTimerRef.current)
       }
+      if (analysisFetchTimerRef.current) {
+        clearTimeout(analysisFetchTimerRef.current)
+      }
     }
   }, [audioUrl])
 
@@ -123,6 +130,8 @@ export default function PairDailyPage() {
     // 録音開始時に一言を非表示
     setOneLinerVisible(false)
     setAnalysisVisible(false)
+    // 録音開始＝過去の解析結果は全部無効
+    analysisReqSeqRef.current += 1
     if (oneLinerTimerRef.current) {
       clearTimeout(oneLinerTimerRef.current)
       oneLinerTimerRef.current = null
@@ -130,6 +139,10 @@ export default function PairDailyPage() {
     if (analysisTimerRef.current) {
       clearTimeout(analysisTimerRef.current)
       analysisTimerRef.current = null
+    }
+    if (analysisFetchTimerRef.current) {
+      clearTimeout(analysisFetchTimerRef.current)
+      analysisFetchTimerRef.current = null
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -171,9 +184,18 @@ export default function PairDailyPage() {
             clearTimeout(analysisTimerRef.current)
             analysisTimerRef.current = null
           }
+          if (analysisFetchTimerRef.current) {
+            clearTimeout(analysisFetchTimerRef.current)
+            analysisFetchTimerRef.current = null
+          }
           setAnalysisVisible(false)
           // 送信成功時のtopicをrefに保持（競合対策）
           topicRef.current = dailyTopic
+          // dateKeyを固定（このupload用に1回だけ作る）
+          const dateKeyForThisUpload = result?.dateKey || getDateKey()
+          // リクエストシーケンス番号をインクリメント
+          analysisReqSeqRef.current += 1
+          const seq = analysisReqSeqRef.current
           setSentAt(new Date())
           setErrorLine(null)
           // 一言表示開始（0-200msで即時表示）
@@ -183,20 +205,7 @@ export default function PairDailyPage() {
           // 300ms後にtopicに応じたテンプレに差し替え
           oneLinerTimerRef.current = setTimeout(() => {
             const topic = topicRef.current
-            let finalMessage = 'いいですね！今日のいちばんはどれでした？' // 汎用フォールバック
-            if (topic) {
-              if (topic.includes('何食べた')) {
-                finalMessage = 'いいですね！いちばんおいしかったのはどれでした？'
-              } else if (topic.includes('天気')) {
-                finalMessage = 'いいね！今日の空で印象に残ったのはどんな感じ？'
-              } else if (topic.includes('一番楽しかった') || topic.includes('ハイライト')) {
-                finalMessage = '最高。いちばん嬉しかったのはどれ？'
-              } else if (topic.includes('誰に会った')) {
-                finalMessage = 'いいね！その人と何話した？'
-              } else if (topic.includes('気分') || topic.includes('色')) {
-                finalMessage = 'いいね。今の気分、もう少し言葉にすると？'
-              }
-            }
+            const finalMessage = getFinalOneLiner(topic, ROLE_PARENT)
             setOneLiner(finalMessage)
             setOneLinerStage('final')
             oneLinerTimerRef.current = null
@@ -204,24 +213,66 @@ export default function PairDailyPage() {
           // さらに700ms後（送信成功から1000ms後）に解析コメントを表示
           analysisTimerRef.current = setTimeout(() => {
             const topic = topicRef.current
-            let comment = '今日の記録、ありがとうございます' // 汎用フォールバック
-            if (topic) {
-              if (topic.includes('何食べた')) {
-                comment = '食事の記録、ありがとうございます'
-              } else if (topic.includes('天気')) {
-                comment = '今日の空の様子、ありがとうございます'
-              } else if (topic.includes('一番楽しかった') || topic.includes('ハイライト')) {
-                comment = '今日のハイライト、ありがとうございます'
-              } else if (topic.includes('誰に会った')) {
-                comment = '今日の出会い、ありがとうございます'
-              } else if (topic.includes('気分') || topic.includes('色')) {
-                comment = '今日の気持ち、ありがとうございます'
-              }
-            }
-            setAnalysisComment(comment)
+            const placeholder = getAnalysisPlaceholder(topic, ROLE_PARENT)
+            setAnalysisComment(placeholder)
             setAnalysisVisible(true)
             analysisTimerRef.current = null
           }, 1000)
+
+          // 非同期で解析コメントAPIをPOST（awaitしない、失敗しても無視）
+          ;(async () => {
+            try {
+              const idToken = await getIdTokenForApi()
+              if (!idToken) return
+              await fetch('/api/analysis-comment', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${idToken}`,
+                },
+                body: JSON.stringify({
+                  pairId: PAIR_ID_DEMO,
+                  dateKey: dateKeyForThisUpload,
+                  role: ROLE_PARENT,
+                  topic: topicRef.current,
+                }),
+              })
+            } catch (e) {
+              // エラーは無視（UIを止めない）
+            }
+          })()
+
+          // 1200-1500ms後にGETして、取れたら差し替え
+          analysisFetchTimerRef.current = setTimeout(() => {
+            ;(async () => {
+              // 古いリクエストの結果が刺さらないようにガード
+              if (analysisReqSeqRef.current !== seq) return
+              try {
+                const idToken = await getIdTokenForApi()
+                if (!idToken) return
+                // 再度チェック（非同期処理中にseqが変わった可能性）
+                if (analysisReqSeqRef.current !== seq) return
+                const res = await fetch(`/api/analysis-comment?pairId=${PAIR_ID_DEMO}&dateKey=${dateKeyForThisUpload}&role=${ROLE_PARENT}`, {
+                  headers: {
+                    Authorization: `Bearer ${idToken}`,
+                  },
+                })
+                // レスポンス取得後もチェック
+                if (analysisReqSeqRef.current !== seq) return
+                if (res.ok) {
+                  const data = await res.json()
+                  if (data.success && data.text) {
+                    // 最後のチェック
+                    if (analysisReqSeqRef.current === seq) {
+                      setAnalysisComment(data.text)
+                    }
+                  }
+                }
+              } catch (e) {
+                // エラーは無視（UIを止めない）
+              }
+            })()
+          }, 1200 + Math.random() * 300) // 1200-1500msの間でランダム
         } else {
           const reqId = result.requestId || 'REQ-XXXX'
           setErrorLine(`うまくいきませんでした。もう一度お試しください（ID: ${reqId}）`)
