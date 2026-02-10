@@ -16,6 +16,8 @@ export default function PairDailyPage() {
   const [oneLinerStage, setOneLinerStage] = useState(null)
   const [oneLinerVisible, setOneLinerVisible] = useState(false)
   const [dailyTopic, setDailyTopic] = useState(null)
+  const [analysisComment, setAnalysisComment] = useState('')
+  const [analysisVisible, setAnalysisVisible] = useState(false)
   const audioRef = useRef(null)
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
@@ -23,6 +25,7 @@ export default function PairDailyPage() {
   const recordStartRef = useRef(null)
   const oneLinerTimerRef = useRef(null)
   const topicRef = useRef(null)
+  const analysisTimerRef = useRef(null)
 
   const ROLE_PARENT = 'parent'
   const LISTEN_ROLE_CHILD = 'child'
@@ -108,6 +111,9 @@ export default function PairDailyPage() {
       if (oneLinerTimerRef.current) {
         clearTimeout(oneLinerTimerRef.current)
       }
+      if (analysisTimerRef.current) {
+        clearTimeout(analysisTimerRef.current)
+      }
     }
   }, [audioUrl])
 
@@ -116,9 +122,14 @@ export default function PairDailyPage() {
     setSentAt(null)
     // 録音開始時に一言を非表示
     setOneLinerVisible(false)
+    setAnalysisVisible(false)
     if (oneLinerTimerRef.current) {
       clearTimeout(oneLinerTimerRef.current)
       oneLinerTimerRef.current = null
+    }
+    if (analysisTimerRef.current) {
+      clearTimeout(analysisTimerRef.current)
+      analysisTimerRef.current = null
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -156,6 +167,11 @@ export default function PairDailyPage() {
             clearTimeout(oneLinerTimerRef.current)
             oneLinerTimerRef.current = null
           }
+          if (analysisTimerRef.current) {
+            clearTimeout(analysisTimerRef.current)
+            analysisTimerRef.current = null
+          }
+          setAnalysisVisible(false)
           // 送信成功時のtopicをrefに保持（競合対策）
           topicRef.current = dailyTopic
           setSentAt(new Date())
@@ -185,6 +201,27 @@ export default function PairDailyPage() {
             setOneLinerStage('final')
             oneLinerTimerRef.current = null
           }, 300)
+          // さらに700ms後（送信成功から1000ms後）に解析コメントを表示
+          analysisTimerRef.current = setTimeout(() => {
+            const topic = topicRef.current
+            let comment = '今日の記録、ありがとうございます' // 汎用フォールバック
+            if (topic) {
+              if (topic.includes('何食べた')) {
+                comment = '食事の記録、ありがとうございます'
+              } else if (topic.includes('天気')) {
+                comment = '今日の空の様子、ありがとうございます'
+              } else if (topic.includes('一番楽しかった') || topic.includes('ハイライト')) {
+                comment = '今日のハイライト、ありがとうございます'
+              } else if (topic.includes('誰に会った')) {
+                comment = '今日の出会い、ありがとうございます'
+              } else if (topic.includes('気分') || topic.includes('色')) {
+                comment = '今日の気持ち、ありがとうございます'
+              }
+            }
+            setAnalysisComment(comment)
+            setAnalysisVisible(true)
+            analysisTimerRef.current = null
+          }, 1000)
         } else {
           const reqId = result.requestId || 'REQ-XXXX'
           setErrorLine(`うまくいきませんでした。もう一度お試しください（ID: ${reqId}）`)
@@ -343,6 +380,21 @@ export default function PairDailyPage() {
               lineHeight: 1.5,
             }}>
               {oneLiner}
+            </div>
+          )}
+
+          {analysisVisible && analysisComment && (
+            <div style={{
+              width: '100%',
+              maxWidth: 320,
+              marginTop: 8,
+              padding: '8px 12px',
+              fontSize: 12,
+              color: '#666',
+              textAlign: 'center',
+              lineHeight: 1.4,
+            }}>
+              {analysisComment}
             </div>
           )}
         </section>
