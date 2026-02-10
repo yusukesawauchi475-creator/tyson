@@ -440,6 +440,7 @@ export default function HomePage() {
               color: '#666',
               textAlign: 'center',
               lineHeight: 1.4,
+              whiteSpace: 'pre-line',
             }}>
               {analysisComment}
             </div>

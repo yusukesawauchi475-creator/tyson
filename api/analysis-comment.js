@@ -4,6 +4,7 @@ import {
   CODE_PARSE_ERROR,
   CODE_EMPTY,
 } from './lib/parseFirebaseServiceAccount.js';
+import { getAnalysisComment } from '../src/lib/uiCopy.js';
 
 let adminApp;
 let firestore;
@@ -115,21 +116,8 @@ async function handlePost(req, res) {
     const docPath = `pair_media/${pairId}/days/${dateKey}/analysis/${role}`;
     const docRef = firestore.doc(docPath);
 
-    // ルールベースの解析コメント（uiCopyより一段"解析っぽい"が安全な内容）
-    let text = '今日の記録、ありがとうございます';
-    if (topic) {
-      if (topic.includes('何食べた')) {
-        text = '食事の記録をありがとうございます。今日のメニュー、楽しそうですね。';
-      } else if (topic.includes('天気')) {
-        text = '今日の空の様子をありがとうございます。天気は気持ちに影響しますね。';
-      } else if (topic.includes('一番楽しかった') || topic.includes('ハイライト')) {
-        text = '今日のハイライトをありがとうございます。良い1日だったようですね。';
-      } else if (topic.includes('誰に会った')) {
-        text = '今日の出会いをありがとうございます。人とのつながりは大切ですね。';
-      } else if (topic.includes('気分') || topic.includes('色')) {
-        text = '今日の気持ちをありがとうございます。感情を言葉にするのは良いことですね。';
-      }
-    }
+    // ルールベースの解析コメント（最大2行・60文字程度、断定禁止、role別）
+    const text = getAnalysisComment(topic || null, role);
 
     const version = Date.now();
     await docRef.set({
