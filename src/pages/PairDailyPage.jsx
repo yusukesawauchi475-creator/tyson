@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { getDateKey, fetchAudioForPlayback, hasTodayAudio, uploadAudio, PAIR_ID_DEMO } from '../lib/pairDaily'
 import DailyPromptCard from '../components/DailyPromptCard'
 
@@ -15,15 +15,22 @@ export default function PairDailyPage() {
   const [oneLiner, setOneLiner] = useState('')
   const [oneLinerStage, setOneLinerStage] = useState(null)
   const [oneLinerVisible, setOneLinerVisible] = useState(false)
+  const [dailyTopic, setDailyTopic] = useState(null)
   const audioRef = useRef(null)
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
   const streamRef = useRef(null)
   const recordStartRef = useRef(null)
   const oneLinerTimerRef = useRef(null)
+  const topicRef = useRef(null)
 
   const ROLE_PARENT = 'parent'
   const LISTEN_ROLE_CHILD = 'child'
+
+  const handleTopicChange = useCallback((topic) => {
+    setDailyTopic(topic)
+    topicRef.current = topic
+  }, [])
 
   const refreshStatus = () => {
     setHasAudio(null)
@@ -149,15 +156,32 @@ export default function PairDailyPage() {
             clearTimeout(oneLinerTimerRef.current)
             oneLinerTimerRef.current = null
           }
+          // 送信成功時のtopicをrefに保持（競合対策）
+          topicRef.current = dailyTopic
           setSentAt(new Date())
           setErrorLine(null)
           // 一言表示開始（0-200msで即時表示）
           setOneLiner('録音ありがとうございます！送信できました。')
           setOneLinerStage('immediate')
           setOneLinerVisible(true)
-          // 300ms後に汎用テンプレに差し替え
+          // 300ms後にtopicに応じたテンプレに差し替え
           oneLinerTimerRef.current = setTimeout(() => {
-            setOneLiner('いいですね！今日のいちばんはどれでした？')
+            const topic = topicRef.current
+            let finalMessage = 'いいですね！今日のいちばんはどれでした？' // 汎用フォールバック
+            if (topic) {
+              if (topic.includes('何食べた')) {
+                finalMessage = 'いいですね！いちばんおいしかったのはどれでした？'
+              } else if (topic.includes('天気')) {
+                finalMessage = 'いいね！今日の空で印象に残ったのはどんな感じ？'
+              } else if (topic.includes('一番楽しかった') || topic.includes('ハイライト')) {
+                finalMessage = '最高。いちばん嬉しかったのはどれ？'
+              } else if (topic.includes('誰に会った')) {
+                finalMessage = 'いいね！その人と何話した？'
+              } else if (topic.includes('気分') || topic.includes('色')) {
+                finalMessage = 'いいね。今の気分、もう少し言葉にすると？'
+              }
+            }
+            setOneLiner(finalMessage)
             setOneLinerStage('final')
             oneLinerTimerRef.current = null
           }, 300)
@@ -302,7 +326,7 @@ export default function PairDailyPage() {
             </p>
           )}
 
-          <DailyPromptCard pairId={PAIR_ID_DEMO} role={ROLE_PARENT} />
+          <DailyPromptCard pairId={PAIR_ID_DEMO} role={ROLE_PARENT} onTopicChange={handleTopicChange} />
 
           {oneLinerVisible && oneLiner && (
             <div style={{

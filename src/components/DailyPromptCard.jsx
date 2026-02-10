@@ -53,7 +53,7 @@ function getSkipKey(pairId, role, dateKey) {
   return `dailyPrompt_skip_${pairId}_${role}_${dateKey}`
 }
 
-export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role }) {
+export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role, onTopicChange }) {
   const [topicIndex, setTopicIndex] = useState(0)
   const [isSkipped, setIsSkipped] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
@@ -79,11 +79,26 @@ export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role }) {
       const finalIndex = (baseIndex + offset) % TOPICS.length
       setTopicIndex(finalIndex)
       setIsVisible(true)
+      // 初期表示でtopic確定時にコールバック
+      if (onTopicChange) {
+        try {
+          onTopicChange(TOPICS[finalIndex] || null)
+        } catch (e) {
+          // コールバックエラーは無視
+        }
+      }
     } catch (e) {
       // エラー時は非表示（赤画面にしない）
       setIsVisible(false)
+      if (onTopicChange) {
+        try {
+          onTopicChange(null)
+        } catch (e) {
+          // コールバックエラーは無視
+        }
+      }
     }
-  }, [pairId, role])
+  }, [pairId, role, onTopicChange])
 
   const handleNextTopic = () => {
     try {
@@ -97,6 +112,14 @@ export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role }) {
       const baseIndex = simpleHash(seed) % TOPICS.length
       const finalIndex = (baseIndex + newOffset) % TOPICS.length
       setTopicIndex(finalIndex)
+      // 「別の話題」で変わった時にコールバック
+      if (onTopicChange) {
+        try {
+          onTopicChange(TOPICS[finalIndex] || null)
+        } catch (e) {
+          // コールバックエラーは無視
+        }
+      }
     } catch (e) {
       // エラー時は何もしない
     }
@@ -109,6 +132,14 @@ export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role }) {
       localStorage.setItem(skipKey, 'true')
       setIsSkipped(true)
       setIsVisible(false)
+      // スキップ時にnullをコールバック
+      if (onTopicChange) {
+        try {
+          onTopicChange(null)
+        } catch (e) {
+          // コールバックエラーは無視
+        }
+      }
     } catch (e) {
       // エラー時は何もしない
     }
