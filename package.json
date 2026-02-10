@@ -23,7 +23,8 @@
     "verify:admin": "node scripts/verify-admin.js",
     "verify:audio": "node scripts/verify-audio-bulletproof.js",
     "verify:date": "node scripts/verify-date-display.js",
-    "kill-orange": "node scripts/kill-orange.js"
+    "kill-orange": "node scripts/kill-orange.js",
+    "smoke:uiCopy": "node scripts/smoke_uiCopy.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
