@@ -74,9 +74,9 @@ export function getAnalysisPlaceholder(topic, role) {
 export function getAnalysisComment(topic, role, durationSec = null) {
   const thanks = role === 'parent' ? 'ありがとうございます' : 'ありがとう'
   
-  // 2行目：durationSecが有効なら「XX秒、残せました。」、無効なら「残せました。」
-  const secondLine = (typeof durationSec === 'number' && durationSec >= 1 && durationSec <= 6000)
-    ? `${durationSec}秒、残せました。`
+  // 2行目：durationSecが有効なら「XX秒残せました。」、無効なら「残せました。」
+  const secondLine = (typeof durationSec === 'number' && durationSec >= 5 && durationSec <= 6000)
+    ? `${durationSec}秒残せました。`
     : '残せました。'
   
   // 汎用フォールバック（topicがnullの場合）

@@ -195,7 +195,7 @@ export default function PairDailyPage() {
           }
           setAnalysisVisible(false)
           // 送信成功時のtopicをrefに保持（競合対策）
-          topicRef.current = dailyTopic
+          if (dailyTopic) topicRef.current = dailyTopic
           // dateKeyを固定（このupload用に1回だけ作る）
           const dateKeyForThisUpload = result?.dateKey || getDateKey()
           // リクエストシーケンス番号をインクリメント
