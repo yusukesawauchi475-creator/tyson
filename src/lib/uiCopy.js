@@ -30,7 +30,9 @@ export function getFinalOneLiner(topic, role) {
     return 'いいね。今の気分、もう少し言葉にすると？'
   }
 
-  return 'いいですね！今日のいちばんはどれでした？'
+  // topicがあるのに既存ifに当たらなかった場合、topicを埋め込む
+  const clean = String(topic).replace(/[？?]\s*$/, '').trim()
+  return `いいですね！「${clean}」で印象に残ったのは？`
 }
 
 /**
