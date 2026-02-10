@@ -171,6 +171,11 @@ export default function PairDailyPage() {
           return
         }
 
+        // 録音秒数を算出（整数秒、1-6000の範囲）
+        const durationSec = recordStartRef.current
+          ? Math.max(1, Math.min(6000, Math.round((Date.now() - recordStartRef.current) / 1000)))
+          : null
+
         setIsUploading(true)
         const result = await uploadAudio(blob, ROLE_PARENT)
 
@@ -235,6 +240,7 @@ export default function PairDailyPage() {
                   dateKey: dateKeyForThisUpload,
                   role: ROLE_PARENT,
                   topic: topicRef.current,
+                  durationSec: durationSec,
                 }),
               })
             } catch (e) {

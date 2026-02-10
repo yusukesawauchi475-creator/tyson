@@ -85,6 +85,11 @@ export default function HomePage() {
           return
         }
 
+        // 録音秒数を算出（整数秒、1-6000の範囲）
+        const durationSec = recordStartRef.current
+          ? Math.max(1, Math.min(6000, Math.round((Date.now() - recordStartRef.current) / 1000)))
+          : null
+
         setIsUploading(true)
         const result = await uploadAudio(blob, ROLE_CHILD)
 
@@ -149,6 +154,7 @@ export default function HomePage() {
                   dateKey: dateKeyForThisUpload,
                   role: ROLE_CHILD,
                   topic: topicRef.current,
+                  durationSec: durationSec,
                 }),
               })
             } catch (e) {

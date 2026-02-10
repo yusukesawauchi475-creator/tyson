@@ -98,7 +98,7 @@ async function handlePost(req, res) {
       return res.status(200).json({ success: false, requestId: reqId, error: 'invalid_body' });
     }
 
-    const { pairId, dateKey, role, topic } = body;
+    const { pairId, dateKey, role, topic, durationSec } = body;
 
     if (!pairId || !dateKey || !role) {
       return res.status(200).json({ success: false, requestId: reqId, error: 'missing_params' });
@@ -117,13 +117,18 @@ async function handlePost(req, res) {
     const docRef = firestore.doc(docPath);
 
     // ルールベースの解析コメント（最大2行・60文字程度、断定禁止、role別）
-    const text = getAnalysisComment(topic || null, role);
+    // durationSecは1-6000の範囲のみ有効
+    const validDurationSec = (typeof durationSec === 'number' && durationSec >= 1 && durationSec <= 6000)
+      ? durationSec
+      : null;
+    const text = getAnalysisComment(topic || null, role, validDurationSec);
 
     const version = Date.now();
     await docRef.set({
       text,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       topic: topic || null,
+      durationSec: validDurationSec,
       version,
     }, { merge: true });
 
