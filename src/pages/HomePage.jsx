@@ -162,35 +162,112 @@ export default function HomePage() {
             }
           })()
 
-          // 1200-1500ms後にGETして、取れたら差し替え
+          // 非同期でAI解析を開始（fire-and-forget、awaitしない）
+          ;(async () => {
+            try {
+              const idToken = await getIdTokenForApi()
+              if (!idToken) return
+              fetch('/api/analyze', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${idToken}`,
+                },
+                body: JSON.stringify({
+                  pairId: PAIR_ID_DEMO,
+                  dateKey: dateKeyForThisUpload,
+                  role: ROLE_CHILD,
+                }),
+              }).catch(() => {
+                // エラーは無視（UIを止めない）
+              })
+            } catch (e) {
+              // エラーは無視（UIを止めない）
+            }
+          })()
+
+          // 1200-1500ms後にGETして、取れたら差し替え（ポーリング開始）
           analysisFetchTimerRef.current = setTimeout(() => {
             ;(async () => {
               // 古いリクエストの結果が刺さらないようにガード
               if (analysisReqSeqRef.current !== seq) return
-              try {
-                const idToken = await getIdTokenForApi()
-                if (!idToken) return
-                // 再度チェック（非同期処理中にseqが変わった可能性）
-                if (analysisReqSeqRef.current !== seq) return
-                const res = await fetch(`/api/analysis-comment?pairId=${PAIR_ID_DEMO}&dateKey=${dateKeyForThisUpload}&role=${ROLE_CHILD}`, {
-                  headers: {
-                    Authorization: `Bearer ${idToken}`,
-                  },
-                })
-                // レスポンス取得後もチェック
-                if (analysisReqSeqRef.current !== seq) return
-                if (res.ok) {
-                  const data = await res.json()
-                  if (data.success && data.text) {
-                    // 最後のチェック
-                    if (analysisReqSeqRef.current === seq) {
-                      setAnalysisComment(data.text)
+              
+              const maxPollCount = 20
+              const pollInterval = 2000 // 2秒間隔
+              let pollCount = 0
+              
+              const pollAnalysis = async () => {
+                // seqガード（各ポーリング開始時）
+                if (analysisReqSeqRef.current !== seq) return false
+                
+                try {
+                  const idToken = await getIdTokenForApi()
+                  if (!idToken) return false
+                  
+                  // 再度チェック（非同期処理中にseqが変わった可能性）
+                  if (analysisReqSeqRef.current !== seq) return false
+                  
+                  const res = await fetch(`/api/analysis-comment?pairId=${PAIR_ID_DEMO}&dateKey=${dateKeyForThisUpload}&role=${ROLE_CHILD}`, {
+                    headers: {
+                      Authorization: `Bearer ${idToken}`,
+                    },
+                  })
+                  
+                  // レスポンス取得後もチェック
+                  if (analysisReqSeqRef.current !== seq) return false
+                  
+                  if (res.ok) {
+                    const data = await res.json()
+                    if (data.success) {
+                      // aiStatusがdoneならaiTextを表示して終了
+                      if (data.aiStatus === 'done' && data.aiText) {
+                        if (analysisReqSeqRef.current === seq) {
+                          setAnalysisComment(data.aiText)
+                        }
+                        return true // 完了
+                      }
+                      
+                      // aiStatusがerrorなら静かに終了（placeholderのまま）
+                      if (data.aiStatus === 'error') {
+                        return true // 終了（エラーでもUIは止めない）
+                      }
+                      
+                      // aiTextがあれば優先、なければtextを使用（初期表示用）
+                      const displayText = data.aiText || data.text
+                      if (displayText && pollCount === 0) {
+                        // 最初のポーリングで既存textがあれば表示
+                        if (analysisReqSeqRef.current === seq) {
+                          setAnalysisComment(displayText)
+                        }
+                      }
                     }
                   }
+                } catch (e) {
+                  // エラーは無視（UIを止めない）
                 }
-              } catch (e) {
-                // エラーは無視（UIを止めない）
+                
+                return false // 継続
               }
+              
+              // 最初のポーリング
+              const done = await pollAnalysis()
+              if (done) return
+              
+              // 最大回数までポーリング
+              const pollLoop = setInterval(async () => {
+                pollCount++
+                
+                if (analysisReqSeqRef.current !== seq) {
+                  clearInterval(pollLoop)
+                  return
+                }
+                
+                const done = await pollAnalysis()
+                if (done || pollCount >= maxPollCount) {
+                  clearInterval(pollLoop)
+                  // 最大回数に達しても静かに終了（placeholderのまま）
+                }
+              }, pollInterval)
             })()
           }, 1200 + Math.random() * 300) // 1200-1500msの間でランダム
         } else {

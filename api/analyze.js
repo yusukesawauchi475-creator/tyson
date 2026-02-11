@@ -1,11 +1,77 @@
 import OpenAI from 'openai';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { parseFirebaseServiceAccount } from './lib/parseFirebaseServiceAccount.js';
+import admin from 'firebase-admin';
 
 const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null;
 const gemini = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
 
 const EXPECTED_ENV_ANALYZE = ['FIREBASE_SERVICE_ACCOUNT', 'OPENAI_API_KEY', 'GEMINI_API_KEY', 'AI_PROVIDER'];
+
+let adminApp;
+let firestore;
+let storageBucket;
+let adminInitError = null;
+
+function initFirebaseAdmin() {
+  if (adminInitError) throw adminInitError;
+  if (adminApp) return;
+
+  if (admin.apps && admin.apps.length > 0) {
+    adminApp = admin.app();
+    firestore = admin.firestore();
+    storageBucket = admin.storage().bucket();
+    return;
+  }
+
+  try {
+    const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+    const parsedResult = parseFirebaseServiceAccount(raw);
+
+    if (!parsedResult.success) {
+      const e = parsedResult.error;
+      const broken = e.brokenFields ? ` [壊れている項目: ${e.brokenFields.join(', ')}]` : '';
+      const err = new Error(e.message + broken);
+      err.code = e.code;
+      err.vercelHint = e.vercelHint;
+      adminInitError = err;
+      throw err;
+    }
+
+    const parsed = parsedResult.data;
+    const projectId = parsed.project_id ?? process.env.VITE_FIREBASE_PROJECT_ID;
+    const envBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET || '';
+    const storageBucketName = envBucket || `${projectId}.firebasestorage.app`;
+
+    adminApp = admin.initializeApp({
+      credential: admin.credential.cert(parsed),
+      storageBucket: storageBucketName,
+    });
+
+    firestore = admin.firestore();
+    storageBucket = admin.storage().bucket();
+  } catch (e) {
+    adminInitError = e;
+    throw e;
+  }
+}
+
+/** Verify idToken. Returns { uid } or null. */
+async function verifyIdToken(idToken) {
+  try {
+    initFirebaseAdmin();
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    return { uid: decoded.uid };
+  } catch (e) {
+    return null;
+  }
+}
+
+/** MVP: pairId=demo は誰でもアクセス可。後でinvite token方式に戻す */
+function isPairAllowed(uid, pairId) {
+  if (pairId === 'demo') return true;
+  return true; // 暫定: 全許可
+}
 
 function toDetail(e) {
   return (e && e.stack) ? String(e.stack) : String(e);
@@ -202,28 +268,124 @@ export default async function handler(req, res) {
     });
   }
 
-  const { audioURL } = body;
-  if (!audioURL) {
-    return res.status(400).json({ error: 'audioURL is required' });
+  // 認証チェック
+  const authHeader = req.headers.authorization || '';
+  const idToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+  const authResult = await verifyIdToken(idToken);
+  
+  if (!authResult) {
+    return res.status(200).json({ success: false, error: 'auth_failed' });
   }
 
-  const downloadResult = await downloadAudioFromStorage(audioURL, undefined);
-  if (!downloadResult.ok) {
-    console.error('[/api/analyze] Storage download:', downloadResult.step, downloadResult.subStep, downloadResult.status, downloadResult.error);
-    const payload = {
-      success: false,
-      step: downloadResult.step,
-      subStep: downloadResult.subStep,
-      status: downloadResult.status,
-      error: downloadResult.error,
-      detail: downloadResult.detail,
-      expectedEnv: EXPECTED_ENV_ANALYZE,
-    };
-    if (downloadResult.hint) payload.hint = downloadResult.hint;
-    payload.userAction = '権限設定を確認してください。Firebase Storage の CORS 設定および Storage Rules を確認し、gsutil cors set cors.json gs://BUCKET を実行してください。';
-    return res.status(downloadResult.status === 403 ? 403 : 500).json(payload);
+  const { audioURL, pairId, dateKey, role } = body;
+
+  let audioBuffer;
+  let sourceVersion;
+
+  // 新方式: pairId/dateKey/role から音声を取得
+  if (pairId && dateKey && role) {
+    if (role !== 'parent' && role !== 'child') {
+      return res.status(200).json({ success: false, error: 'invalid_role' });
+    }
+
+    if (!isPairAllowed(authResult.uid, pairId)) {
+      return res.status(200).json({ success: false, error: 'pair_not_allowed' });
+    }
+
+    try {
+      initFirebaseAdmin();
+      
+      // Firestoreから音声パスを取得
+      const metaRef = firestore.collection('pair_media').doc(pairId).collection('days').doc(dateKey);
+      const metaSnap = await metaRef.get();
+      
+      if (!metaSnap.exists) {
+        return res.status(200).json({ success: false, error: 'no_audio_found' });
+      }
+
+      const meta = metaSnap.data();
+      const roleData = meta?.[role];
+      
+      if (!roleData || !roleData.audioPath) {
+        return res.status(200).json({ success: false, error: 'no_audio_for_role' });
+      }
+
+      const audioPath = roleData.audioPath;
+      sourceVersion = roleData.version || roleData.uploadedAt?.toMillis?.() || Date.now();
+
+      // 解析開始時にaiStatusを'running'に設定（sourceVersionガード付き）
+      const docPath = `pair_media/${pairId}/days/${dateKey}/analysis/${role}`;
+      const docRef = firestore.doc(docPath);
+      
+      // 既存のsourceVersionをチェック（古い解析が走っている可能性）
+      const currentDoc = await docRef.get();
+      const currentData = currentDoc.data();
+      const currentSourceVersion = currentData?.sourceVersion;
+      
+      // 既存のsourceVersionが現在のversionと異なる場合は、古い解析なので上書きしない
+      if (currentSourceVersion && currentSourceVersion !== sourceVersion) {
+        console.log('[OBSERVE] analyze: existing sourceVersion differs, skipping start', { currentSourceVersion, sourceVersion });
+        return res.status(200).json({ success: false, error: 'source_version_mismatch_on_start' });
+      }
+      
+      await docRef.set({
+        aiStatus: 'running',
+        startedAt: admin.firestore.FieldValue.serverTimestamp(),
+        aiUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        sourceVersion,
+      }, { merge: true });
+
+      // Storageからダウンロード
+      const fileRef = storageBucket.file(audioPath);
+      const [contents] = await fileRef.download();
+      audioBuffer = contents;
+
+      console.log('[OBSERVE] analyze: audio downloaded from Storage', { pairId, dateKey, role, audioPath, sourceVersion });
+    } catch (e) {
+      console.error('[/api/analyze] Storage download error:', e);
+      
+      // エラー状態をFirestoreに保存（sourceVersionは既に取得済み）
+      if (sourceVersion) {
+        try {
+          const docPath = `pair_media/${pairId}/days/${dateKey}/analysis/${role}`;
+          const docRef = firestore.doc(docPath);
+          await docRef.set({
+            aiStatus: 'error',
+            errorCode: 'storage_download_failed',
+            finishedAt: admin.firestore.FieldValue.serverTimestamp(),
+            aiUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            sourceVersion,
+          }, { merge: true });
+        } catch (writeErr) {
+          console.error('[/api/analyze] Firestore error write failed:', writeErr);
+        }
+      }
+      
+      return res.status(200).json({ success: false, error: 'storage_download_failed', detail: toDetail(e) });
+    }
+  } else if (audioURL) {
+    // 旧方式: audioURL から取得（後方互換性）
+    const downloadResult = await downloadAudioFromStorage(audioURL, undefined);
+    if (!downloadResult.ok) {
+      console.error('[/api/analyze] Storage download:', downloadResult.step, downloadResult.subStep, downloadResult.status, downloadResult.error);
+      const payload = {
+        success: false,
+        step: downloadResult.step,
+        subStep: downloadResult.subStep,
+        status: downloadResult.status,
+        error: downloadResult.error,
+        detail: downloadResult.detail,
+        expectedEnv: EXPECTED_ENV_ANALYZE,
+      };
+      if (downloadResult.hint) payload.hint = downloadResult.hint;
+      payload.userAction = '権限設定を確認してください。Firebase Storage の CORS 設定および Storage Rules を確認し、gsutil cors set cors.json gs://BUCKET を実行してください。';
+      return res.status(downloadResult.status === 403 ? 403 : 500).json(payload);
+    }
+    audioBuffer = downloadResult.buffer;
+    sourceVersion = Date.now();
+  } else {
+    return res.status(200).json({ success: false, error: 'audioURL or pairId/dateKey/role is required' });
   }
-  const audioBuffer = downloadResult.buffer;
 
   let transcription;
   try {
@@ -245,6 +407,36 @@ export default async function handler(req, res) {
     analysisResult = await analyzeWithLLM(transcription, provider);
   } catch (e) {
     console.error('[/api/analyze] LLM analyze:', e);
+    
+    // pairId/dateKey/role 方式の場合はエラー状態をFirestoreに保存
+    if (pairId && dateKey && role) {
+      try {
+        initFirebaseAdmin();
+        const docPath = `pair_media/${pairId}/days/${dateKey}/analysis/${role}`;
+        const docRef = firestore.doc(docPath);
+        
+        // 書き込み前にsourceVersionを再チェック（古い音声の結果を上書きしない）
+        const currentDoc = await docRef.get();
+        const currentData = currentDoc.data();
+        const currentSourceVersion = currentData?.sourceVersion;
+        
+        if (currentSourceVersion && currentSourceVersion !== sourceVersion) {
+          console.log('[OBSERVE] analyze: sourceVersion mismatch, skipping write', { currentSourceVersion, sourceVersion });
+          return res.status(200).json({ success: false, error: 'source_version_mismatch' });
+        }
+        
+        await docRef.set({
+          aiStatus: 'error',
+          errorCode: 'llm_analyze_failed',
+          finishedAt: admin.firestore.FieldValue.serverTimestamp(),
+          aiUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          sourceVersion,
+        }, { merge: true });
+      } catch (writeErr) {
+        console.error('[/api/analyze] Firestore error write failed:', writeErr);
+      }
+    }
+    
     return res.status(500).json({
       success: false,
       step: 'LLM analyze',
@@ -252,6 +444,49 @@ export default async function handler(req, res) {
       detail: toDetail(e),
       expectedEnv: EXPECTED_ENV_ANALYZE,
     });
+  }
+
+  // pairId/dateKey/role 方式の場合はFirestoreに保存
+  if (pairId && dateKey && role) {
+    try {
+      initFirebaseAdmin();
+      const docPath = `pair_media/${pairId}/days/${dateKey}/analysis/${role}`;
+      const docRef = firestore.doc(docPath);
+      
+      // 書き込み前にsourceVersionを再チェック（古い音声の結果を上書きしない）
+      const currentDoc = await docRef.get();
+      const currentData = currentDoc.data();
+      const currentSourceVersion = currentData?.sourceVersion;
+      
+      if (currentSourceVersion && currentSourceVersion !== sourceVersion) {
+        console.log('[OBSERVE] analyze: sourceVersion mismatch, skipping write', { currentSourceVersion, sourceVersion });
+        return res.status(200).json({ success: false, error: 'source_version_mismatch' });
+      }
+      
+      // aiTextを2行に整形（1行目=要約、2行目=秒数は既存のdurationSecから取得）
+      const existingDurationSec = currentData?.durationSec || null;
+      const durationLine = (existingDurationSec && existingDurationSec >= 5 && existingDurationSec <= 6000)
+        ? `${existingDurationSec}秒残せました。`
+        : '残せました。';
+      
+      // adviceを要約として使用（最大60文字程度）
+      const summary = analysisResult.advice ? analysisResult.advice.substring(0, 60) : '記録ありがとうございます。';
+      const aiText = `${summary}\n${durationLine}`;
+      
+      await docRef.set({
+        aiStatus: 'done',
+        aiText,
+        transcript: transcription.substring(0, 200), // 短く
+        finishedAt: admin.firestore.FieldValue.serverTimestamp(),
+        aiUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        sourceVersion,
+      }, { merge: true });
+      
+      console.log('[OBSERVE] analyze: saved to Firestore', { pairId, dateKey, role, sourceVersion });
+    } catch (writeErr) {
+      console.error('[/api/analyze] Firestore write failed:', writeErr);
+      // Firestore書き込み失敗でも解析結果は返す
+    }
   }
 
   return res.status(200).json({

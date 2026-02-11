@@ -182,9 +182,19 @@ async function handleGet(req, res) {
     }
 
     const data = docSnap.data();
-    console.log('[OBSERVE] analysis-comment GET success:', { reqId, pairId, dateKey, role, docPath, hasText: !!data?.text });
+    console.log('[OBSERVE] analysis-comment GET success:', { reqId, pairId, dateKey, role, docPath, hasText: !!data?.text, hasAiText: !!data?.aiText, aiStatus: data?.aiStatus });
 
-    return res.status(200).json({ success: true, requestId: reqId, text: data?.text || '' });
+    // aiTextがあれば優先、なければ既存のtextを返す
+    const displayText = data?.aiText || data?.text || '';
+    
+    return res.status(200).json({
+      success: true,
+      requestId: reqId,
+      text: displayText,
+      aiText: data?.aiText || null,
+      aiStatus: data?.aiStatus || null,
+      durationSec: data?.durationSec || null,
+    });
   } catch (e) {
     console.error('[OBSERVE] analysis-comment GET error:', e);
     return res.status(404).json({ success: false, requestId: reqId, error: 'server_error' });
