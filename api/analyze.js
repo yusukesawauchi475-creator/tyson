@@ -232,6 +232,8 @@ ${transcription}
 }
 
 export default async function handler(req, res) {
+  console.log('[analyze] BUILD_TAG', process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7), 'FIX2');
+  
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -347,24 +349,33 @@ export default async function handler(req, res) {
       
       console.log('[analyze] computedSourceVersion', { sourceVersion });
       
-      // 既存のsourceVersionが現在のversionと異なる場合は、古い解析なので上書きしない
-      // ただし、bodySourceVersionが来ている場合は、それを正として扱う（最短Fix）
+      // 既存のsourceVersionが現在のversionと異なる場合の処理
+      // bodySourceVersionが来ている場合は、それを正として扱い、sourceVersionを上書きして解析を続行
       if (currentSourceVersion && currentSourceVersion !== sourceVersion) {
-        // bodySourceVersionが来ている場合は、それを正として解析を開始できるようにする
         if (bodySourceVersion || version) {
-          console.log('[analyze] mismatch detected but bodySourceVersion provided, will update currentSourceVersion', { 
+          // bodyにversionが来ている場合は、mismatchを無視してsourceVersionを上書きして解析を続行
+          const newSourceVersion = bodySourceVersion || version;
+          console.log('[analyze] mismatch detected but bodySourceVersion provided, updating sourceVersion', { 
             currentSourceVersion, 
-            bodySourceVersion: bodySourceVersion || version,
-            action: 'will_update_and_continue'
+            newSourceVersion,
+            action: 'updating_and_continuing'
           });
-          // sourceVersionをbodySourceVersionに強制設定して自己修復（古い解析結果を上書きしないようにするため）
-          // 解析は続行する（sourceVersionは既にbodySourceVersionに設定済み）
+          
+          // sourceVersionを上書きして自己修復
+          await docRef.set({
+            sourceVersion: newSourceVersion,
+          }, { merge: true });
+          
+          // sourceVersionを更新
+          sourceVersion = newSourceVersion;
         } else {
+          // bodyにversionが無い場合のみ、mismatchエラーを返す
           console.log('[analyze] mismatch detected, no bodySourceVersion, skipping start', { currentSourceVersion, sourceVersion });
           return res.status(200).json({ success: false, error: 'source_version_mismatch_on_start' });
         }
       }
       
+      // aiStatusをrunningに設定（sourceVersionは既に正しい値に設定済み）
       await docRef.set({
         aiStatus: 'running',
         startedAt: admin.firestore.FieldValue.serverTimestamp(),
