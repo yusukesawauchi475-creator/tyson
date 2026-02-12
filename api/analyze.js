@@ -277,7 +277,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: false, error: 'auth_failed' });
   }
 
-  const { audioURL, pairId, dateKey, role } = body;
+  const { audioURL, pairId, dateKey, role, sourceVersion: bodySourceVersion, version } = body;
 
   let audioBuffer;
   let sourceVersion;
@@ -290,6 +290,11 @@ export default async function handler(req, res) {
 
     if (!isPairAllowed(authResult.uid, pairId)) {
       return res.status(200).json({ success: false, error: 'pair_not_allowed' });
+    }
+
+    // sourceVersionがbodyに含まれているかチェック
+    if (!bodySourceVersion && !version) {
+      return res.status(200).json({ success: false, error: 'missing_source_version' });
     }
 
     try {
@@ -311,7 +316,8 @@ export default async function handler(req, res) {
       }
 
       const audioPath = roleData.audioPath;
-      sourceVersion = roleData.version || roleData.uploadedAt?.toMillis?.() || Date.now();
+      // bodyから送られてきたsourceVersionを優先、なければFirestoreから取得
+      sourceVersion = bodySourceVersion || version || roleData.version || roleData.uploadedAt?.toMillis?.() || Date.now();
 
       // 解析開始時にaiStatusを'running'に設定（sourceVersionガード付き）
       const docPath = `pair_media/${pairId}/days/${dateKey}/analysis/${role}`;

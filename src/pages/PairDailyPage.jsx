@@ -253,6 +253,14 @@ export default function PairDailyPage() {
             try {
               const idToken = await getIdTokenForApi()
               if (!idToken) return
+              
+              // uploadAudioのレスポンスからversionを取得
+              const sourceVersion = result?.version
+              if (!sourceVersion) {
+                console.error('[PairDailyPage] uploadAudio result missing version, skipping analyze')
+                return
+              }
+              
               fetch('/api/analyze', {
                 method: 'POST',
                 headers: {
@@ -263,6 +271,8 @@ export default function PairDailyPage() {
                   pairId: PAIR_ID_DEMO,
                   dateKey: dateKeyForThisUpload,
                   role: ROLE_PARENT,
+                  sourceVersion,
+                  version: sourceVersion, // 互換性のため
                 }),
               }).catch(() => {
                 // エラーは無視（UIを止めない）
