@@ -171,11 +171,14 @@ async function handleGet(req, res) {
     const metaSnap = await metaRef.get();
     if (!metaSnap.exists) {
       console.log('[OBSERVE] handleGet: no doc exists:', { listenRole, pairId, dateKey, hasAudio: false });
-      return res.status(404).json({
-        success: false,
-        error: 'No media for this date',
-        requestId: reqId,
+      return res.status(200).json({
+        success: true,
         hasAudio: false,
+        url: null,
+        requestId: reqId,
+        pairId,
+        dateKey,
+        role: listenRole,
       });
     }
 
@@ -202,11 +205,14 @@ async function handleGet(req, res) {
         console.log('[OBSERVE] handleGet legacy meta used:', { listenRole, pairId, dateKey, resolvedAudioPath: roleData.audioPath });
       } else {
         console.log('[OBSERVE] handleGet: no audio for role:', { listenRole, pairId, dateKey, selectedKey, availableKeys, hasRoleData: !!roleData, hasAudio: false });
-        return res.status(404).json({
-          success: false,
-          error: 'No audio for this role and date',
-          requestId: reqId,
+        return res.status(200).json({
+          success: true,
           hasAudio: false,
+          url: null,
+          requestId: reqId,
+          pairId,
+          dateKey,
+          role: listenRole,
         });
       }
     }
