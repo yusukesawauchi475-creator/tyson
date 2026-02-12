@@ -316,9 +316,7 @@ export default async function handler(req, res) {
       }
 
       const audioPath = roleData.audioPath;
-      // bodyから送られてきたsourceVersionを優先、なければFirestoreから取得
-      sourceVersion = bodySourceVersion || version || roleData.version || roleData.uploadedAt?.toMillis?.() || Date.now();
-
+      
       // 解析開始時にaiStatusを'running'に設定（sourceVersionガード付き）
       const docPath = `pair_media/${pairId}/days/${dateKey}/analysis/${role}`;
       const docRef = firestore.doc(docPath);
@@ -328,10 +326,43 @@ export default async function handler(req, res) {
       const currentData = currentDoc.data();
       const currentSourceVersion = currentData?.sourceVersion;
       
+      // 原因特定用ログ
+      const storedVersion = roleData.version;
+      const storedUploadedAt = roleData.uploadedAt?.toMillis?.();
+      console.log('[analyze] ids', { pairId, dateKey, role });
+      console.log('[analyze] received', { bodySourceVersion, version });
+      console.log('[analyze] stored', { storedVersion, uploadedAt: storedUploadedAt });
+      console.log('[analyze] paths', { docPath, audioPath });
+      console.log('[analyze] current', { currentSourceVersion });
+      
+      // bodyから送られてきたsourceVersionを優先、なければFirestoreから取得
+      // bodySourceVersionが来ている場合は、それを正として扱う（最短Fix）
+      if (bodySourceVersion || version) {
+        sourceVersion = bodySourceVersion || version;
+        console.log('[analyze] using bodySourceVersion as sourceVersion', { sourceVersion });
+      } else {
+        sourceVersion = roleData.version || roleData.uploadedAt?.toMillis?.() || Date.now();
+        console.log('[analyze] using stored version as sourceVersion', { sourceVersion });
+      }
+      
+      console.log('[analyze] computedSourceVersion', { sourceVersion });
+      
       // 既存のsourceVersionが現在のversionと異なる場合は、古い解析なので上書きしない
+      // ただし、bodySourceVersionが来ている場合は、それを正として扱う（最短Fix）
       if (currentSourceVersion && currentSourceVersion !== sourceVersion) {
-        console.log('[OBSERVE] analyze: existing sourceVersion differs, skipping start', { currentSourceVersion, sourceVersion });
-        return res.status(200).json({ success: false, error: 'source_version_mismatch_on_start' });
+        // bodySourceVersionが来ている場合は、それを正として解析を開始できるようにする
+        if (bodySourceVersion || version) {
+          console.log('[analyze] mismatch detected but bodySourceVersion provided, will update currentSourceVersion', { 
+            currentSourceVersion, 
+            bodySourceVersion: bodySourceVersion || version,
+            action: 'will_update_and_continue'
+          });
+          // sourceVersionをbodySourceVersionに強制設定して自己修復（古い解析結果を上書きしないようにするため）
+          // 解析は続行する（sourceVersionは既にbodySourceVersionに設定済み）
+        } else {
+          console.log('[analyze] mismatch detected, no bodySourceVersion, skipping start', { currentSourceVersion, sourceVersion });
+          return res.status(200).json({ success: false, error: 'source_version_mismatch_on_start' });
+        }
       }
       
       await docRef.set({
