@@ -189,11 +189,13 @@ async function handleGet(req, res) {
     // 新スキーマ優先: meta[listenRole] を取得
     let roleData = meta?.[listenRole];
     let isLegacy = false;
-    
-    // 旧スキーマフォールバック: 新スキーマが無く、meta.audioPath があれば旧スキーマとして扱う
+    let objectPath = listenRole; // Firestore key: parent | child | (legacy) audioPath
+
+    // 旧スキーマフォールバック: parent のみ許す。child には絶対に旧 audioPath(直下) を返さない
     if (!roleData || !roleData.audioPath) {
-      if (meta?.audioPath) {
+      if (listenRole === 'parent' && meta?.audioPath) {
         isLegacy = true;
+        objectPath = 'audioPath';
         roleData = {
           audioPath: meta.audioPath,
           mimeType: meta.mimeType,
@@ -202,7 +204,7 @@ async function handleGet(req, res) {
           uploadedBy: meta.uploadedBy,
           version: meta.uploadedAt?.toMillis?.() || Date.now(),
         };
-        console.log('[OBSERVE] handleGet legacy meta used:', { listenRole, pairId, dateKey, resolvedAudioPath: roleData.audioPath });
+        console.log('[OBSERVE] handleGet:', { objectPath, resolvedAudioPath: roleData.audioPath, isLegacy });
       } else {
         console.log('[OBSERVE] handleGet: no audio for role:', { listenRole, pairId, dateKey, selectedKey, availableKeys, hasRoleData: !!roleData, hasAudio: false });
         return res.status(200).json({
@@ -218,8 +220,9 @@ async function handleGet(req, res) {
     }
 
     const audioPath = roleData.audioPath;
+    const resolvedAudioPath = audioPath;
     const version = roleData.version || roleData.uploadedAt?.toMillis?.() || Date.now();
-    console.log('[OBSERVE] handleGet: found audio:', { listenRole, pairId, dateKey, selectedKey, availableKeys, resolvedAudioPath: audioPath, resolvedVersion: version, isLegacy, hasAudio: true });
+    console.log('[OBSERVE] handleGet:', { objectPath, resolvedAudioPath, isLegacy });
 
     const fileRef = storageBucket.file(audioPath);
 
@@ -360,7 +363,7 @@ async function handlePost(req, res) {
         contentType: mimeType,
         resumable: false,
       });
-      console.log('[OBSERVE] handlePost firebase upload success:', { objectPath });
+      console.log('[OBSERVE] handlePost:', { objectPath, resolvedAudioPath: objectPath, isLegacy: false });
     } catch (uploadErr) {
       console.log('[OBSERVE] handlePost firebase upload failed:', {
         errorName: uploadErr?.name,
@@ -385,10 +388,7 @@ async function handlePost(req, res) {
         [role]: roleData,
         latestUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
       }, { merge: true });
-      const docAfter = await metaRef.get();
-      const docData = docAfter.data() || {};
-      const writeKeys = Object.keys(docData).filter(k => k !== 'latestUpdatedAt');
-      console.log('[OBSERVE] handlePost firestore write success:', { role, pairId, dateKey, objectPath, version, firestoreDocPath: `pair_media/${pairId}/days/${dateKey}`, writeKeys });
+      console.log('[OBSERVE] handlePost firestore write success:', { objectPath, resolvedAudioPath: objectPath, isLegacy: false });
     } catch (firestoreErr) {
       console.log('[OBSERVE] handlePost firestore write failed:', {
         errorName: firestoreErr?.name,

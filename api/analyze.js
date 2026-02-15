@@ -369,9 +369,12 @@ export default async function handler(req, res) {
           // sourceVersionを更新
           sourceVersion = newSourceVersion;
         } else {
-          // bodyにversionが無い場合のみ、mismatchエラーを返す
-          console.log('[analyze] mismatch detected, no bodySourceVersion, skipping start', { currentSourceVersion, sourceVersion });
-          return res.status(200).json({ success: false, error: 'source_version_mismatch_on_start' });
+          // bodyにversionが無い場合のみ、mismatchでスキップ（500にしない）
+          const reqId = 'REQ-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+          const clientVersion = sourceVersion; // 今回リクエスト側で使うversion
+          const serverVersion = currentSourceVersion; // 既存analysis docのversion
+          console.log('[OBSERVE] handleAnalyze:', { requestId: reqId, pairId, dateKey, role, clientVersion, serverVersion, action: 'skip_mismatch' });
+          return res.status(200).json({ success: true, skipped: true, reason: 'source_version_mismatch_on_start', requestId: reqId });
         }
       }
       
@@ -517,13 +520,29 @@ export default async function handler(req, res) {
         ? `${existingDurationSec}秒残せました。`
         : '残せました。';
       
+      // adviceを整形（改行正規化、連続改行の制限、重複助詞の除去、trim）
+      let cleanedAdvice = analysisResult.advice || '';
+      if (cleanedAdvice) {
+        // \r\n → \n に正規化
+        cleanedAdvice = cleanedAdvice.replace(/\r\n/g, '\n');
+        // 連続する改行を最大2つまでに潰す（\n\n\n... → \n\n）
+        cleanedAdvice = cleanedAdvice.replace(/\n{3,}/g, '\n\n');
+        // 「の\nの」のような重複助詞を除去（の\nの → の\n）
+        cleanedAdvice = cleanedAdvice.replace(/の\s*\n\s*の/g, 'の\n');
+        // 前後空白除去
+        cleanedAdvice = cleanedAdvice.trim();
+      }
+      
       // adviceを要約として使用（最大60文字程度）
-      const summary = analysisResult.advice ? analysisResult.advice.substring(0, 60) : '記録ありがとうございます。';
+      const summary = cleanedAdvice ? cleanedAdvice.substring(0, 60) : '記録ありがとうございます。';
       const aiText = `${summary}\n${durationLine}`;
       
       await docRef.set({
         aiStatus: 'done',
         aiText,
+        analysis: {
+          advice: cleanedAdvice, // 整形済みのadviceを保存
+        },
         transcript: transcription.substring(0, 200), // 短く
         finishedAt: admin.firestore.FieldValue.serverTimestamp(),
         aiUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
