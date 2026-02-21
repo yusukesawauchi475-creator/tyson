@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, PAIR_ID_DEMO, getDateKey, genRequestId } from '../lib/pairDaily'
+import { uploadJournalImage, fetchTodayJournalMeta } from '../lib/journal'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import DailyPromptCard from '../components/DailyPromptCard'
 import { getIdTokenForApi } from '../lib/firebase'
@@ -22,6 +23,10 @@ export default function HomePage() {
   const [analysisComment, setAnalysisComment] = useState('')
   const [analysisVisible, setAnalysisVisible] = useState(false)
   const [lastRequestId, setLastRequestId] = useState(null)
+  const [journalUploading, setJournalUploading] = useState(false)
+  const [journalRequestId, setJournalRequestId] = useState(null)
+  const [journalUploaded, setJournalUploaded] = useState(false)
+  const [journalDateKey, setJournalDateKey] = useState(null)
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
   const streamRef = useRef(null)
@@ -36,6 +41,8 @@ export default function HomePage() {
   const uploadingRef = useRef(false)
   const loadingParentRef = useRef(false)
   const playingParentRef = useRef(false)
+  const galleryInputRef = useRef(null)
+  const cameraInputRef = useRef(null)
   const { level, isSpeaking, start: startAudioLevel, stop: stopAudioLevel } = useAudioLevel()
 
   useEffect(() => {
@@ -44,8 +51,8 @@ export default function HomePage() {
     playingParentRef.current = isPlayingParent
   }, [isUploading, isLoadingParent, isPlayingParent])
 
-  const ROLE_CHILD = 'child'
-  const LISTEN_ROLE_PARENT = 'parent'
+  const ROLE_PARENT = 'parent'
+  const LISTEN_ROLE_CHILD = 'child'
 
   const handleTopicChange = useCallback((topic) => {
     setDailyTopic(topic)
@@ -111,7 +118,7 @@ export default function HomePage() {
         const durationSec = recordStartRef.current
           ? Math.max(1, Math.min(6000, Math.round((Date.now() - recordStartRef.current) / 1000)))
           : null
-        const result = await uploadAudio(blob, ROLE_CHILD, PAIR_ID_DEMO, getDateKey(), reqId)
+        const result = await uploadAudio(blob, ROLE_PARENT, PAIR_ID_DEMO, getDateKey(), reqId)
 
         if (result.success) {
           // 古いタイマーをクリア（連続録音対策）
@@ -144,7 +151,7 @@ export default function HomePage() {
           // 300ms後にtopicに応じたテンプレに差し替え
           oneLinerTimerRef.current = setTimeout(() => {
             const topic = topicRef.current
-            const finalMessage = getFinalOneLiner(topic, ROLE_CHILD)
+            const finalMessage = getFinalOneLiner(topic, ROLE_PARENT)
             setOneLiner(finalMessage)
             setOneLinerStage('final')
             oneLinerTimerRef.current = null
@@ -152,7 +159,7 @@ export default function HomePage() {
           // さらに700ms後（送信成功から1000ms後）に解析コメントを表示
           analysisTimerRef.current = setTimeout(() => {
             const topic = topicRef.current
-            const placeholder = getAnalysisPlaceholder(topic, ROLE_CHILD)
+            const placeholder = getAnalysisPlaceholder(topic, ROLE_PARENT)
             setAnalysisComment(placeholder)
             setAnalysisVisible(true)
             analysisTimerRef.current = null
@@ -172,7 +179,7 @@ export default function HomePage() {
                 body: JSON.stringify({
                   pairId: PAIR_ID_DEMO,
                   dateKey: dateKeyForThisUpload,
-                  role: ROLE_CHILD,
+                  role: ROLE_PARENT,
                   topic: topicRef.current,
                   durationSec: durationSec,
                 }),
@@ -204,7 +211,7 @@ export default function HomePage() {
                 body: JSON.stringify({
                   pairId: PAIR_ID_DEMO,
                   dateKey: dateKeyForThisUpload,
-                  role: ROLE_CHILD,
+                  role: ROLE_PARENT,
                   sourceVersion,
                   version: sourceVersion, // 互換性のため
                 }),
@@ -237,7 +244,7 @@ export default function HomePage() {
                   // 再度チェック（非同期処理中にseqが変わった可能性）
                   if (analysisReqSeqRef.current !== seq) return false
                   
-                  const res = await fetch(`/api/analysis-comment?pairId=${PAIR_ID_DEMO}&dateKey=${dateKeyForThisUpload}&role=${ROLE_CHILD}`, {
+                  const res = await fetch(`/api/analysis-comment?pairId=${PAIR_ID_DEMO}&dateKey=${dateKeyForThisUpload}&role=${ROLE_PARENT}`, {
                     headers: {
                       Authorization: `Bearer ${idToken}`,
                     },
@@ -332,6 +339,62 @@ export default function HomePage() {
     setIsRecording(false)
   }
 
+  const MAX_IMAGE_EDGE = 1600
+  const JPEG_QUALITY = 0.65
+
+  const resizeImageIfNeeded = (file) => {
+    return new Promise((resolve) => {
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        const w = img.naturalWidth || img.width
+        const h = img.naturalHeight || img.height
+        if (w <= MAX_IMAGE_EDGE && h <= MAX_IMAGE_EDGE) {
+          resolve(file)
+          return
+        }
+        const scale = Math.min(MAX_IMAGE_EDGE / w, MAX_IMAGE_EDGE / h)
+        const c = document.createElement('canvas')
+        c.width = Math.round(w * scale)
+        c.height = Math.round(h * scale)
+        const ctx = c.getContext('2d')
+        ctx.drawImage(img, 0, 0, c.width, c.height)
+        c.toBlob((blob) => {
+          if (!blob) { resolve(file); return }
+          resolve(new File([blob], file.name || 'page-01.jpg', { type: file.type || 'image/jpeg' }))
+        }, file.type || 'image/jpeg', JPEG_QUALITY)
+      }
+      img.onerror = () => {
+        URL.revokeObjectURL(url)
+        resolve(file)
+      }
+      img.src = url
+    })
+  }
+
+  const handleJournalFile = async (file) => {
+    if (!file || journalUploading) return
+    if (typeof file.type !== 'string' || !file.type.startsWith('image/')) {
+      setErrorLine('画像ファイルを選んでください')
+      return
+    }
+    setJournalUploading(true)
+    setErrorLine(null)
+    const reqId = genRequestId()
+    const toUpload = await resizeImageIfNeeded(file)
+    const result = await uploadJournalImage(toUpload, reqId, PAIR_ID_DEMO)
+    setJournalUploading(false)
+    if (result.success) {
+      setJournalRequestId(result.requestId)
+      setJournalUploaded(true)
+      if (result.dateKey) setJournalDateKey(result.dateKey)
+      setLastRequestId(result.requestId)
+    } else {
+      setErrorLine(result.error ? `ジャーナル: ${result.error}` : 'アップロードに失敗しました')
+    }
+  }
+
   const handleClick = () => {
     if (isUploading) return
     if (isRecording) stopRecording()
@@ -341,15 +404,22 @@ export default function HomePage() {
   const refreshParentStatus = () => {
     setHasParentAudio(null)
     setIsParentUnseen(false)
-    getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio, isUnseen }) => {
+    getListenRoleMeta(LISTEN_ROLE_CHILD).then(({ hasAudio, isUnseen }) => {
       setHasParentAudio(hasAudio)
       setIsParentUnseen(!!isUnseen)
     })
   }
 
   useEffect(() => {
+    fetchTodayJournalMeta(PAIR_ID_DEMO).then(({ hasImage, dateKey }) => {
+      setJournalUploaded(!!hasImage)
+      if (dateKey) setJournalDateKey(dateKey)
+    })
+  }, [])
+
+  useEffect(() => {
     let cancelled = false
-    getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio, isUnseen }) => {
+    getListenRoleMeta(LISTEN_ROLE_CHILD).then(({ hasAudio, isUnseen }) => {
       if (!cancelled) {
         setHasParentAudio(hasAudio)
         setIsParentUnseen(!!isUnseen)
@@ -363,7 +433,7 @@ export default function HomePage() {
     const tick = () => {
       if (document.visibilityState !== 'visible') return
       if (uploadingRef.current || loadingParentRef.current || playingParentRef.current) return
-      getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio, isUnseen }) => {
+      getListenRoleMeta(LISTEN_ROLE_CHILD).then(({ hasAudio, isUnseen }) => {
         setHasParentAudio(hasAudio)
         setIsParentUnseen(!!isUnseen)
       }).catch((e) => { if (import.meta.env.DEV) console.debug('[HomePage] poll', e?.message) })
@@ -407,7 +477,7 @@ export default function HomePage() {
     }
     setParentAudioUrl(null)
     
-    const result = await fetchAudioForPlayback(LISTEN_ROLE_PARENT)
+    const result = await fetchAudioForPlayback(LISTEN_ROLE_CHILD)
 
     if (result.error) {
       const reqId = result.requestId || 'REQ-XXXX'
@@ -432,7 +502,7 @@ export default function HomePage() {
         el.currentTime = 0
         await el.play()
         setIsPlayingParent(true)
-        markSeen(LISTEN_ROLE_PARENT).then(() => setIsParentUnseen(false))
+        markSeen(LISTEN_ROLE_CHILD).then(() => setIsParentUnseen(false))
       }
     } catch (_) {
       setErrorLine(`うまくいきませんでした。もう一度お試しください（ID: PLAY-ERR）`)
@@ -499,7 +569,7 @@ export default function HomePage() {
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
         <section style={{ width: '100%', maxWidth: 320 }}>
           <p style={{ fontSize: 14, color: '#666', margin: '0 0 8px', textAlign: 'center' }}>
-            相手（親）の音声
+            相手（子）の音声
           </p>
           {hasParentAudio === true ? (
             <>
@@ -616,7 +686,7 @@ export default function HomePage() {
             </p>
           )}
 
-          <DailyPromptCard pairId={PAIR_ID_DEMO} role={ROLE_CHILD} onTopicChange={handleTopicChange} />
+          <DailyPromptCard pairId={PAIR_ID_DEMO} role={ROLE_PARENT} onTopicChange={handleTopicChange} />
 
           {oneLinerVisible && oneLiner && (
             <div style={{
@@ -650,6 +720,96 @@ export default function HomePage() {
             }}>
               {analysisComment}
             </div>
+          )}
+        </section>
+
+        <section style={{ width: '100%', maxWidth: 320 }}>
+          <p style={{ fontSize: 14, color: '#666', margin: '0 0 8px', textAlign: 'center' }}>
+            ジャーナル写真をアップ
+          </p>
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="*/*"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) handleJournalFile(f)
+              e.target.value = ''
+            }}
+          />
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) handleJournalFile(f)
+              e.target.value = ''
+            }}
+          />
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              disabled={journalUploading}
+              onClick={() => {
+                if (galleryInputRef.current) {
+                  galleryInputRef.current.value = ''
+                  galleryInputRef.current.click()
+                }
+              }}
+              style={{
+                padding: '8px 14px',
+                fontSize: 14,
+                color: '#4a90d9',
+                background: '#fff',
+                border: '1px solid #4a90d9',
+                borderRadius: 8,
+                cursor: journalUploading ? 'not-allowed' : 'pointer',
+              }}
+            >
+              ギャラリーから選ぶ
+            </button>
+            <button
+              type="button"
+              disabled={journalUploading}
+              onClick={() => {
+                if (cameraInputRef.current) {
+                  cameraInputRef.current.value = ''
+                  cameraInputRef.current.click()
+                }
+              }}
+              style={{
+                padding: '8px 14px',
+                fontSize: 14,
+                color: '#4a90d9',
+                background: '#fff',
+                border: '1px solid #4a90d9',
+                borderRadius: 8,
+                cursor: journalUploading ? 'not-allowed' : 'pointer',
+              }}
+            >
+              カメラで撮る
+            </button>
+          </div>
+          {journalUploaded && (
+            <p style={{ fontSize: 13, color: '#2e7d32', margin: '0 0 4px' }}>
+              保存済み{journalDateKey ? `（${journalDateKey}）` : ''}
+            </p>
+          )}
+          {(journalRequestId || lastRequestId) && (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#666', marginTop: 4 }}>
+              REQ: {journalRequestId || lastRequestId}
+              <button
+                type="button"
+                onClick={() => navigator.clipboard?.writeText(journalRequestId || lastRequestId).then(() => {}).catch(() => {})}
+                style={{ padding: '2px 6px', fontSize: 11, cursor: 'pointer', border: '1px solid #ccc', borderRadius: 4, background: '#fff' }}
+              >
+                Copy
+              </button>
+            </span>
           )}
         </section>
 
