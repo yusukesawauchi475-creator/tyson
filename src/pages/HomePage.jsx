@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { uploadAudio, fetchAudioForPlayback, hasTodayAudio, PAIR_ID_DEMO, getDateKey } from '../lib/pairDaily'
+import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, PAIR_ID_DEMO, getDateKey, genRequestId } from '../lib/pairDaily'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import DailyPromptCard from '../components/DailyPromptCard'
 import { getIdTokenForApi } from '../lib/firebase'
+import { useAudioLevel } from '../lib/useAudioLevel'
 
 export default function HomePage() {
   const [isRecording, setIsRecording] = useState(false)
@@ -10,6 +11,7 @@ export default function HomePage() {
   const [sentAt, setSentAt] = useState(null)
   const [errorLine, setErrorLine] = useState(null)
   const [hasParentAudio, setHasParentAudio] = useState(null)
+  const [isParentUnseen, setIsParentUnseen] = useState(false)
   const [parentAudioUrl, setParentAudioUrl] = useState(null)
   const [isLoadingParent, setIsLoadingParent] = useState(false)
   const [isPlayingParent, setIsPlayingParent] = useState(false)
@@ -19,6 +21,7 @@ export default function HomePage() {
   const [dailyTopic, setDailyTopic] = useState(null)
   const [analysisComment, setAnalysisComment] = useState('')
   const [analysisVisible, setAnalysisVisible] = useState(false)
+  const [lastRequestId, setLastRequestId] = useState(null)
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
   const streamRef = useRef(null)
@@ -29,6 +32,17 @@ export default function HomePage() {
   const analysisTimerRef = useRef(null)
   const analysisFetchTimerRef = useRef(null)
   const analysisReqSeqRef = useRef(0)
+  const pollIntervalRef = useRef(null)
+  const uploadingRef = useRef(false)
+  const loadingParentRef = useRef(false)
+  const playingParentRef = useRef(false)
+  const { level, isSpeaking, start: startAudioLevel, stop: stopAudioLevel } = useAudioLevel()
+
+  useEffect(() => {
+    uploadingRef.current = isUploading
+    loadingParentRef.current = isLoadingParent
+    playingParentRef.current = isPlayingParent
+  }, [isUploading, isLoadingParent, isPlayingParent])
 
   const ROLE_CHILD = 'child'
   const LISTEN_ROLE_PARENT = 'parent'
@@ -39,6 +53,7 @@ export default function HomePage() {
   }, [])
 
   const startRecording = async () => {
+    if (isUploading) return
     setErrorLine(null)
     setSentAt(null)
     // 録音開始時に一言を非表示
@@ -62,6 +77,9 @@ export default function HomePage() {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       streamRef.current = stream
 
+      // 音量レベル監視を開始
+      startAudioLevel(stream)
+
       let mimeType = 'audio/webm'
       if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4'
       else if (MediaRecorder.isTypeSupported('audio/aac')) mimeType = 'audio/aac'
@@ -77,6 +95,8 @@ export default function HomePage() {
       recordStartRef.current = Date.now()
 
       mr.onstop = async () => {
+        // 音量レベル監視を停止
+        stopAudioLevel()
         const blob = new Blob(chunksRef.current, { type: mr.mimeType })
         const duration = recordStartRef.current ? (Date.now() - recordStartRef.current) / 1000 : 0
 
@@ -85,13 +105,13 @@ export default function HomePage() {
           return
         }
 
-        // 録音秒数を算出（整数秒、1-6000の範囲）
+        const reqId = genRequestId()
+        setLastRequestId(reqId)
+        setIsUploading(true)
         const durationSec = recordStartRef.current
           ? Math.max(1, Math.min(6000, Math.round((Date.now() - recordStartRef.current) / 1000)))
           : null
-
-        setIsUploading(true)
-        const result = await uploadAudio(blob, ROLE_CHILD)
+        const result = await uploadAudio(blob, ROLE_CHILD, PAIR_ID_DEMO, getDateKey(), reqId)
 
         if (result.success) {
           // 古いタイマーをクリア（連続録音対策）
@@ -289,6 +309,8 @@ export default function HomePage() {
 
         streamRef.current?.getTracks().forEach((t) => t.stop())
         streamRef.current = null
+        // 音量レベル監視を停止（念のため）
+        stopAudioLevel()
       }
 
       mr.start()
@@ -302,26 +324,70 @@ export default function HomePage() {
   const stopRecording = () => {
     if (!isRecording || isUploading) return
     const mr = mediaRecorderRef.current
-    if (mr?.state === 'recording') mr.stop()
+    if (mr?.state === 'recording') {
+      mr.stop()
+      // 音量レベル監視を停止
+      stopAudioLevel()
+    }
     setIsRecording(false)
   }
 
   const handleClick = () => {
+    if (isUploading) return
     if (isRecording) stopRecording()
     else startRecording()
   }
 
   const refreshParentStatus = () => {
     setHasParentAudio(null)
-    hasTodayAudio(LISTEN_ROLE_PARENT).then(setHasParentAudio)
+    setIsParentUnseen(false)
+    getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio, isUnseen }) => {
+      setHasParentAudio(hasAudio)
+      setIsParentUnseen(!!isUnseen)
+    })
   }
 
   useEffect(() => {
     let cancelled = false
-    hasTodayAudio(LISTEN_ROLE_PARENT).then((v) => {
-      if (!cancelled) setHasParentAudio(v)
+    getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio, isUnseen }) => {
+      if (!cancelled) {
+        setHasParentAudio(hasAudio)
+        setIsParentUnseen(!!isUnseen)
+      }
     })
     return () => { cancelled = true }
+  }, [])
+
+  // 60秒ポーリング（visible時のみ、送信中/再生中はスキップ）
+  useEffect(() => {
+    const tick = () => {
+      if (document.visibilityState !== 'visible') return
+      if (uploadingRef.current || loadingParentRef.current || playingParentRef.current) return
+      getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio, isUnseen }) => {
+        setHasParentAudio(hasAudio)
+        setIsParentUnseen(!!isUnseen)
+      }).catch((e) => { if (import.meta.env.DEV) console.debug('[HomePage] poll', e?.message) })
+    }
+    const start = () => {
+      if (pollIntervalRef.current != null) return
+      pollIntervalRef.current = setInterval(tick, 60 * 1000)
+    }
+    const stop = () => {
+      if (pollIntervalRef.current != null) {
+        clearInterval(pollIntervalRef.current)
+        pollIntervalRef.current = null
+      }
+    }
+    if (document.visibilityState === 'visible') start()
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') start()
+      else stop()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      stop()
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
   }, [])
 
   const handlePlayParent = async () => {
@@ -329,8 +395,13 @@ export default function HomePage() {
 
     setIsLoadingParent(true)
     setErrorLine(null)
-    
-    // 古いObjectURLがあれば破棄（毎回最新を取得するため）
+
+    const el = parentAudioRef.current
+    if (el) {
+      el.pause()
+      el.src = ''
+      el.load()
+    }
     if (parentAudioUrl && parentAudioUrl.startsWith('blob:')) {
       URL.revokeObjectURL(parentAudioUrl)
     }
@@ -343,13 +414,11 @@ export default function HomePage() {
       setErrorLine(`うまくいきませんでした。もう一度お試しください（ID: ${reqId}）`)
       if (import.meta.env.DEV) console.error('[HomePage]', result.requestId, result.errorCode, result.error)
       setIsLoadingParent(false)
-      if (result.hasAudio === false) setHasParentAudio(false)
+      if (result.hasAudio === false) {
+        setHasParentAudio(false)
+        setIsParentUnseen(false)
+      }
       return
-    }
-
-    // 古いObjectURLがあれば破棄
-    if (parentAudioUrl && parentAudioUrl.startsWith('blob:')) {
-      URL.revokeObjectURL(parentAudioUrl)
     }
 
     setParentAudioUrl(result.url)
@@ -363,6 +432,7 @@ export default function HomePage() {
         el.currentTime = 0
         await el.play()
         setIsPlayingParent(true)
+        markSeen(LISTEN_ROLE_PARENT).then(() => setIsParentUnseen(false))
       }
     } catch (_) {
       setErrorLine(`うまくいきませんでした。もう一度お試しください（ID: PLAY-ERR）`)
@@ -403,7 +473,7 @@ export default function HomePage() {
       background: '#fff',
       color: '#333',
     }}>
-      <header style={{ flexShrink: 0, marginBottom: 24 }}>
+      <header style={{ flexShrink: 0, marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
         <time style={{ fontSize: 14, color: '#666' }}>
           {new Date().toLocaleDateString('ja-JP', {
             year: 'numeric',
@@ -412,6 +482,18 @@ export default function HomePage() {
             weekday: 'short',
           })}
         </time>
+        {lastRequestId && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#666' }}>
+            REQ: {lastRequestId}
+            <button
+              type="button"
+              onClick={() => navigator.clipboard?.writeText(lastRequestId).then(() => {}).catch(() => {})}
+              style={{ padding: '2px 6px', fontSize: 11, cursor: 'pointer', border: '1px solid #ccc', borderRadius: 4, background: '#fff' }}
+            >
+              Copy
+            </button>
+          </span>
+        )}
       </header>
 
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
@@ -423,6 +505,7 @@ export default function HomePage() {
             <>
               <p style={{ fontSize: 14, color: '#2e7d32', textAlign: 'center', margin: '0 0 8px', fontWeight: 500 }}>
                 届いています
+                {isParentUnseen && <span style={{ marginLeft: 4, color: '#f44336' }} title="未再生">●</span>}
               </p>
               <button
                 type="button"
@@ -496,6 +579,36 @@ export default function HomePage() {
           >
             {isUploading ? '送信中…' : isRecording ? '録音中…' : '録音'}
           </button>
+
+          {isRecording && isSpeaking && (
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: 4,
+              marginTop: 8,
+              height: 24,
+            }}>
+              {[0, 1, 2, 3, 4].map((i) => {
+                const jitter = (Math.random() - 0.5) * 0.1
+                const scale = Math.max(0.2, Math.min(1.0, level * 8 + jitter))
+                return (
+                  <span
+                    key={i}
+                    style={{
+                      width: 3,
+                      height: '100%',
+                      background: '#4a90d9',
+                      borderRadius: 2,
+                      transform: `scaleY(${scale})`,
+                      transformOrigin: 'center',
+                      transition: 'transform 0.1s ease-out',
+                    }}
+                  />
+                )
+              })}
+            </div>
+          )}
 
           {sentAt && (
             <p style={{ fontSize: 16, color: '#2e7d32', fontWeight: 500, margin: '8px 0 0', textAlign: 'center' }}>

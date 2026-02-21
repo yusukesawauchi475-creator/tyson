@@ -57,6 +57,32 @@ function genRequestId() {
   return 'REQ-' + Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
+/** NY時間（America/New_York）で YYYY-MM-DD。server側正規化用。 */
+function getDateKeyNY() {
+  const now = new Date();
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(now);
+
+    const get = (t) => parts.find((p) => p.type === t)?.value;
+    const y = get('year'), m = get('month'), d = get('day');
+    if (y && m && d) return `${y}-${m}-${d}`;
+  } catch {}
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/** OBSERVEログ1行JSON（秘密情報は含めない） */
+function logObserve(obj) {
+  console.log('[OBSERVE]', JSON.stringify(obj));
+}
+
 /** Verify idToken. Returns { uid } or throws. */
 async function verifyIdToken(idToken) {
   initFirebaseAdmin();
@@ -118,26 +144,112 @@ async function parseMultipartFormData(req) {
   return { fields, file };
 }
 
+/** 未再生ならPush送信。child送信→親へ、parent送信→子へ。ベストエフォート。 */
+async function sendPushIfUnseen(reqId, pairId, role, dateKey) {
+  const recipientRole = role === 'child' ? 'parent' : 'child';
+  const devicesCollection = recipientRole === 'parent' ? 'parentDevices' : 'childDevices';
+
+  try {
+    initFirebaseAdmin();
+    const devicesRef = firestore.collection('pair_users').doc(pairId).collection(devicesCollection);
+    const devicesSnap = await devicesRef.get();
+    const tokens = [];
+    const docIds = [];
+    devicesSnap.docs.forEach((d) => {
+      const t = d.data()?.token;
+      if (t && typeof t === 'string') {
+        tokens.push(t);
+        docIds.push(d.id);
+      }
+    });
+    if (tokens.length === 0) {
+      logObserve({ requestId: reqId, stage: 'push_send', status: 'ok', pairId, role, dateKey, tokenCount: 0 });
+      return;
+    }
+
+    const metaRef = firestore.collection('pair_media').doc(pairId).collection('days').doc(dateKey);
+    const metaSnap = await metaRef.get();
+    if (!metaSnap.exists) return;
+    const roleData = metaSnap.data()?.[role];
+    if (!roleData?.audioPath) return;
+    const updatedAt = roleData.updatedAt?.toMillis?.() ?? roleData.version ?? 0;
+    const seenAt = roleData.seenAt?.toMillis?.() ?? null;
+    const isUnseen = seenAt == null || updatedAt > seenAt;
+    if (!isUnseen) {
+      logObserve({ requestId: reqId, stage: 'push_send', status: 'ok', pairId, role, dateKey, tokenCount: 0, note: 'already_seen' });
+      return;
+    }
+
+    const messaging = admin.messaging();
+    const multicast = {
+      tokens,
+      notification: {
+        title: 'Tyson',
+        body: '新しい音声が届きました',
+      },
+      data: { pairId, dateKey, role },
+    };
+    const result = await messaging.sendEachForMulticast(multicast);
+
+    let successCount = 0;
+    let errorCode = null;
+    for (let i = 0; i < result.responses.length; i++) {
+      const r = result.responses[i];
+      if (r.success) {
+        successCount++;
+      } else {
+        const code = r.error?.errorInfo?.code || r.error?.code || 'unknown';
+        errorCode = code;
+        const invalidCodes = ['messaging/invalid-registration-token', 'messaging/registration-token-not-registered', 'messaging/invalid-argument'];
+        if (invalidCodes.some((c) => String(code).includes(c))) {
+          try {
+            await devicesRef.doc(docIds[i]).delete();
+          } catch (_) {}
+        }
+      }
+    }
+    logObserve({
+      requestId: reqId,
+      stage: 'push_send',
+      status: result.successCount > 0 ? 'ok' : 'error',
+      pairId,
+      role,
+      dateKey,
+      tokenCount: tokens.length,
+      successCount,
+      errorCode: errorCode || undefined,
+    });
+  } catch (e) {
+    const code = e?.code || 'unknown';
+    const msg = (e?.message || String(e)).substring(0, 80);
+    logObserve({ requestId: reqId, stage: 'push_send', status: 'error', pairId, role, dateKey, tokenCount: 0, errorCode: code, errorMessage: msg });
+  }
+}
+
 /** GET: blob または signed URL */
 async function handleGet(req, res) {
-  const reqId = genRequestId();
+  const reqId = req.headers['x-request-id'] || genRequestId();
   const pairId = req.query?.pairId || req.query?.pair_id;
-  const dateKey = req.query?.dateKey || req.query?.date_key;
+  const clientDateKey = req.query?.dateKey || req.query?.date_key;
+  const serverDateKey = getDateKeyNY();
+  const dateKey = serverDateKey;
   const listenRole = req.query?.listenRole || req.query?.listen_role; // 'parent' | 'child'
-  const type = req.query?.type || 'audio';
   const mode = req.query?.mode || 'blob'; // 'blob' | 'signed'
 
-  console.log('[OBSERVE] handleGet entered:', { requestId: reqId, pairId, dateKey, listenRole, mode });
+  const firestoreDocPath = pairId && dateKey ? `pair_media/${pairId}/days/${dateKey}` : null;
+  const dateKeyNormalized = clientDateKey && clientDateKey !== serverDateKey;
 
-  if (!pairId || !dateKey) {
+  if (!pairId) {
+    logObserve({ requestId: reqId, stage: 'get_validate', status: 'error', pairId: null, role: listenRole, clientDateKey: clientDateKey || null, serverDateKey, storagePath: null, firestoreDocPath, httpStatus: 400, errorCode: 'missing_params', errorMessage: 'pairId required' });
     return res.status(400).json({
       success: false,
-      error: 'pairId and dateKey are required',
+      error: 'pairId is required',
       requestId: reqId,
     });
   }
 
   if (!listenRole || (listenRole !== 'parent' && listenRole !== 'child')) {
+    logObserve({ requestId: reqId, stage: 'get_validate', status: 'error', pairId, role: listenRole || null, clientDateKey, serverDateKey, storagePath: null, firestoreDocPath, httpStatus: 400, errorCode: 'invalid_role', errorMessage: 'listenRole must be parent or child' });
     return res.status(400).json({
       success: false,
       error: 'listenRole must be "parent" or "child"',
@@ -148,6 +260,7 @@ async function handleGet(req, res) {
   const authHeader = req.headers.authorization || '';
   const idToken = authHeader.replace(/^Bearer\s+/i, '').trim();
   if (!idToken) {
+    logObserve({ requestId: reqId, stage: 'get_auth', status: 'error', pairId, role: listenRole, clientDateKey, serverDateKey, storagePath: null, firestoreDocPath, httpStatus: 401, errorCode: 'unauthorized', errorMessage: 'idToken required' });
     return res.status(401).json({
       success: false,
       error: 'Authorization: Bearer <idToken> required',
@@ -170,7 +283,7 @@ async function handleGet(req, res) {
     const metaRef = firestore.collection('pair_media').doc(pairId).collection('days').doc(dateKey);
     const metaSnap = await metaRef.get();
     if (!metaSnap.exists) {
-      console.log('[OBSERVE] handleGet: no doc exists:', { listenRole, pairId, dateKey, hasAudio: false });
+      logObserve({ requestId: reqId, stage: 'get_fetch', status: 'ok', pairId, role: listenRole, clientDateKey, serverDateKey, ...(dateKeyNormalized ? { note: 'dateKey_normalized' } : {}), storagePath: null, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
       return res.status(200).json({
         success: true,
         hasAudio: false,
@@ -204,9 +317,9 @@ async function handleGet(req, res) {
           uploadedBy: meta.uploadedBy,
           version: meta.uploadedAt?.toMillis?.() || Date.now(),
         };
-        console.log('[OBSERVE] handleGet:', { objectPath, resolvedAudioPath: roleData.audioPath, isLegacy });
+        logObserve({ requestId: reqId, stage: 'get_resolve', status: 'ok', pairId, role: listenRole, clientDateKey, serverDateKey, ...(dateKeyNormalized ? { note: 'dateKey_normalized' } : {}), storagePath: roleData.audioPath, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
       } else {
-        console.log('[OBSERVE] handleGet: no audio for role:', { listenRole, pairId, dateKey, selectedKey, availableKeys, hasRoleData: !!roleData, hasAudio: false });
+        logObserve({ requestId: reqId, stage: 'get_resolve', status: 'ok', pairId, role: listenRole, clientDateKey, serverDateKey, ...(dateKeyNormalized ? { note: 'dateKey_normalized' } : {}), storagePath: null, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
         return res.status(200).json({
           success: true,
           hasAudio: false,
@@ -222,7 +335,7 @@ async function handleGet(req, res) {
     const audioPath = roleData.audioPath;
     const resolvedAudioPath = audioPath;
     const version = roleData.version || roleData.uploadedAt?.toMillis?.() || Date.now();
-    console.log('[OBSERVE] handleGet:', { objectPath, resolvedAudioPath, isLegacy });
+    logObserve({ requestId: reqId, stage: 'get_resolve', status: 'ok', pairId, role: listenRole, clientDateKey, serverDateKey, ...(dateKeyNormalized ? { note: 'dateKey_normalized' } : {}), storagePath: resolvedAudioPath, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
 
     const fileRef = storageBucket.file(audioPath);
 
@@ -231,11 +344,15 @@ async function handleGet(req, res) {
         action: 'read',
         expires: Date.now() + 60 * 60 * 1000,
       });
+      const updatedAt = roleData.updatedAt?.toMillis?.() ?? roleData.version ?? Date.now();
+      const seenAt = roleData.seenAt?.toMillis?.() ?? null;
       return res.status(200).json({
         success: true,
         mode: 'signed',
         url: signedUrl,
         version,
+        updatedAt,
+        seenAt,
         audioPath,
         requestId: reqId,
         hasAudio: true,
@@ -244,14 +361,19 @@ async function handleGet(req, res) {
 
     const [contents] = await fileRef.download();
     const mimeType = roleData.mimeType || 'audio/mp4';
+    const updatedAt = roleData.updatedAt?.toMillis?.() ?? roleData.version ?? Date.now();
+    const seenAt = roleData.seenAt?.toMillis?.() ?? null;
     res.setHeader('Content-Type', mimeType);
     res.setHeader('Cache-Control', 'private, max-age=0, must-revalidate');
     res.setHeader('X-Audio-Version', String(version));
+    res.setHeader('X-Audio-UpdatedAt', String(updatedAt));
+    if (seenAt != null) res.setHeader('X-Audio-SeenAt', String(seenAt));
+    res.setHeader('X-Request-Id', reqId);
     return res.status(200).send(contents);
   } catch (e) {
     const code = e?.code || 'unknown';
-    console.error(`[pair-media GET] ${reqId} error:`, code, e?.message);
-    console.log('[OBSERVE] handleGet error:', { errorName: e?.name, errorCode: code, errorMessage: e?.message?.substring(0, 100) });
+    const msg = (e?.message || String(e)).substring(0, 100);
+    logObserve({ requestId: reqId, stage: 'get_download', status: 'error', pairId, role: listenRole, clientDateKey, serverDateKey, storagePath: null, firestoreDocPath, httpStatus: 500, errorCode: code, errorMessage: msg });
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch media',
@@ -263,13 +385,13 @@ async function handleGet(req, res) {
 
 /** POST: upload audio */
 async function handlePost(req, res) {
-  const reqId = genRequestId();
-  console.log('[OBSERVE] handlePost entered:', { requestId: reqId, method: req.method, url: req.url });
+  const reqId = req.headers['x-request-id'] || genRequestId();
+  const firestoreDocPath = null; // set after pairId/dateKey known
 
   const authHeader = req.headers.authorization || '';
   const idToken = authHeader.replace(/^Bearer\s+/i, '').trim();
-  console.log('[OBSERVE] handlePost auth check:', { authHeaderPresent: !!idToken });
   if (!idToken) {
+    logObserve({ requestId: reqId, stage: 'post_auth', status: 'error', pairId: null, role: null, dateKey: null, storagePath: null, firestoreDocPath: null, httpStatus: 401, errorCode: 'unauthorized', errorMessage: 'idToken required' });
     return res.status(401).json({
       success: false,
       error: 'Authorization: Bearer <idToken> required',
@@ -278,7 +400,6 @@ async function handlePost(req, res) {
   }
 
   const contentType = req.headers['content-type'] || '';
-  console.log('[OBSERVE] handlePost content-type:', { contentType: contentType.substring(0, 50) });
   if (!contentType.startsWith('multipart/form-data')) {
     return res.status(400).json({
       success: false,
@@ -289,24 +410,14 @@ async function handlePost(req, res) {
 
   try {
     const { uid } = await verifyIdToken(idToken);
-    console.log('[OBSERVE] handlePost multipart parse start');
     let fields, file;
     try {
       const parsed = await parseMultipartFormData(req);
       fields = parsed.fields;
       file = parsed.file;
-      console.log('[OBSERVE] handlePost multipart parsed:', {
-        success: true,
-        receivedFields: Object.keys(fields),
-        receivedRole: fields.role || 'missing',
-        receivedFileMeta: file ? { filename: file.filename, mimeType: file.mimeType, size: file.buffer?.length } : null,
-      });
     } catch (parseErr) {
-      console.log('[OBSERVE] handlePost multipart parse failed:', {
-        success: false,
-        errorName: parseErr?.name,
-        errorMessage: parseErr?.message?.substring(0, 100),
-      });
+      const msg = (parseErr?.message || String(parseErr)).substring(0, 100);
+      logObserve({ requestId: reqId, stage: 'post_parse', status: 'error', pairId: null, role: null, dateKey: null, storagePath: null, firestoreDocPath: null, httpStatus: 400, errorCode: 'parse_failed', errorMessage: msg });
       throw parseErr;
     }
 
@@ -320,12 +431,16 @@ async function handlePost(req, res) {
     }
 
     const pairId = fields.pairId || fields.pair_id || 'demo';
-    const dateKey = fields.dateKey || fields.date_key;
+    const clientDateKey = fields.dateKey || fields.date_key || null;
+    const serverDateKey = getDateKeyNY();
+    const dateKey = serverDateKey;
+    const dateKeyNormalized = clientDateKey && clientDateKey !== serverDateKey;
     const role = fields.role; // 'parent' | 'child' (必須)
-    
+    const docPath = `pair_media/${pairId}/days/${dateKey}`;
+
     // role を最初にチェック（必須化）
     if (!role || (role !== 'parent' && role !== 'child')) {
-      console.log('[OBSERVE] handlePost role validation failed:', { receivedRole: role || 'missing', receivedFields: Object.keys(fields) });
+      logObserve({ requestId: reqId, stage: 'post_validate', status: 'error', pairId, role: role || null, clientDateKey, serverDateKey, storagePath: null, firestoreDocPath: docPath, httpStatus: 400, errorCode: 'invalid_role', errorMessage: 'role must be parent or child' });
       return res.status(400).json({
         success: false,
         error: 'role must be "parent" or "child"',
@@ -333,14 +448,6 @@ async function handlePost(req, res) {
       });
     }
     
-    if (!dateKey) {
-      return res.status(400).json({
-        success: false,
-        error: 'dateKey is required',
-        requestId: reqId,
-      });
-    }
-
     if (!isPairAllowed(uid, pairId)) {
       return res.status(403).json({
         success: false,
@@ -355,46 +462,45 @@ async function handlePost(req, res) {
     const ext = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('m4a') ? 'm4a' : 'webm';
     const objectPath = `pair-media/${pairId}/${dateKey}/${role}/recording.${ext}`;
     const version = Date.now();
-
-    console.log('[OBSERVE] handlePost firebase upload start:', { role, pairId, dateKey, objectPath, version });
     try {
       const fileRef = storageBucket.file(objectPath);
       await fileRef.save(audioFile.buffer, {
         contentType: mimeType,
         resumable: false,
       });
-      console.log('[OBSERVE] handlePost:', { objectPath, resolvedAudioPath: objectPath, isLegacy: false });
+      logObserve({ requestId: reqId, stage: 'post_storage', status: 'ok', pairId, role, clientDateKey, serverDateKey, ...(dateKeyNormalized ? { note: 'dateKey_normalized' } : {}), storagePath: objectPath, firestoreDocPath: docPath, httpStatus: 200, errorCode: null, errorMessage: null });
     } catch (uploadErr) {
-      console.log('[OBSERVE] handlePost firebase upload failed:', {
-        errorName: uploadErr?.name,
-        errorCode: uploadErr?.code,
-        errorMessage: uploadErr?.message?.substring(0, 100),
-      });
+      const code = uploadErr?.code || 'unknown';
+      const msg = (uploadErr?.message || String(uploadErr)).substring(0, 100);
+      logObserve({ requestId: reqId, stage: 'post_storage', status: 'error', pairId, role, clientDateKey, serverDateKey, storagePath: objectPath, firestoreDocPath: docPath, httpStatus: 500, errorCode: code, errorMessage: msg });
       throw uploadErr;
     }
 
-    console.log('[OBSERVE] handlePost firestore write start');
     try {
       const metaRef = firestore.collection('pair_media').doc(pairId).collection('days').doc(dateKey);
+      const uploadedAtTs = admin.firestore.FieldValue.serverTimestamp();
       const roleData = {
         audioPath: objectPath,
+        storagePath: objectPath,
         mimeType,
         extension: ext,
-        uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
+        uploadedAt: uploadedAtTs,
+        updatedAt: uploadedAtTs,
         uploadedBy: uid,
         version,
+        uploadId: reqId,
+        role,
+        dateKey,
       };
       await metaRef.set({
         [role]: roleData,
         latestUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
       }, { merge: true });
-      console.log('[OBSERVE] handlePost firestore write success:', { objectPath, resolvedAudioPath: objectPath, isLegacy: false });
+      logObserve({ requestId: reqId, stage: 'post_firestore', status: 'ok', pairId, role, clientDateKey, serverDateKey, ...(dateKeyNormalized ? { note: 'dateKey_normalized' } : {}), storagePath: objectPath, firestoreDocPath: docPath, httpStatus: 200, errorCode: null, errorMessage: null });
     } catch (firestoreErr) {
-      console.log('[OBSERVE] handlePost firestore write failed:', {
-        errorName: firestoreErr?.name,
-        errorCode: firestoreErr?.code,
-        errorMessage: firestoreErr?.message?.substring(0, 100),
-      });
+      const code = firestoreErr?.code || 'unknown';
+      const msg = (firestoreErr?.message || String(firestoreErr)).substring(0, 100);
+      logObserve({ requestId: reqId, stage: 'post_firestore', status: 'error', pairId, role, clientDateKey, serverDateKey, storagePath: objectPath, firestoreDocPath: docPath, httpStatus: 500, errorCode: code, errorMessage: msg });
       throw firestoreErr;
     }
 
@@ -406,16 +512,16 @@ async function handlePost(req, res) {
       version,
       requestId: reqId,
     };
-    console.log('[OBSERVE] handlePost response:', { status: 200, role, version, responseKeys: Object.keys(responseJson) });
+    logObserve({ requestId: reqId, stage: 'post_done', status: 'ok', pairId, role, clientDateKey, serverDateKey, ...(dateKeyNormalized ? { note: 'dateKey_normalized' } : {}), storagePath: objectPath, firestoreDocPath: docPath, httpStatus: 200, errorCode: null, errorMessage: null });
+
+    // Push通知（ベストエフォート・POST成功に影響しない）
+    sendPushIfUnseen(reqId, pairId, role, dateKey).catch(() => {});
+
     return res.status(200).json(responseJson);
   } catch (e) {
     const code = e?.code || 'unknown';
-    console.error(`[pair-media POST] ${reqId} error:`, code, e?.message);
-    console.log('[OBSERVE] handlePost error summary:', {
-      errorName: e?.name,
-      errorCode: code,
-      errorMessage: e?.message?.substring(0, 100),
-    });
+    const msg = (e?.message || String(e)).substring(0, 100);
+    logObserve({ requestId: reqId, stage: 'post_error', status: 'error', pairId: null, role: null, dateKey: null, storagePath: null, firestoreDocPath: null, httpStatus: 500, errorCode: code, errorMessage: msg });
     return res.status(500).json({
       success: false,
       error: 'Upload failed',
@@ -425,18 +531,76 @@ async function handlePost(req, res) {
   }
 }
 
+/** PATCH: action=markSeen で seenAt を serverTimestamp に更新 */
+async function handlePatch(req, res) {
+  const reqId = req.headers['x-request-id'] || genRequestId();
+  const action = req.query?.action;
+  const pairId = req.query?.pairId || req.query?.pair_id;
+  const clientDateKey = req.query?.dateKey || req.query?.date_key;
+  const serverDateKey = getDateKeyNY();
+  const dateKey = serverDateKey;
+  const role = req.query?.listenRole || req.query?.listen_role || req.query?.role;
+  const firestoreDocPath = pairId && dateKey ? `pair_media/${pairId}/days/${dateKey}` : null;
+
+  if (action !== 'markSeen') {
+    return res.status(400).json({ success: false, error: 'action must be markSeen', requestId: reqId });
+  }
+  if (!pairId || !role || (role !== 'parent' && role !== 'child')) {
+    logObserve({ requestId: reqId, stage: 'mark_seen', status: 'error', pairId: pairId || null, role: role || null, dateKey, firestoreDocPath, httpStatus: 400, errorCode: 'invalid_params', errorMessage: 'pairId and role (parent|child) required' });
+    return res.status(400).json({ success: false, error: 'pairId and listenRole (parent|child) required', requestId: reqId });
+  }
+
+  const authHeader = req.headers.authorization || '';
+  const idToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+  if (!idToken) {
+    return res.status(401).json({ success: false, error: 'Authorization required', requestId: reqId });
+  }
+
+  try {
+    const { uid } = await verifyIdToken(idToken);
+    if (!isPairAllowed(uid, pairId)) {
+      return res.status(403).json({ success: false, error: 'Not a pair member', requestId: reqId });
+    }
+    initFirebaseAdmin();
+
+    const metaRef = firestore.collection('pair_media').doc(pairId).collection('days').doc(dateKey);
+    const metaSnap = await metaRef.get();
+    if (!metaSnap.exists) {
+      logObserve({ requestId: reqId, stage: 'mark_seen', status: 'ok', pairId, role, dateKey, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
+      return res.status(200).json({ success: true, requestId: reqId });
+    }
+    const roleData = metaSnap.data()?.[role];
+    if (!roleData?.audioPath) {
+      logObserve({ requestId: reqId, stage: 'mark_seen', status: 'ok', pairId, role, dateKey, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
+      return res.status(200).json({ success: true, requestId: reqId });
+    }
+
+    await metaRef.set({
+      [role]: { ...roleData, seenAt: admin.firestore.FieldValue.serverTimestamp() },
+      latestUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+    logObserve({ requestId: reqId, stage: 'mark_seen', status: 'ok', pairId, role, dateKey, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
+    return res.status(200).json({ success: true, requestId: reqId });
+  } catch (e) {
+    const code = e?.code || 'unknown';
+    const msg = (e?.message || String(e)).substring(0, 100);
+    logObserve({ requestId: reqId, stage: 'mark_seen', status: 'error', pairId, role, dateKey, firestoreDocPath, httpStatus: 500, errorCode: code, errorMessage: msg });
+    return res.status(500).json({ success: false, error: 'Failed to mark seen', requestId: reqId });
+  }
+}
+
 export default async function handler(req, res) {
-  const reqId = genRequestId();
-  console.log('[OBSERVE] pair-media handler called:', { requestId: reqId, method: req.method, url: req.url });
+  const reqId = req.headers['x-request-id'] || genRequestId();
   
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Request-Id');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   if (req.method === 'GET') return handleGet(req, res);
   if (req.method === 'POST') return handlePost(req, res);
+  if (req.method === 'PATCH') return handlePatch(req, res);
 
   return res.status(405).json({ success: false, error: 'Method not allowed' });
 }

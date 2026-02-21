@@ -1,7 +1,7 @@
 import { getIdTokenForApi } from './firebase.js';
 
-/** NY時間（America/New_York、DST対応）で YYYY-MM-DD を返す */
-export function getDateKey() {
+/** NY時間（America/New_York、DST対応）で YYYY-MM-DD を返す。単一ソース。 */
+export function getDateKeyNY() {
   const now = new Date();
   try {
     const parts = new Intl.DateTimeFormat('en-CA', {
@@ -15,15 +15,24 @@ export function getDateKey() {
     const y = get('year'), m = get('month'), d = get('day');
     if (y && m && d) return `${y}-${m}-${d}`;
   } catch {}
-  // フォールバック：端末ローカル日付（JST固定には戻さない）
   const y = now.getFullYear();
   const m = String(now.getMonth() + 1).padStart(2, '0');
   const d = String(now.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
 }
 
+/** getDateKeyNY のエイリアス（後方互換） */
+export const getDateKey = getDateKeyNY;
+
 /** MVP用固定 pairId。後で invite token 方式に戻す */
 export const PAIR_ID_DEMO = 'demo';
+
+/** requestId生成: REQ- + base36 timestamp + 乱数 */
+export function genRequestId() {
+  const ts = Date.now().toString(36).toUpperCase();
+  const rnd = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `REQ-${ts.slice(-6)}${rnd}`;
+}
 
 /**
  * FormData で audio を POST。戻り値 { success, requestId, error, errorCode, version }
@@ -31,46 +40,35 @@ export const PAIR_ID_DEMO = 'demo';
  * @param {string} role - 'parent' | 'child'
  * @param {string} pairId
  * @param {string} dateKey
+ * @param {string} [requestId] - 呼び出し側で生成したrequestId（省略時は内部生成）
  */
-export async function uploadAudio(blob, role, pairId = PAIR_ID_DEMO, dateKey = getDateKey()) {
-  console.log('[OBSERVE] uploadAudio called:', { role, pairId, dateKey });
+export async function uploadAudio(blob, role, pairId = PAIR_ID_DEMO, _dateKey, requestId = genRequestId()) {
+  const dateKey = getDateKeyNY();
   const idToken = await getIdTokenForApi();
   if (!idToken) {
-    console.log('[OBSERVE] uploadAudio: idToken missing');
-    return { success: false, error: '認証できません', requestId: 'NO-TOKEN', errorCode: 'auth' };
+    return { success: false, error: '認証できません', requestId: requestId || 'NO-TOKEN', errorCode: 'auth' };
   }
 
   if (!role || (role !== 'parent' && role !== 'child')) {
-    return { success: false, error: 'role must be "parent" or "child"', requestId: 'INVALID-ROLE', errorCode: 'invalid-role' };
+    return { success: false, error: 'role must be "parent" or "child"', requestId: requestId || 'INVALID-ROLE', errorCode: 'invalid-role' };
   }
-
-  const reqId = 'REQ-' + Math.random().toString(36).slice(2, 8).toUpperCase();
   const form = new FormData();
   form.append('audio', blob, `recording.${blob.type?.includes('mp4') ? 'mp4' : blob.type?.includes('m4a') ? 'm4a' : 'webm'}`);
   form.append('pairId', pairId);
   form.append('dateKey', dateKey);
   form.append('role', role);
 
-  const formKeys = [];
-  for (const key of form.keys()) formKeys.push(key);
-
-  console.log('[OBSERVE] uploadAudio fetch start:', {
-    url: '/api/pair-media',
-    method: 'POST',
-    authHeaderPresent: !!idToken,
-    bodyIsFormData: form instanceof FormData,
-    formKeys: formKeys,
-  });
-
   try {
     const res = await fetch('/api/pair-media', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${idToken}` },
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+        'X-Request-Id': requestId,
+      },
       body: form,
     });
     
     const responseText = await res.text();
-    const responseSnippet = responseText.length > 200 ? responseText.slice(0, 200) + '...' : responseText;
     const data = (() => {
       try {
         return JSON.parse(responseText);
@@ -79,29 +77,19 @@ export async function uploadAudio(blob, role, pairId = PAIR_ID_DEMO, dateKey = g
       }
     })();
 
-    console.log('[OBSERVE] uploadAudio fetch complete:', {
-      responseStatus: res.status,
-      responseOk: res.ok,
-      responseSnippet: responseSnippet.replace(/Bearer\s+[^\s"]+/gi, 'Bearer [MASKED]'),
-    });
-
     if (!res.ok) {
-      console.error(`[pair-media] ${reqId} error:`, data?.errorCode ?? res.status, data?.error);
       return {
         success: false,
-        requestId: data?.requestId || reqId,
+        requestId: data?.requestId || requestId,
         error: data?.error || `HTTP ${res.status}`,
         errorCode: data?.errorCode || String(res.status),
       };
     }
-    console.log('[OBSERVE] uploadAudio success:', { role, version: data?.version });
-    return { success: true, requestId: data?.requestId || reqId, version: data?.version };
+    return { success: true, requestId: data?.requestId || requestId, version: data?.version, dateKey: data?.dateKey ?? dateKey };
   } catch (e) {
-    console.error(`[pair-media] ${reqId} fetch failed:`, e?.message);
-    console.log('[OBSERVE] uploadAudio fetch exception:', { errorName: e?.name, errorMessage: e?.message });
     return {
       success: false,
-      requestId: reqId,
+      requestId: requestId,
       error: e?.message || 'ネットワークエラー',
       errorCode: 'network',
     };
@@ -115,24 +103,26 @@ export async function uploadAudio(blob, role, pairId = PAIR_ID_DEMO, dateKey = g
  * @param {string} pairId
  * @param {string} dateKey
  */
-export async function fetchAudioForPlayback(listenRole, pairId = PAIR_ID_DEMO, dateKey = getDateKey()) {
-  console.log('[OBSERVE] fetchAudioForPlayback called:', { listenRole, pairId, dateKey });
+export async function fetchAudioForPlayback(listenRole, pairId = PAIR_ID_DEMO, _dateKey, requestId = genRequestId()) {
+  const dateKey = getDateKeyNY();
   const idToken = await getIdTokenForApi();
   if (!idToken) {
-    return { error: '認証できません', requestId: 'NO-TOKEN', errorCode: 'auth', hasAudio: false };
+    return { error: '認証できません', requestId: requestId || 'NO-TOKEN', errorCode: 'auth', hasAudio: false };
   }
 
   if (!listenRole || (listenRole !== 'parent' && listenRole !== 'child')) {
-    return { error: 'listenRole must be "parent" or "child"', requestId: 'INVALID-ROLE', errorCode: 'invalid-role', hasAudio: false };
+    return { error: 'listenRole must be "parent" or "child"', requestId: requestId || 'INVALID-ROLE', errorCode: 'invalid-role', hasAudio: false };
   }
 
-  const reqId = 'REQ-' + Math.random().toString(36).slice(2, 8).toUpperCase();
   const cacheBuster = Date.now();
   const base = `/api/pair-media?pairId=${encodeURIComponent(pairId)}&dateKey=${encodeURIComponent(dateKey)}&type=audio&listenRole=${encodeURIComponent(listenRole)}&v=${cacheBuster}`;
 
   try {
     const resBlob = await fetch(base, {
-      headers: { Authorization: `Bearer ${idToken}` },
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+        'X-Request-Id': requestId,
+      },
       cache: 'no-store',
     });
 
@@ -141,7 +131,7 @@ export async function fetchAudioForPlayback(listenRole, pairId = PAIR_ID_DEMO, d
       const hasAudio = errData?.hasAudio === false ? false : null;
       return {
         error: errData?.error || `HTTP ${resBlob.status}`,
-        requestId: errData?.requestId || reqId,
+        requestId: errData?.requestId || requestId,
         errorCode: errData?.errorCode || String(resBlob.status),
         hasAudio,
       };
@@ -149,38 +139,37 @@ export async function fetchAudioForPlayback(listenRole, pairId = PAIR_ID_DEMO, d
 
     const blob = await resBlob.blob();
     if (!blob || blob.size < 10) {
-      return { error: '音声データが空です', requestId: reqId, errorCode: 'empty', hasAudio: false };
+      return { error: '音声データが空です', requestId: requestId, errorCode: 'empty', hasAudio: false };
     }
 
-    const version = resBlob.headers.get('X-Audio-Version') || Date.now();
+    const version = resBlob.headers.get('X-Audio-Version') || resBlob.headers.get('X-Audio-UpdatedAt') || Date.now();
     const objectUrl = URL.createObjectURL(blob);
-    console.log('[OBSERVE] fetchAudioForPlayback blob success:', { listenRole, pairId, dateKey, version, objectUrlCreated: true });
-    return { url: objectUrl, mode: 'blob', requestId: reqId, version, hasAudio: true };
+    return { url: objectUrl, mode: 'blob', requestId: resBlob.headers.get('X-Request-Id') || requestId, version, hasAudio: true };
   } catch (_) {
     try {
       const resSigned = await fetch(base + '&mode=signed', {
-        headers: { Authorization: `Bearer ${idToken}` },
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          'X-Request-Id': requestId,
+        },
         cache: 'no-store',
       });
       const data = await resSigned.json().catch(() => ({}));
       if (data?.url) {
-        const version = data?.version || Date.now();
-        // signed URLはHTTP URLなので、versionをqueryとして付与してもOK（キャッシュ回避）
+        const version = data?.version || data?.updatedAt || Date.now();
         const urlWithVersion = `${data.url}${data.url.includes('?') ? '&' : '?'}v=${version}`;
-        console.log('[OBSERVE] fetchAudioForPlayback signed success:', { listenRole, version, urlLength: urlWithVersion.length });
-        return { url: urlWithVersion, mode: 'signed', requestId: data?.requestId || reqId, version, hasAudio: true };
+        return { url: urlWithVersion, mode: 'signed', requestId: data?.requestId || requestId, version, hasAudio: true };
       }
       return {
         error: data?.error || '署名URLの取得に失敗しました',
-        requestId: data?.requestId || reqId,
+        requestId: data?.requestId || requestId,
         errorCode: data?.errorCode || 'signed-failed',
         hasAudio: data?.hasAudio === false ? false : null,
       };
     } catch (e2) {
-      console.error(`[pair-media] ${reqId} blob+signed both failed:`, e2?.message);
       return {
         error: e2?.message || '再生に失敗しました',
-        requestId: reqId,
+        requestId: requestId,
         errorCode: 'fallback-failed',
         hasAudio: false,
       };
@@ -188,9 +177,27 @@ export async function fetchAudioForPlayback(listenRole, pairId = PAIR_ID_DEMO, d
   }
 }
 
+/** action=markSeen で seenAt を更新。再生開始時に呼ぶ */
+export async function markSeen(listenRole, pairId = PAIR_ID_DEMO, _dateKey, requestId = genRequestId()) {
+  const dateKey = getDateKeyNY();
+  const idToken = await getIdTokenForApi();
+  if (!idToken) return { success: false, requestId };
+  if (!listenRole || (listenRole !== 'parent' && listenRole !== 'child')) return { success: false, requestId };
+  try {
+    const res = await fetch(
+      `/api/pair-media?action=markSeen&pairId=${encodeURIComponent(pairId)}&dateKey=${encodeURIComponent(dateKey)}&listenRole=${encodeURIComponent(listenRole)}`,
+      { method: 'PATCH', headers: { Authorization: `Bearer ${idToken}`, 'X-Request-Id': requestId }, cache: 'no-store' }
+    );
+    const data = await res.json().catch(() => ({}));
+    return { success: res.ok, requestId: data?.requestId ?? requestId };
+  } catch {
+    return { success: false, requestId };
+  }
+}
+
 /** 相手の音声が存在するか確認（軽量チェック） */
-export async function hasTodayAudio(listenRole, pairId = PAIR_ID_DEMO, dateKey = getDateKey()) {
-  console.log('[OBSERVE] hasTodayAudio called:', { listenRole, dateKey });
+export async function hasTodayAudio(listenRole, pairId = PAIR_ID_DEMO) {
+  const dateKey = getDateKeyNY();
   const idToken = await getIdTokenForApi();
   if (!idToken) return false;
   if (!listenRole || (listenRole !== 'parent' && listenRole !== 'child')) return false;
@@ -202,17 +209,39 @@ export async function hasTodayAudio(listenRole, pairId = PAIR_ID_DEMO, dateKey =
     );
     if (res.ok) {
       const d = await res.json().catch(() => ({}));
-      const hasAudio = !!d?.url;
-      console.log('[OBSERVE] hasTodayAudio result:', { listenRole, hasAudio });
-      return hasAudio;
+      return !!d?.url;
+    } else if (res.status === 404) {
+      // 404は「音声なし」として静かに扱う
+      return false;
     } else {
-      const d = await res.json().catch(() => ({}));
-      const hasAudio = d?.hasAudio === false ? false : null;
-      console.log('[OBSERVE] hasTodayAudio error:', { listenRole, status: res.status, hasAudio });
-      return hasAudio === false ? false : false; // エラー時はfalse扱い
+      // 401/500等は警告のみ
+      console.warn('[OBSERVE] hasTodayAudio error:', { listenRole, status: res.status });
+      return false;
     }
   } catch (_) {
-    console.log('[OBSERVE] hasTodayAudio exception:', { listenRole });
     return false;
+  }
+}
+
+/** hasAudio + isUnseen（未再生バッジ用）。updatedAt > seenAt または seenAt なしで未再生 */
+export async function getListenRoleMeta(listenRole, pairId = PAIR_ID_DEMO) {
+  const dateKey = getDateKeyNY();
+  const idToken = await getIdTokenForApi();
+  if (!idToken) return { hasAudio: false, isUnseen: false };
+  if (!listenRole || (listenRole !== 'parent' && listenRole !== 'child')) return { hasAudio: false, isUnseen: false };
+  try {
+    const res = await fetch(
+      `/api/pair-media?pairId=${encodeURIComponent(pairId)}&dateKey=${encodeURIComponent(dateKey)}&listenRole=${encodeURIComponent(listenRole)}&mode=signed&v=${Date.now()}`,
+      { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }
+    );
+    if (!res.ok) return { hasAudio: false, isUnseen: false };
+    const d = await res.json().catch(() => ({}));
+    const hasAudio = !!d?.url;
+    const updatedAt = d?.updatedAt ?? null;
+    const seenAt = d?.seenAt ?? null;
+    const isUnseen = hasAudio && (seenAt == null || (updatedAt != null && updatedAt > seenAt));
+    return { hasAudio, isUnseen };
+  } catch (_) {
+    return { hasAudio: false, isUnseen: false };
   }
 }

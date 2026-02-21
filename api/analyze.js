@@ -371,9 +371,7 @@ export default async function handler(req, res) {
         } else {
           // bodyにversionが無い場合のみ、mismatchでスキップ（500にしない）
           const reqId = 'REQ-' + Math.random().toString(36).slice(2, 8).toUpperCase();
-          const clientVersion = sourceVersion; // 今回リクエスト側で使うversion
-          const serverVersion = currentSourceVersion; // 既存analysis docのversion
-          console.log('[OBSERVE] handleAnalyze:', { requestId: reqId, pairId, dateKey, role, clientVersion, serverVersion, action: 'skip_mismatch' });
+          console.log('[OBSERVE]', JSON.stringify({ requestId: reqId, stage: 'analyze_mismatch', status: 'ok', note: 'skipped', pairId, role, dateKey }));
           return res.status(200).json({ success: true, skipped: true, reason: 'source_version_mismatch_on_start', requestId: reqId });
         }
       }

@@ -169,6 +169,23 @@ let pairMediaHandler = null;
   }
 })();
 
+// /api/journal（Journal MVP: 写真アップロード→保存）
+// 本番: Vercel では api/journal.js が直接 /api/journal として動作。以下はローカル用マウント。
+let journalHandler = null;
+(async () => {
+  try {
+    journalHandler = (await import('./api/journal.js')).default;
+    app.all('/api/journal', (req, res) => {
+      return journalHandler(req, res);
+    });
+  } catch (err) {
+    console.error('[OBSERVE] Failed to load journal handler:', err?.message);
+    app.all('/api/journal', (req, res) => {
+      res.status(500).json({ success: false, error: 'journal handler not loaded', requestId: 'LOAD-ERR' });
+    });
+  }
+})();
+
 // /api/analyze エンドポイント
 app.post('/api/analyze', async (req, res) => {
   try {

@@ -149,7 +149,8 @@ async function handleGet(req, res) {
   const reqId = genRequestId();
   const pairId = req.query?.pairId || req.query?.pair_id;
   const dateKey = req.query?.dateKey || req.query?.date_key;
-  const role = req.query?.role;
+  // role と listenRole の両方に対応（互換性）
+  const role = req.query?.role || req.query?.listenRole;
 
   try {
     if (!pairId || !dateKey || !role) {
@@ -187,11 +188,17 @@ async function handleGet(req, res) {
     // aiTextがあれば優先、なければ既存のtextを返す
     const displayText = data?.aiText || data?.text || '';
     
+    // aiTextを必ず返す（analysis.adviceがある場合はそれをaiTextとして使用）
+    let aiText = data?.aiText || null;
+    if (!aiText && data?.analysis?.advice) {
+      aiText = data.analysis.advice;
+    }
+    
     return res.status(200).json({
       success: true,
       requestId: reqId,
       text: displayText,
-      aiText: data?.aiText || null,
+      aiText: aiText || displayText || null,
       aiStatus: data?.aiStatus || null,
       durationSec: data?.durationSec || null,
     });
