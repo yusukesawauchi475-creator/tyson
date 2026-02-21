@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, PAIR_ID_DEMO, getDateKey, genRequestId } from '../lib/pairDaily'
+import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, getPairId, getDateKey, genRequestId } from '../lib/pairDaily'
 import { uploadJournalImage, fetchTodayJournalMeta } from '../lib/journal'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import DailyPromptCard from '../components/DailyPromptCard'
@@ -27,6 +27,8 @@ export default function HomePage() {
   const [journalRequestId, setJournalRequestId] = useState(null)
   const [journalUploaded, setJournalUploaded] = useState(false)
   const [journalDateKey, setJournalDateKey] = useState(null)
+  const [journalError, setJournalError] = useState(null)
+  const [showReloadButton, setShowReloadButton] = useState(false)
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
   const streamRef = useRef(null)
@@ -118,7 +120,7 @@ export default function HomePage() {
         const durationSec = recordStartRef.current
           ? Math.max(1, Math.min(6000, Math.round((Date.now() - recordStartRef.current) / 1000)))
           : null
-        const result = await uploadAudio(blob, ROLE_PARENT, PAIR_ID_DEMO, getDateKey(), reqId)
+        const result = await uploadAudio(blob, ROLE_PARENT, getPairId(), getDateKey(), reqId)
 
         if (result.success) {
           // 古いタイマーをクリア（連続録音対策）
@@ -177,7 +179,7 @@ export default function HomePage() {
                   Authorization: `Bearer ${idToken}`,
                 },
                 body: JSON.stringify({
-                  pairId: PAIR_ID_DEMO,
+                  pairId: getPairId(),
                   dateKey: dateKeyForThisUpload,
                   role: ROLE_PARENT,
                   topic: topicRef.current,
@@ -209,7 +211,7 @@ export default function HomePage() {
                   Authorization: `Bearer ${idToken}`,
                 },
                 body: JSON.stringify({
-                  pairId: PAIR_ID_DEMO,
+                  pairId: getPairId(),
                   dateKey: dateKeyForThisUpload,
                   role: ROLE_PARENT,
                   sourceVersion,
@@ -244,7 +246,7 @@ export default function HomePage() {
                   // 再度チェック（非同期処理中にseqが変わった可能性）
                   if (analysisReqSeqRef.current !== seq) return false
                   
-                  const res = await fetch(`/api/analysis-comment?pairId=${PAIR_ID_DEMO}&dateKey=${dateKeyForThisUpload}&role=${ROLE_PARENT}`, {
+                  const res = await fetch(`/api/analysis-comment?pairId=${getPairId()}&dateKey=${dateKeyForThisUpload}&role=${ROLE_PARENT}`, {
                     headers: {
                       Authorization: `Bearer ${idToken}`,
                     },
@@ -376,22 +378,27 @@ export default function HomePage() {
   const handleJournalFile = async (file) => {
     if (!file || journalUploading) return
     if (typeof file.type !== 'string' || !file.type.startsWith('image/')) {
-      setErrorLine('画像ファイルを選んでください')
+      setJournalError('画像ファイルを選んでください')
       return
     }
     setJournalUploading(true)
-    setErrorLine(null)
-    const reqId = genRequestId()
-    const toUpload = await resizeImageIfNeeded(file)
-    const result = await uploadJournalImage(toUpload, reqId, PAIR_ID_DEMO)
-    setJournalUploading(false)
-    if (result.success) {
-      setJournalRequestId(result.requestId)
-      setJournalUploaded(true)
-      if (result.dateKey) setJournalDateKey(result.dateKey)
-      setLastRequestId(result.requestId)
-    } else {
-      setErrorLine(result.error ? `ジャーナル: ${result.error}` : 'アップロードに失敗しました')
+    setJournalError(null)
+    try {
+      const reqId = genRequestId()
+      const toUpload = await resizeImageIfNeeded(file)
+      const result = await uploadJournalImage(toUpload, reqId, getPairId())
+      setJournalUploading(false)
+      if (result.success) {
+        setJournalRequestId(result.requestId)
+        setJournalUploaded(true)
+        if (result.dateKey) setJournalDateKey(result.dateKey)
+        setLastRequestId(result.requestId)
+      } else {
+        setJournalError(result.error || 'アップロードに失敗しました')
+      }
+    } catch (e) {
+      setJournalUploading(false)
+      setJournalError(e?.message || String(e))
     }
   }
 
@@ -411,20 +418,29 @@ export default function HomePage() {
   }
 
   useEffect(() => {
-    fetchTodayJournalMeta(PAIR_ID_DEMO).then(({ hasImage, dateKey }) => {
-      setJournalUploaded(!!hasImage)
-      if (dateKey) setJournalDateKey(dateKey)
-    })
+    fetchTodayJournalMeta(getPairId())
+      .then(({ hasImage, dateKey }) => {
+        setJournalUploaded(!!hasImage)
+        if (dateKey) setJournalDateKey(dateKey)
+      })
+      .catch((e) => setJournalError(e?.message || String(e)))
+  }, [])
+
+  useEffect(() => {
+    const t = setTimeout(() => setShowReloadButton(true), 10000)
+    return () => clearTimeout(t)
   }, [])
 
   useEffect(() => {
     let cancelled = false
-    getListenRoleMeta(LISTEN_ROLE_CHILD).then(({ hasAudio, isUnseen }) => {
-      if (!cancelled) {
-        setHasParentAudio(hasAudio)
-        setIsParentUnseen(!!isUnseen)
-      }
-    })
+    getListenRoleMeta(LISTEN_ROLE_CHILD)
+      .then(({ hasAudio, isUnseen }) => {
+        if (!cancelled) {
+          setHasParentAudio(hasAudio)
+          setIsParentUnseen(!!isUnseen)
+        }
+      })
+      .catch((e) => setJournalError('初期化: ' + (e?.message || String(e))))
     return () => { cancelled = true }
   }, [])
 
@@ -543,6 +559,9 @@ export default function HomePage() {
       background: '#fff',
       color: '#333',
     }}>
+      <div style={{ position: 'fixed', top: 6, right: 6, zIndex: 9999, fontSize: 10, color: '#999', background: 'rgba(255,255,255,0.8)', padding: '2px 4px', borderRadius: 4 }}>
+        Build: {import.meta.env.MODE === 'production' ? 'prod' : import.meta.env.MODE} {import.meta.env.VITE_BUILD_TIME || 'no_time'}
+      </div>
       <header style={{ flexShrink: 0, marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
         <time style={{ fontSize: 14, color: '#666' }}>
           {new Date().toLocaleDateString('ja-JP', {
@@ -552,6 +571,7 @@ export default function HomePage() {
             weekday: 'short',
           })}
         </time>
+        <span style={{ fontSize: 11, color: '#999' }}>pairId: {getPairId()}</span>
         {lastRequestId && (
           <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#666' }}>
             REQ: {lastRequestId}
@@ -602,9 +622,20 @@ export default function HomePage() {
               まだ届いていません
             </p>
           ) : (
-            <p style={{ fontSize: 14, color: '#888', textAlign: 'center', margin: '0 0 16px' }}>
-              確認中…
-            </p>
+            <>
+              <p style={{ fontSize: 14, color: '#888', textAlign: 'center', margin: '0 0 16px' }}>
+                確認中…
+              </p>
+              {showReloadButton && (
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  style={{ padding: '6px 12px', fontSize: 12, color: '#4a90d9', border: '1px solid #4a90d9', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
+                >
+                  再読み込み
+                </button>
+              )}
+            </>
           )}
           {hasParentAudio !== null && (
             <button
@@ -686,45 +717,7 @@ export default function HomePage() {
             </p>
           )}
 
-          <DailyPromptCard pairId={PAIR_ID_DEMO} role={ROLE_PARENT} onTopicChange={handleTopicChange} />
-
-          {oneLinerVisible && oneLiner && (
-            <div style={{
-              width: '100%',
-              maxWidth: 320,
-              marginTop: 16,
-              padding: '12px 16px',
-              background: '#e8f5e9',
-              border: '1px solid #c8e6c9',
-              borderRadius: 8,
-              fontSize: 14,
-              color: '#2e7d32',
-              textAlign: 'center',
-              lineHeight: 1.5,
-            }}>
-              {oneLiner}
-            </div>
-          )}
-
-          {analysisVisible && analysisComment && (
-            <div style={{
-              width: '100%',
-              maxWidth: 320,
-              marginTop: 8,
-              padding: '8px 12px',
-              fontSize: 12,
-              color: '#666',
-              textAlign: 'center',
-              lineHeight: 1.4,
-              whiteSpace: 'pre-line',
-            }}>
-              {analysisComment}
-            </div>
-          )}
-        </section>
-
-        <section style={{ width: '100%', maxWidth: 320 }}>
-          <p style={{ fontSize: 14, color: '#666', margin: '0 0 8px', textAlign: 'center' }}>
+          <p style={{ fontSize: 14, color: '#666', margin: '16px 0 8px', textAlign: 'center' }}>
             ジャーナル写真をアップ
           </p>
           <input
@@ -770,7 +763,7 @@ export default function HomePage() {
                 cursor: journalUploading ? 'not-allowed' : 'pointer',
               }}
             >
-              ギャラリーから選ぶ
+              Filesから選ぶ
             </button>
             <button
               type="button"
@@ -810,6 +803,45 @@ export default function HomePage() {
                 Copy
               </button>
             </span>
+          )}
+          {journalError && (
+            <p style={{ fontSize: 11, color: '#666', margin: '4px 0 0' }}>{journalError}</p>
+          )}
+
+          <DailyPromptCard pairId={getPairId()} role={ROLE_PARENT} onTopicChange={handleTopicChange} />
+
+          {oneLinerVisible && oneLiner && (
+            <div style={{
+              width: '100%',
+              maxWidth: 320,
+              marginTop: 16,
+              padding: '12px 16px',
+              background: '#e8f5e9',
+              border: '1px solid #c8e6c9',
+              borderRadius: 8,
+              fontSize: 14,
+              color: '#2e7d32',
+              textAlign: 'center',
+              lineHeight: 1.5,
+            }}>
+              {oneLiner}
+            </div>
+          )}
+
+          {analysisVisible && analysisComment && (
+            <div style={{
+              width: '100%',
+              maxWidth: 320,
+              marginTop: 8,
+              padding: '8px 12px',
+              fontSize: 12,
+              color: '#666',
+              textAlign: 'center',
+              lineHeight: 1.4,
+              whiteSpace: 'pre-line',
+            }}>
+              {analysisComment}
+            </div>
           )}
         </section>
 

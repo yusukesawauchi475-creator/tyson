@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { getDateKey, fetchAudioForPlayback, hasTodayAudio, getListenRoleMeta, markSeen, uploadAudio, PAIR_ID_DEMO, genRequestId } from '../lib/pairDaily'
-import { uploadJournalImage, fetchTodayJournalMeta } from '../lib/journal'
+import { getDateKey, fetchAudioForPlayback, hasTodayAudio, getListenRoleMeta, markSeen, uploadAudio, getPairId, genRequestId } from '../lib/pairDaily'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import DailyPromptCard from '../components/DailyPromptCard'
 import { getIdTokenForApi } from '../lib/firebase'
@@ -27,10 +26,7 @@ export default function PairDailyPage() {
   const [commentText, setCommentText] = useState('')
   const [commentStatus, setCommentStatus] = useState('idle')
   const [lastRequestId, setLastRequestId] = useState(null)
-  const [journalUploading, setJournalUploading] = useState(false)
-  const [journalRequestId, setJournalRequestId] = useState(null)
-  const [journalUploaded, setJournalUploaded] = useState(false)
-  const [journalDateKey, setJournalDateKey] = useState(null)
+  const [showReloadButton, setShowReloadButton] = useState(false)
   const audioRef = useRef(null)
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
@@ -43,8 +39,8 @@ export default function PairDailyPage() {
   const analysisReqSeqRef = useRef(0)
   const { level, isSpeaking, start: startAudioLevel, stop: stopAudioLevel } = useAudioLevel()
 
-  const ROLE_PARENT = 'parent'
-  const LISTEN_ROLE_CHILD = 'child'
+  const ROLE_CHILD = 'child'
+  const LISTEN_ROLE_PARENT = 'parent'
 
   const handleTopicChange = useCallback((topic) => {
     setDailyTopic(topic)
@@ -54,7 +50,7 @@ export default function PairDailyPage() {
   const refreshStatus = () => {
     setHasAudio(null)
     setIsChildUnseen(false)
-    getListenRoleMeta(LISTEN_ROLE_CHILD).then(({ hasAudio, isUnseen }) => {
+    getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio, isUnseen }) => {
       setHasAudio(hasAudio)
       setIsChildUnseen(!!isUnseen)
     })
@@ -67,7 +63,7 @@ export default function PairDailyPage() {
     setCommentStatus('loading')
     try {
       const currentDateKey = dateKey || getDateKey()
-      const res = await fetch(`/api/analysis-comment?pairId=${PAIR_ID_DEMO}&dateKey=${currentDateKey}&role=${ROLE_PARENT}`, {
+      const res = await fetch(`/api/analysis-comment?pairId=${getPairId()}&dateKey=${currentDateKey}&role=${ROLE_CHILD}`, {
         headers: {
           Authorization: `Bearer ${idToken}`,
         },
@@ -112,7 +108,7 @@ export default function PairDailyPage() {
     const currentDateKey = getDateKey()
     setDateKey(currentDateKey)
     let cancelled = false
-    getListenRoleMeta(LISTEN_ROLE_CHILD).then(({ hasAudio, isUnseen }) => {
+    getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio, isUnseen }) => {
       if (!cancelled) {
         setHasAudio(hasAudio)
         setIsChildUnseen(!!isUnseen)
@@ -122,15 +118,13 @@ export default function PairDailyPage() {
   }, [])
 
   useEffect(() => {
-    refreshComment()
-  }, [refreshComment])
+    const t = setTimeout(() => setShowReloadButton(true), 10000)
+    return () => clearTimeout(t)
+  }, [])
 
   useEffect(() => {
-    fetchTodayJournalMeta(PAIR_ID_DEMO).then(({ hasImage, dateKey }) => {
-      setJournalUploaded(!!hasImage)
-      if (dateKey) setJournalDateKey(dateKey)
-    })
-  }, [])
+    refreshComment()
+  }, [refreshComment])
 
   const handlePlay = async () => {
     if (hasAudio === false) return
@@ -149,7 +143,7 @@ export default function PairDailyPage() {
     }
     setAudioUrl(null)
     
-    const result = await fetchAudioForPlayback(LISTEN_ROLE_CHILD)
+    const result = await fetchAudioForPlayback(LISTEN_ROLE_PARENT)
 
     if (result.error) {
       const reqId = result.requestId || 'REQ-XXXX'
@@ -174,7 +168,7 @@ export default function PairDailyPage() {
         el.currentTime = 0
         await el.play()
         setIsPlaying(true)
-        markSeen(LISTEN_ROLE_CHILD).then(() => setIsChildUnseen(false))
+        markSeen(LISTEN_ROLE_PARENT).then(() => setIsChildUnseen(false))
       }
     } catch (_) {
       setErrorLine(`うまくいきませんでした。もう一度お試しください（ID: PLAY-ERR）`)
@@ -260,7 +254,7 @@ export default function PairDailyPage() {
         const durationSec = recordStartRef.current
           ? Math.max(1, Math.min(6000, Math.round((Date.now() - recordStartRef.current) / 1000)))
           : null
-        const result = await uploadAudio(blob, ROLE_PARENT, PAIR_ID_DEMO, getDateKey(), reqId)
+        const result = await uploadAudio(blob, ROLE_CHILD, getPairId(), getDateKey(), reqId)
 
         if (result.success) {
           // 古いタイマーをクリア（連続録音対策）
@@ -293,7 +287,7 @@ export default function PairDailyPage() {
           // 300ms後にtopicに応じたテンプレに差し替え
           oneLinerTimerRef.current = setTimeout(() => {
             const topic = topicRef.current
-            const finalMessage = getFinalOneLiner(topic, ROLE_PARENT)
+            const finalMessage = getFinalOneLiner(topic, ROLE_CHILD)
             setOneLiner(finalMessage)
             setOneLinerStage('final')
             oneLinerTimerRef.current = null
@@ -301,7 +295,7 @@ export default function PairDailyPage() {
           // さらに700ms後（送信成功から1000ms後）に解析コメントを表示
           analysisTimerRef.current = setTimeout(() => {
             const topic = topicRef.current
-            const placeholder = getAnalysisPlaceholder(topic, ROLE_PARENT)
+            const placeholder = getAnalysisPlaceholder(topic, ROLE_CHILD)
             setAnalysisComment(placeholder)
             setAnalysisVisible(true)
             analysisTimerRef.current = null
@@ -319,9 +313,9 @@ export default function PairDailyPage() {
                   Authorization: `Bearer ${idToken}`,
                 },
                 body: JSON.stringify({
-                  pairId: PAIR_ID_DEMO,
+                  pairId: getPairId(),
                   dateKey: dateKeyForThisUpload,
-                  role: ROLE_PARENT,
+                  role: ROLE_CHILD,
                   topic: topicRef.current,
                   durationSec: durationSec,
                 }),
@@ -351,9 +345,9 @@ export default function PairDailyPage() {
                   Authorization: `Bearer ${idToken}`,
                 },
                 body: JSON.stringify({
-                  pairId: PAIR_ID_DEMO,
+                  pairId: getPairId(),
                   dateKey: dateKeyForThisUpload,
-                  role: ROLE_PARENT,
+                  role: ROLE_CHILD,
                   sourceVersion,
                   version: sourceVersion, // 互換性のため
                 }),
@@ -389,7 +383,7 @@ export default function PairDailyPage() {
                   // 再度チェック（非同期処理中にseqが変わった可能性）
                   if (analysisReqSeqRef.current !== seq) return false
                   
-                  const res = await fetch(`/api/analysis-comment?pairId=${PAIR_ID_DEMO}&dateKey=${dateKeyForThisUpload}&role=${ROLE_PARENT}`, {
+                  const res = await fetch(`/api/analysis-comment?pairId=${getPairId()}&dateKey=${dateKeyForThisUpload}&role=${ROLE_CHILD}`, {
                     headers: {
                       Authorization: `Bearer ${idToken}`,
                     },
@@ -484,57 +478,6 @@ export default function PairDailyPage() {
     setIsRecording(false)
   }
 
-  const MAX_IMAGE_EDGE = 1600
-
-  const resizeImageIfNeeded = (file) => {
-    return new Promise((resolve) => {
-      const img = new Image()
-      const url = URL.createObjectURL(file)
-      img.onload = () => {
-        URL.revokeObjectURL(url)
-        const w = img.naturalWidth || img.width
-        const h = img.naturalHeight || img.height
-        if (w <= MAX_IMAGE_EDGE && h <= MAX_IMAGE_EDGE) {
-          resolve(file)
-          return
-        }
-        const scale = Math.min(MAX_IMAGE_EDGE / w, MAX_IMAGE_EDGE / h)
-        const c = document.createElement('canvas')
-        c.width = Math.round(w * scale)
-        c.height = Math.round(h * scale)
-        const ctx = c.getContext('2d')
-        ctx.drawImage(img, 0, 0, c.width, c.height)
-        c.toBlob((blob) => {
-          if (!blob) { resolve(file); return }
-          resolve(new File([blob], file.name || 'page-01.jpg', { type: file.type || 'image/jpeg' }))
-        }, file.type || 'image/jpeg', 0.9)
-      }
-      img.onerror = () => {
-        URL.revokeObjectURL(url)
-        resolve(file)
-      }
-      img.src = url
-    })
-  }
-
-  const handleJournalFile = async (file) => {
-    if (!file || journalUploading) return
-    setJournalUploading(true)
-    setErrorLine(null)
-    const reqId = genRequestId()
-    const toUpload = await resizeImageIfNeeded(file)
-    const result = await uploadJournalImage(toUpload, reqId, PAIR_ID_DEMO)
-    setJournalUploading(false)
-    if (result.success) {
-      setJournalRequestId(result.requestId)
-      setJournalUploaded(true)
-      if (result.dateKey) setJournalDateKey(result.dateKey)
-      setLastRequestId(result.requestId)
-    } else {
-      setErrorLine(result.error ? `ジャーナル: ${result.error}` : 'アップロードに失敗しました')
-    }
-  }
-
   const handleRecordClick = () => {
     if (isUploading) return
     if (isRecording) stopRecording()
@@ -555,6 +498,9 @@ export default function PairDailyPage() {
       background: '#fff',
       color: '#333',
     }}>
+      <div style={{ position: 'fixed', top: 6, right: 6, zIndex: 9999, fontSize: 10, color: '#999', background: 'rgba(255,255,255,0.8)', padding: '2px 4px', borderRadius: 4 }}>
+        Build: {import.meta.env.MODE === 'production' ? 'prod' : import.meta.env.MODE} {import.meta.env.VITE_BUILD_TIME || 'no_time'}
+      </div>
       <header style={{ flexShrink: 0, marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
         <div>
         <time style={{ fontSize: 14, color: '#666' }}>{today || '...'}</time>
@@ -562,6 +508,7 @@ export default function PairDailyPage() {
           {hasAudio === true ? '今日は声が届いています' : hasAudio === false ? 'まだです（今日はこれで大丈夫です）' : '確認中…'}
         </p>
         </div>
+        <span style={{ fontSize: 11, color: '#999' }}>pairId: {getPairId()}</span>
         {lastRequestId && (
           <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#666' }}>
             REQ: {lastRequestId}
@@ -579,7 +526,7 @@ export default function PairDailyPage() {
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
         <section style={{ width: '100%', maxWidth: 320 }}>
           <p style={{ fontSize: 14, color: '#666', margin: '0 0 8px', textAlign: 'center' }}>
-            相手（子）の音声
+            相手（親）の音声
           </p>
           {hasAudio === true ? (
             <>
@@ -612,9 +559,20 @@ export default function PairDailyPage() {
               まだ届いていません（今日はこれで大丈夫です）
             </p>
           ) : (
-            <p style={{ fontSize: 14, color: '#888', textAlign: 'center', margin: '0 0 16px' }}>
-              確認中…
-            </p>
+            <>
+              <p style={{ fontSize: 14, color: '#888', textAlign: 'center', margin: '0 0 16px' }}>
+                確認中…
+              </p>
+              {showReloadButton && (
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  style={{ padding: '6px 12px', fontSize: 12, color: '#4a90d9', border: '1px solid #4a90d9', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
+                >
+                  再読み込み
+                </button>
+              )}
+            </>
           )}
           {hasAudio !== null && (
             <button
@@ -633,44 +591,6 @@ export default function PairDailyPage() {
             >
               更新
             </button>
-          )}
-        </section>
-
-        <section style={{ width: '100%', maxWidth: 320 }}>
-          <p style={{ fontSize: 14, color: '#666', margin: '0 0 8px', textAlign: 'center' }}>
-            ジャーナル写真をアップ
-          </p>
-          <label style={{ display: 'block', marginBottom: 8 }}>
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              disabled={journalUploading}
-              style={{ fontSize: 14 }}
-              onChange={(e) => {
-                const f = e.target.files?.[0]
-                if (f) handleJournalFile(f)
-                e.target.value = ''
-              }}
-            />
-            <span style={{ marginLeft: 8, fontSize: 14, color: '#666' }}>{journalUploading ? '送信中…' : '写真を選ぶ / 撮る'}</span>
-          </label>
-          {journalUploaded && (
-            <p style={{ fontSize: 13, color: '#2e7d32', margin: '0 0 4px' }}>
-              保存済み{journalDateKey ? `（${journalDateKey}）` : ''}
-            </p>
-          )}
-          {(journalRequestId || lastRequestId) && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#666', marginTop: 4 }}>
-              REQ: {journalRequestId || lastRequestId}
-              <button
-                type="button"
-                onClick={() => navigator.clipboard?.writeText(journalRequestId || lastRequestId).then(() => {}).catch(() => {})}
-                style={{ padding: '2px 6px', fontSize: 11, cursor: 'pointer', border: '1px solid #ccc', borderRadius: 4, background: '#fff' }}
-              >
-                Copy
-              </button>
-            </span>
           )}
         </section>
 
@@ -734,7 +654,7 @@ export default function PairDailyPage() {
             </p>
           )}
 
-          <DailyPromptCard pairId={PAIR_ID_DEMO} role={ROLE_PARENT} onTopicChange={handleTopicChange} />
+          <DailyPromptCard pairId={getPairId()} role={ROLE_CHILD} onTopicChange={handleTopicChange} />
 
           {oneLinerVisible && oneLiner && (
             <div style={{

@@ -1,3 +1,23 @@
+// SWキラー: 起動時に1回だけ SW 解除 + Cache 削除してリロード（古い UI 回避）。sessionStorage で無限リロード防止。
+;(async () => {
+  try {
+    if (sessionStorage.getItem('__sw_killed__') === '1') return
+    sessionStorage.setItem('__sw_killed__', '1')
+
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations()
+      await Promise.all(regs.map((r) => r.unregister()))
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys()
+      await Promise.all(keys.map((k) => caches.delete(k)))
+    }
+    location.reload()
+  } catch (e) {
+    if (import.meta.env.DEV) console.debug('[sw-kill]', e?.message)
+  }
+})()
+
 // キャッシュ完全破壊: ファイル最上位で即時実行。try-catch で囲み、失敗しても root.render は止めない [cite: 2026-01-25]
 const VERSION = '2026-01-28-V_FINAL_FORCE_RELOAD'
 let skipReload = false

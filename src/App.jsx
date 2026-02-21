@@ -6,8 +6,9 @@ function App() {
   return (
     <HashRouter>
       <Routes>
-        <Route path="/" element={<PairDailyPage />} />
-        <Route path="/tyson" element={<HomePage />} />
+        {/* 親=/#/ (HomePage), 子=/#/tyson (PairDailyPage) */}
+        <Route path="/" element={<HomePage />} />
+        <Route path="/tyson" element={<PairDailyPage />} />
       </Routes>
     </HashRouter>
   )

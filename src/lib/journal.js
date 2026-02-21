@@ -1,5 +1,5 @@
 import { getIdTokenForApi } from './firebase.js';
-import { getDateKeyNY, PAIR_ID_DEMO, genRequestId } from './pairDaily.js';
+import { getDateKeyNY, getPairId, genRequestId } from './pairDaily.js';
 
 /** File を data URL (base64) に変換 */
 function fileToDataUrl(file) {
@@ -18,7 +18,8 @@ function fileToDataUrl(file) {
  * @param {string} [pairId]
  * @returns {Promise<{ success: boolean, requestId?: string, dateKey?: string, storagePath?: string, error?: string, errorCode?: string }>}
  */
-export async function uploadJournalImage(file, requestId = genRequestId(), pairId = PAIR_ID_DEMO) {
+export async function uploadJournalImage(file, requestId = genRequestId(), pairId) {
+  const pid = pairId ?? getPairId();
   const idToken = await getIdTokenForApi();
   if (!idToken) {
     return { success: false, error: '認証できません', requestId, errorCode: 'auth' };
@@ -44,7 +45,7 @@ export async function uploadJournalImage(file, requestId = genRequestId(), pairI
         'X-Request-Id': requestId,
       },
       body: JSON.stringify({
-        pairId,
+        pairId: pid,
         role: 'parent',
         requestId,
         imageDataUrl,
@@ -81,14 +82,15 @@ export async function uploadJournalImage(file, requestId = genRequestId(), pairI
  * @param {string} [pairId]
  * @returns {Promise<{ hasImage: boolean, requestId?: string, dateKey?: string, storagePath?: string, updatedAt?: number }>}
  */
-export async function fetchTodayJournalMeta(pairId = PAIR_ID_DEMO) {
+export async function fetchTodayJournalMeta(pairId) {
+  const pid = pairId ?? getPairId();
   const idToken = await getIdTokenForApi();
   if (!idToken) return { hasImage: false };
 
   const clientDateKey = getDateKeyNY();
   try {
     const res = await fetch(
-      `/api/journal?pairId=${encodeURIComponent(pairId)}&role=parent&clientDateKey=${encodeURIComponent(clientDateKey)}&v=${Date.now()}`,
+      `/api/journal?pairId=${encodeURIComponent(pid)}&role=parent&clientDateKey=${encodeURIComponent(clientDateKey)}&v=${Date.now()}`,
       { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }
     );
     if (!res.ok) return { hasImage: false };

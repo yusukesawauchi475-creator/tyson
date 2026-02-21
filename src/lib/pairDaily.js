@@ -27,6 +27,32 @@ export const getDateKey = getDateKeyNY;
 /** MVP用固定 pairId。後で invite token 方式に戻す */
 export const PAIR_ID_DEMO = 'demo';
 
+const PAIR_ID_STORAGE_KEY = 'tyson_pairId';
+
+/**
+ * pairId を取得。優先順位: URLクエリ(?pairId=) > localStorage(tyson_pairId) > 'demo'。
+ * HashRouter では /#/?pairId=XXX のクエリを参照。クエリで取得した場合は localStorage に保存する。
+ */
+export function getPairId() {
+  if (typeof window === 'undefined') return PAIR_ID_DEMO;
+  try {
+    const hash = window.location.hash || '';
+    const qIndex = hash.indexOf('?');
+    const queryString = qIndex >= 0 ? hash.slice(qIndex + 1) : '';
+    const params = new URLSearchParams(queryString);
+    const fromQuery = params.get('pairId')?.trim?.();
+    if (fromQuery) {
+      try {
+        localStorage.setItem(PAIR_ID_STORAGE_KEY, fromQuery);
+      } catch (_) {}
+      return fromQuery;
+    }
+    const fromStorage = localStorage.getItem(PAIR_ID_STORAGE_KEY)?.trim?.();
+    if (fromStorage) return fromStorage;
+  } catch (_) {}
+  return PAIR_ID_DEMO;
+}
+
 /** requestId生成: REQ- + base36 timestamp + 乱数 */
 export function genRequestId() {
   const ts = Date.now().toString(36).toUpperCase();
@@ -42,7 +68,7 @@ export function genRequestId() {
  * @param {string} dateKey
  * @param {string} [requestId] - 呼び出し側で生成したrequestId（省略時は内部生成）
  */
-export async function uploadAudio(blob, role, pairId = PAIR_ID_DEMO, _dateKey, requestId = genRequestId()) {
+export async function uploadAudio(blob, role, pairId = getPairId(), _dateKey, requestId = genRequestId()) {
   const dateKey = getDateKeyNY();
   const idToken = await getIdTokenForApi();
   if (!idToken) {
@@ -103,7 +129,7 @@ export async function uploadAudio(blob, role, pairId = PAIR_ID_DEMO, _dateKey, r
  * @param {string} pairId
  * @param {string} dateKey
  */
-export async function fetchAudioForPlayback(listenRole, pairId = PAIR_ID_DEMO, _dateKey, requestId = genRequestId()) {
+export async function fetchAudioForPlayback(listenRole, pairId = getPairId(), _dateKey, requestId = genRequestId()) {
   const dateKey = getDateKeyNY();
   const idToken = await getIdTokenForApi();
   if (!idToken) {
@@ -178,7 +204,7 @@ export async function fetchAudioForPlayback(listenRole, pairId = PAIR_ID_DEMO, _
 }
 
 /** action=markSeen で seenAt を更新。再生開始時に呼ぶ */
-export async function markSeen(listenRole, pairId = PAIR_ID_DEMO, _dateKey, requestId = genRequestId()) {
+export async function markSeen(listenRole, pairId = getPairId(), _dateKey, requestId = genRequestId()) {
   const dateKey = getDateKeyNY();
   const idToken = await getIdTokenForApi();
   if (!idToken) return { success: false, requestId };
@@ -196,7 +222,7 @@ export async function markSeen(listenRole, pairId = PAIR_ID_DEMO, _dateKey, requ
 }
 
 /** 相手の音声が存在するか確認（軽量チェック） */
-export async function hasTodayAudio(listenRole, pairId = PAIR_ID_DEMO) {
+export async function hasTodayAudio(listenRole, pairId = getPairId()) {
   const dateKey = getDateKeyNY();
   const idToken = await getIdTokenForApi();
   if (!idToken) return false;
@@ -224,7 +250,7 @@ export async function hasTodayAudio(listenRole, pairId = PAIR_ID_DEMO) {
 }
 
 /** hasAudio + isUnseen（未再生バッジ用）。updatedAt > seenAt または seenAt なしで未再生 */
-export async function getListenRoleMeta(listenRole, pairId = PAIR_ID_DEMO) {
+export async function getListenRoleMeta(listenRole, pairId = getPairId()) {
   const dateKey = getDateKeyNY();
   const idToken = await getIdTokenForApi();
   if (!idToken) return { hasAudio: false, isUnseen: false };
