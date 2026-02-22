@@ -4,13 +4,18 @@ import HomePage from './pages/HomePage'
 
 function App() {
   return (
-    <HashRouter>
-      <Routes>
-        {/* 親=/#/ (HomePage), 子=/#/tyson (PairDailyPage) */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/tyson" element={<PairDailyPage />} />
-      </Routes>
-    </HashRouter>
+    <>
+      <div className="mobile-white-overlay" aria-hidden="true" />
+      <div className="app-foreground app-root">
+        <HashRouter>
+          <Routes>
+            {/* 親=/#/ (HomePage), 子=/#/tyson (PairDailyPage) */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/tyson" element={<PairDailyPage />} />
+          </Routes>
+        </HashRouter>
+      </div>
+    </>
   )
 }
 

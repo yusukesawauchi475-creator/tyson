@@ -75,3 +75,113 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* モバイル用: 白オーバーレイはデフォルト非表示、アプリは前面 */
+.mobile-white-overlay {
+  display: none;
+}
+.app-foreground {
+  position: relative;
+  z-index: 1;
+}
+
+/* モバイル: 1カラム・余白ゼロ・横スクロール防止（CSSのみ、レイアウト構造は変更しない） */
+@media (max-width: 768px) {
+  html,
+  body,
+  #root {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+    margin: 0 !important;
+  }
+  body {
+    display: block !important;
+    min-width: 0 !important;
+    background: #fff !important;
+  }
+  body::before,
+  body::after,
+  #root::before,
+  #root::after {
+    content: none !important;
+    display: none !important;
+  }
+  * {
+    background-attachment: scroll !important;
+  }
+  .mobile-white-overlay {
+    display: block !important;
+    position: fixed !important;
+    inset: 0 !important;
+    background: #fff !important;
+    z-index: 0 !important;
+    pointer-events: none !important;
+  }
+  .app-foreground {
+    background: #fff !important;
+    min-height: 100dvh !important;
+    width: 100vw !important;
+  }
+  #root > * {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-height: 100vh !important;
+    min-height: 100dvh !important;
+    box-sizing: border-box !important;
+  }
+  .page-content {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  .page-content * {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .page-content section {
+    max-width: none !important;
+  }
+  .app-root {
+    display: block !important;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    flex-direction: column !important;
+    grid-template-columns: 1fr !important;
+  }
+  .app-root * {
+    max-width: 100vw !important;
+  }
+  .app-root > :nth-child(2) {
+    display: none !important;
+  }
+  /* カード幅制限を解除し、アプリ本体を100vwに */
+  .app-root,
+  .app-root > *,
+  .app-root main,
+  .page-content {
+    width: 100vw !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .container,
+  .wrapper,
+  section {
+    max-width: none !important;
+  }
+  .page-content {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    box-sizing: border-box !important;
+  }
+  #root .mobile-hide {
+    display: none !important;
+  }
+}

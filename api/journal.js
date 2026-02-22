@@ -176,6 +176,20 @@ async function handleGet(req, res) {
     const hasImage = !!(roleData?.storagePath);
     const updatedAt = roleData?.updatedAt?.toMillis?.() ?? roleData?.updatedAt ?? null;
 
+    let signedUrl = null;
+    if (hasImage && roleData?.storagePath) {
+      try {
+        const fileRef = storageBucket.file(roleData.storagePath);
+        const [url] = await fileRef.getSignedUrl({
+          action: 'read',
+          expires: Date.now() + 60 * 60 * 1000,
+        });
+        signedUrl = url || null;
+      } catch (urlErr) {
+        // signed URL 失敗時は url なしで返す
+      }
+    }
+
     logObserve({ requestId: reqId, stage: 'journal_get', status: 'ok', pairId, role, clientDateKey, serverDateKey, storagePath: roleData?.storagePath ?? null, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
     return res.status(200).json({
       success: true,
@@ -184,6 +198,8 @@ async function handleGet(req, res) {
       dateKey,
       storagePath: roleData?.storagePath ?? null,
       updatedAt,
+      url: signedUrl,
+      signedUrl: signedUrl,
     });
   } catch (e) {
     const code = e?.code || 'unknown';

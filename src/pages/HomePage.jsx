@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, getPairId, getDateKey, genRequestId } from '../lib/pairDaily'
-import { uploadJournalImage, fetchTodayJournalMeta } from '../lib/journal'
+import { uploadJournalImage, fetchTodayJournalMeta, resizeImageIfNeeded } from '../lib/journal'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import DailyPromptCard from '../components/DailyPromptCard'
 import { getIdTokenForApi } from '../lib/firebase'
@@ -341,40 +341,6 @@ export default function HomePage() {
     setIsRecording(false)
   }
 
-  const MAX_IMAGE_EDGE = 1600
-  const JPEG_QUALITY = 0.65
-
-  const resizeImageIfNeeded = (file) => {
-    return new Promise((resolve) => {
-      const img = new Image()
-      const url = URL.createObjectURL(file)
-      img.onload = () => {
-        URL.revokeObjectURL(url)
-        const w = img.naturalWidth || img.width
-        const h = img.naturalHeight || img.height
-        if (w <= MAX_IMAGE_EDGE && h <= MAX_IMAGE_EDGE) {
-          resolve(file)
-          return
-        }
-        const scale = Math.min(MAX_IMAGE_EDGE / w, MAX_IMAGE_EDGE / h)
-        const c = document.createElement('canvas')
-        c.width = Math.round(w * scale)
-        c.height = Math.round(h * scale)
-        const ctx = c.getContext('2d')
-        ctx.drawImage(img, 0, 0, c.width, c.height)
-        c.toBlob((blob) => {
-          if (!blob) { resolve(file); return }
-          resolve(new File([blob], file.name || 'page-01.jpg', { type: file.type || 'image/jpeg' }))
-        }, file.type || 'image/jpeg', JPEG_QUALITY)
-      }
-      img.onerror = () => {
-        URL.revokeObjectURL(url)
-        resolve(file)
-      }
-      img.src = url
-    })
-  }
-
   const handleJournalFile = async (file) => {
     if (!file || journalUploading) return
     if (typeof file.type !== 'string' || !file.type.startsWith('image/')) {
@@ -573,12 +539,12 @@ export default function HomePage() {
         </time>
         <span style={{ fontSize: 11, color: '#999' }}>pairId: {getPairId()}</span>
         {lastRequestId && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#666' }}>
-            REQ: {lastRequestId}
+          <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12, color: '#666' }}>
+            <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>REQ: {lastRequestId}</span>
             <button
               type="button"
               onClick={() => navigator.clipboard?.writeText(lastRequestId).then(() => {}).catch(() => {})}
-              style={{ padding: '2px 6px', fontSize: 11, cursor: 'pointer', border: '1px solid #ccc', borderRadius: 4, background: '#fff' }}
+              style={{ flex: '0 0 auto', padding: '2px 6px', fontSize: 11, cursor: 'pointer', border: '1px solid #ccc', borderRadius: 4, background: '#fff' }}
             >
               Copy
             </button>
@@ -586,7 +552,7 @@ export default function HomePage() {
         )}
       </header>
 
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
+      <main className="page-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
         <section style={{ width: '100%', maxWidth: 320 }}>
           <p style={{ fontSize: 14, color: '#666', margin: '0 0 8px', textAlign: 'center' }}>
             相手（子）の音声
@@ -793,12 +759,12 @@ export default function HomePage() {
             </p>
           )}
           {(journalRequestId || lastRequestId) && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#666', marginTop: 4 }}>
-              REQ: {journalRequestId || lastRequestId}
+            <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12, color: '#666', marginTop: 4 }}>
+              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>REQ: {journalRequestId || lastRequestId}</span>
               <button
                 type="button"
                 onClick={() => navigator.clipboard?.writeText(journalRequestId || lastRequestId).then(() => {}).catch(() => {})}
-                style={{ padding: '2px 6px', fontSize: 11, cursor: 'pointer', border: '1px solid #ccc', borderRadius: 4, background: '#fff' }}
+                style={{ flex: '0 0 auto', padding: '2px 6px', fontSize: 11, cursor: 'pointer', border: '1px solid #ccc', borderRadius: 4, background: '#fff' }}
               >
                 Copy
               </button>

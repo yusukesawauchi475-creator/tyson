@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { getDateKey, fetchAudioForPlayback, hasTodayAudio, getListenRoleMeta, markSeen, uploadAudio, getPairId, genRequestId } from '../lib/pairDaily'
+import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import DailyPromptCard from '../components/DailyPromptCard'
 import { getIdTokenForApi } from '../lib/firebase'
@@ -27,7 +28,18 @@ export default function PairDailyPage() {
   const [commentStatus, setCommentStatus] = useState('idle')
   const [lastRequestId, setLastRequestId] = useState(null)
   const [showReloadButton, setShowReloadButton] = useState(false)
+  const [journalUploading, setJournalUploading] = useState(false)
+  const [journalRequestId, setJournalRequestId] = useState(null)
+  const [journalUploaded, setJournalUploaded] = useState(false)
+  const [journalDateKey, setJournalDateKey] = useState(null)
+  const [journalError, setJournalError] = useState(null)
+  const [parentJournalUrl, setParentJournalUrl] = useState(null)
+  const [parentJournalLoading, setParentJournalLoading] = useState(false)
+  const [parentJournalError, setParentJournalError] = useState(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
   const audioRef = useRef(null)
+  const galleryInputRef = useRef(null)
+  const cameraInputRef = useRef(null)
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
   const streamRef = useRef(null)
@@ -96,6 +108,60 @@ export default function PairDailyPage() {
       setCommentStatus('done')
     }
   }, [dateKey])
+
+  const handleJournalFile = async (file) => {
+    if (!file || journalUploading) return
+    if (typeof file.type !== 'string' || !file.type.startsWith('image/')) {
+      setJournalError('画像ファイルを選んでください')
+      return
+    }
+    setJournalUploading(true)
+    setJournalError(null)
+    try {
+      const reqId = genRequestId()
+      const toUpload = await resizeImageIfNeeded(file)
+      const result = await uploadJournalImage(toUpload, reqId, getPairId(), 'child')
+      setJournalUploading(false)
+      if (result.success) {
+        setJournalRequestId(result.requestId)
+        setJournalUploaded(true)
+        if (result.dateKey) setJournalDateKey(result.dateKey)
+        setLastRequestId(result.requestId)
+      } else {
+        setJournalError(result.error || 'アップロードに失敗しました')
+      }
+    } catch (e) {
+      setJournalUploading(false)
+      setJournalError(e?.message || String(e))
+    }
+  }
+
+  useEffect(() => {
+    fetchTodayJournalMeta(getPairId(), 'child')
+      .then(({ hasImage, dateKey }) => {
+        setJournalUploaded(!!hasImage)
+        if (dateKey) setJournalDateKey(dateKey)
+      })
+      .catch((e) => setJournalError(e?.message || String(e)))
+  }, [])
+
+  const fetchParentJournal = useCallback(async () => {
+    setParentJournalLoading(true)
+    setParentJournalError(null)
+    try {
+      const url = await fetchJournalViewUrl(getPairId(), 'parent')
+      setParentJournalUrl(url)
+    } catch (e) {
+      setParentJournalError(e?.message || String(e))
+      setParentJournalUrl(null)
+    } finally {
+      setParentJournalLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchParentJournal()
+  }, [fetchParentJournal])
 
   useEffect(() => {
     const d = new Date()
@@ -510,12 +576,12 @@ export default function PairDailyPage() {
         </div>
         <span style={{ fontSize: 11, color: '#999' }}>pairId: {getPairId()}</span>
         {lastRequestId && (
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#666' }}>
-            REQ: {lastRequestId}
+          <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12, color: '#666' }}>
+            <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>REQ: {lastRequestId}</span>
             <button
               type="button"
               onClick={() => navigator.clipboard?.writeText(lastRequestId).then(() => {}).catch(() => {})}
-              style={{ padding: '2px 6px', fontSize: 11, cursor: 'pointer', border: '1px solid #ccc', borderRadius: 4, background: '#fff' }}
+              style={{ flex: '0 0 auto', padding: '2px 6px', fontSize: 11, cursor: 'pointer', border: '1px solid #ccc', borderRadius: 4, background: '#fff' }}
             >
               Copy
             </button>
@@ -523,7 +589,7 @@ export default function PairDailyPage() {
         )}
       </header>
 
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
+      <main className="page-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
         <section style={{ width: '100%', maxWidth: 320 }}>
           <p style={{ fontSize: 14, color: '#666', margin: '0 0 8px', textAlign: 'center' }}>
             相手（親）の音声
@@ -654,6 +720,139 @@ export default function PairDailyPage() {
             </p>
           )}
 
+          <p style={{ fontSize: 14, color: '#666', margin: '16px 0 8px', textAlign: 'center' }}>
+            親のジャーナル（今日）
+          </p>
+          {parentJournalLoading && (
+            <p style={{ fontSize: 13, color: '#888', margin: '0 0 8px', textAlign: 'center' }}>読み込み中…</p>
+          )}
+          {!parentJournalLoading && parentJournalUrl && (
+            <>
+              <img
+                src={parentJournalUrl}
+                alt="親のジャーナル"
+                role="button"
+                tabIndex={0}
+                onClick={() => setPreviewOpen(true)}
+                onKeyDown={(e) => e.key === 'Enter' && setPreviewOpen(true)}
+                style={{
+                  width: '100%',
+                  borderRadius: 12,
+                  maxHeight: 260,
+                  objectFit: 'contain',
+                  cursor: 'pointer',
+                  display: 'block',
+                }}
+              />
+              <p style={{ fontSize: 12, color: '#888', margin: '4px 0 0', textAlign: 'center' }}>タップで拡大</p>
+            </>
+          )}
+          {!parentJournalLoading && !parentJournalUrl && !parentJournalError && (
+            <p style={{ fontSize: 13, color: '#888', margin: '0 0 8px', textAlign: 'center' }}>まだアップされていません</p>
+          )}
+          {parentJournalError && (
+            <p style={{ fontSize: 12, color: '#666', margin: '0 0 8px', textAlign: 'center' }}>{parentJournalError}</p>
+          )}
+          <button
+            type="button"
+            onClick={fetchParentJournal}
+            disabled={parentJournalLoading}
+            style={{ padding: '4px 12px', fontSize: 12, color: '#4a90d9', background: 'transparent', border: '1px solid #4a90d9', borderRadius: 6, cursor: parentJournalLoading ? 'wait' : 'pointer', marginTop: 4 }}
+          >
+            更新
+          </button>
+
+          <p style={{ fontSize: 14, color: '#666', margin: '16px 0 8px', textAlign: 'center' }}>
+            ジャーナル写真をアップ
+          </p>
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="*/*"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) handleJournalFile(f)
+              e.target.value = ''
+            }}
+          />
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) handleJournalFile(f)
+              e.target.value = ''
+            }}
+          />
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              disabled={journalUploading}
+              onClick={() => {
+                if (galleryInputRef.current) {
+                  galleryInputRef.current.value = ''
+                  galleryInputRef.current.click()
+                }
+              }}
+              style={{
+                padding: '8px 14px',
+                fontSize: 14,
+                color: '#4a90d9',
+                background: '#fff',
+                border: '1px solid #4a90d9',
+                borderRadius: 8,
+                cursor: journalUploading ? 'not-allowed' : 'pointer',
+              }}
+            >
+              Filesから選ぶ
+            </button>
+            <button
+              type="button"
+              disabled={journalUploading}
+              onClick={() => {
+                if (cameraInputRef.current) {
+                  cameraInputRef.current.value = ''
+                  cameraInputRef.current.click()
+                }
+              }}
+              style={{
+                padding: '8px 14px',
+                fontSize: 14,
+                color: '#4a90d9',
+                background: '#fff',
+                border: '1px solid #4a90d9',
+                borderRadius: 8,
+                cursor: journalUploading ? 'not-allowed' : 'pointer',
+              }}
+            >
+              カメラで撮る
+            </button>
+          </div>
+          {journalUploaded && (
+            <p style={{ fontSize: 13, color: '#2e7d32', margin: '0 0 4px' }}>
+              保存済み{journalDateKey ? `（${journalDateKey}）` : ''}
+            </p>
+          )}
+          {(journalRequestId || lastRequestId) && (
+            <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12, color: '#666', marginTop: 4 }}>
+              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>REQ: {journalRequestId || lastRequestId}</span>
+              <button
+                type="button"
+                onClick={() => navigator.clipboard?.writeText(journalRequestId || lastRequestId).then(() => {}).catch(() => {})}
+                style={{ flex: '0 0 auto', padding: '2px 6px', fontSize: 11, cursor: 'pointer', border: '1px solid #ccc', borderRadius: 4, background: '#fff' }}
+              >
+                Copy
+              </button>
+            </span>
+          )}
+          {journalError && (
+            <p style={{ fontSize: 11, color: '#666', margin: '4px 0 0' }}>{journalError}</p>
+          )}
+
           <DailyPromptCard pairId={getPairId()} role={ROLE_CHILD} onTopicChange={handleTopicChange} />
 
           {oneLinerVisible && oneLiner && (
@@ -704,6 +903,33 @@ export default function PairDailyPage() {
         onPause={() => setIsPlaying(false)}
         style={{ display: 'none' }}
       />
+
+      {previewOpen && parentJournalUrl && (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setPreviewOpen(false)}
+          onKeyDown={(e) => e.key === 'Escape' && setPreviewOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.8)',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+            boxSizing: 'border-box',
+            cursor: 'pointer',
+          }}
+        >
+          <img
+            src={parentJournalUrl}
+            alt="親のジャーナル（拡大）"
+            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8, pointerEvents: 'none' }}
+          />
+        </div>
+      )}
     </div>
   )
 }

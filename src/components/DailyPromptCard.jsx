@@ -154,7 +154,6 @@ export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role, onTopicCh
   return (
     <div style={{
       width: '100%',
-      maxWidth: 320,
       marginTop: 16,
       padding: '12px 16px',
       background: '#f8f9fa',
@@ -168,7 +167,7 @@ export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role, onTopicCh
       <p style={{ margin: '0 0 12px', fontSize: 14, color: '#333', lineHeight: 1.5 }}>
         {topic}
       </p>
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         <button
           type="button"
           onClick={handleNextTopic}
