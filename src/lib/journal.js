@@ -54,14 +54,15 @@ export function resizeImageIfNeeded(file) {
 }
 
 /**
- * ジャーナル画像をアップロード（1日1枚）。JSON body (imageDataUrl) で送信。
+ * ジャーナル/写真画像をアップロード。JSON body (imageDataUrl, kind) で送信。
  * @param {File} file - 画像ファイル（クライアントで必要なら縮小済み）
  * @param {string} [requestId] - X-Request-Id に載せるID（省略時は genRequestId()）
  * @param {string} [pairId]
  * @param {string} [role] - 'parent' | 'child'（省略時は parent）
+ * @param {string} [kind] - 'journal_image' | 'generic_image'（省略時は journal_image）
  * @returns {Promise<{ success: boolean, requestId?: string, dateKey?: string, storagePath?: string, error?: string, errorCode?: string }>}
  */
-export async function uploadJournalImage(file, requestId = genRequestId(), pairId, role = 'parent') {
+export async function uploadJournalImage(file, requestId = genRequestId(), pairId, role = 'parent', kind = 'journal_image') {
   const pid = pairId ?? getPairId();
   const idToken = await getIdTokenForApi();
   if (!idToken) {
@@ -80,6 +81,7 @@ export async function uploadJournalImage(file, requestId = genRequestId(), pairI
   }
 
   const roleVal = role === 'child' ? 'child' : 'parent';
+  const kindVal = kind === 'generic_image' ? 'generic_image' : 'journal_image';
   try {
     const res = await fetch('/api/journal', {
       method: 'POST',
@@ -91,6 +93,7 @@ export async function uploadJournalImage(file, requestId = genRequestId(), pairI
       body: JSON.stringify({
         pairId: pid,
         role: roleVal,
+        kind: kindVal,
         requestId,
         imageDataUrl,
       }),

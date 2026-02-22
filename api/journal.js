@@ -172,7 +172,10 @@ async function handleGet(req, res) {
     }
 
     const data = snap.data();
-    const roleData = data?.roleData?.[role];
+    const roleDataRaw = data?.roleData?.[role];
+    const roleData = roleDataRaw && typeof roleDataRaw.storagePath === 'string'
+      ? roleDataRaw
+      : roleDataRaw?.journal_image ?? null;
     const hasImage = !!(roleData?.storagePath);
     const updatedAt = roleData?.updatedAt?.toMillis?.() ?? roleData?.updatedAt ?? null;
 
@@ -246,6 +249,7 @@ async function handlePost(req, res) {
 
     const pairId = body.pairId || body.pair_id || 'demo';
     const role = body.role || 'parent';
+    const kind = (body.kind || 'journal_image') === 'generic_image' ? 'generic_image' : 'journal_image';
     const requestIdFromBody = (body.requestId || body.request_id || '').trim() || reqId;
     const clientDateKey = body.dateKey || body.clientDateKey || null;
 
@@ -269,7 +273,7 @@ async function handlePost(req, res) {
     }
 
     const firestoreDocPath = `journal/${pairId}/months/${monthKey}/days/${dateKey}`;
-    const storagePath = `journal/${pairId}/${monthKey}/${dateKey}/${role}/page-01.${parsed.ext}`;
+    const storagePath = `journal/${pairId}/${monthKey}/${dateKey}/${role}/${kind}/page-01.${parsed.ext}`;
 
     initFirebaseAdmin();
 
@@ -290,6 +294,7 @@ async function handlePost(req, res) {
     const bytes = parsed.buffer.length;
     const roleDataPayload = {
       storagePath,
+      kind,
       uploadId: requestIdFromBody,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       bytes,
@@ -300,12 +305,23 @@ async function handlePost(req, res) {
 
     try {
       const docRef = firestore.collection('journal').doc(pairId).collection('months').doc(monthKey).collection('days').doc(dateKey);
+      const snap = await docRef.get();
+      const existingRole = (snap.exists && snap.data()?.roleData?.[role]) ? snap.data().roleData[role] : {};
+      let updatedRole = {};
+      if (existingRole && typeof existingRole === 'object' && existingRole !== null) {
+        if (typeof existingRole.storagePath === 'string') {
+          updatedRole = { journal_image: existingRole };
+        } else {
+          updatedRole = { ...existingRole };
+        }
+      }
+      updatedRole[kind] = roleDataPayload;
       await docRef.set({
         requestId: requestIdFromBody,
         dateKey,
         monthKey,
         roleData: {
-          [role]: roleDataPayload,
+          [role]: updatedRole,
         },
       }, { merge: true });
       logObserve({ requestId: requestIdFromBody, stage: 'journal_post_firestore', status: 'ok', pairId, role, clientDateKey, serverDateKey, storagePath, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });

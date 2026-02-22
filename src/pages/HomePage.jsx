@@ -43,8 +43,10 @@ export default function HomePage() {
   const uploadingRef = useRef(false)
   const loadingParentRef = useRef(false)
   const playingParentRef = useRef(false)
-  const galleryInputRef = useRef(null)
-  const cameraInputRef = useRef(null)
+  const journalGalleryInputRef = useRef(null)
+  const journalCameraInputRef = useRef(null)
+  const genericGalleryInputRef = useRef(null)
+  const genericCameraInputRef = useRef(null)
   const { level, isSpeaking, start: startAudioLevel, stop: stopAudioLevel } = useAudioLevel()
 
   useEffect(() => {
@@ -341,23 +343,28 @@ export default function HomePage() {
     setIsRecording(false)
   }
 
-  const handleJournalFile = async (file) => {
+  const handleJournalFile = async (file, kind = 'journal_image') => {
     if (!file || journalUploading) return
     if (typeof file.type !== 'string' || !file.type.startsWith('image/')) {
       setJournalError('画像ファイルを選んでください')
       return
     }
+    if (kind === 'journal_image' && journalUploaded && !window.confirm('今日のジャーナルを上書きします。OK？')) return
+    if (kind === 'generic_image' && localStorage.getItem('tyson_generic_confirmed') !== '1' && !window.confirm('日常写真は相手に表示されません。保存だけします。OK？')) return
+    if (kind === 'generic_image') localStorage.setItem('tyson_generic_confirmed', '1')
     setJournalUploading(true)
     setJournalError(null)
     try {
       const reqId = genRequestId()
       const toUpload = await resizeImageIfNeeded(file)
-      const result = await uploadJournalImage(toUpload, reqId, getPairId())
+      const result = await uploadJournalImage(toUpload, reqId, getPairId(), ROLE_PARENT, kind)
       setJournalUploading(false)
       if (result.success) {
         setJournalRequestId(result.requestId)
-        setJournalUploaded(true)
-        if (result.dateKey) setJournalDateKey(result.dateKey)
+        if (kind === 'journal_image') {
+          setJournalUploaded(true)
+          if (result.dateKey) setJournalDateKey(result.dateKey)
+        }
         setLastRequestId(result.requestId)
       } else {
         setJournalError(result.error || 'アップロードに失敗しました')
@@ -683,29 +690,104 @@ export default function HomePage() {
             </p>
           )}
 
-          <p style={{ fontSize: 14, color: '#666', margin: '16px 0 8px', textAlign: 'center' }}>
-            ジャーナル写真をアップ
+          <p style={{ fontSize: 14, color: '#666', margin: '16px 0 6px', textAlign: 'center' }}>
+            ジャーナル写真（解析・共有）
+          </p>
+          <p style={{ fontSize: 11, color: '#888', margin: '0 0 8px', lineHeight: 1.4 }}>
+            ジャーナルは相手に表示＆後でAI解析。日常写真は保存のみ（相手には表示されません）。
           </p>
           <input
-            ref={galleryInputRef}
+            ref={journalGalleryInputRef}
             type="file"
-            accept="*/*"
+            accept="image/*"
             style={{ display: 'none' }}
             onChange={(e) => {
               const f = e.target.files?.[0]
-              if (f) handleJournalFile(f)
+              if (f) handleJournalFile(f, 'journal_image')
               e.target.value = ''
             }}
           />
           <input
-            ref={cameraInputRef}
+            ref={journalCameraInputRef}
             type="file"
             accept="image/*"
             capture="environment"
             style={{ display: 'none' }}
             onChange={(e) => {
               const f = e.target.files?.[0]
-              if (f) handleJournalFile(f)
+              if (f) handleJournalFile(f, 'journal_image')
+              e.target.value = ''
+            }}
+          />
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              disabled={journalUploading}
+              onClick={() => {
+                if (journalGalleryInputRef.current) {
+                  journalGalleryInputRef.current.value = ''
+                  journalGalleryInputRef.current.click()
+                }
+              }}
+              style={{
+                padding: '8px 14px',
+                fontSize: 14,
+                color: '#4a90d9',
+                background: '#fff',
+                border: '1px solid #4a90d9',
+                borderRadius: 8,
+                cursor: journalUploading ? 'not-allowed' : 'pointer',
+              }}
+            >
+              ジャーナル（ギャラリー）
+            </button>
+            <button
+              type="button"
+              disabled={journalUploading}
+              onClick={() => {
+                if (journalCameraInputRef.current) {
+                  journalCameraInputRef.current.value = ''
+                  journalCameraInputRef.current.click()
+                }
+              }}
+              style={{
+                padding: '8px 14px',
+                fontSize: 14,
+                color: '#fff',
+                background: journalUploading ? '#999' : '#4a90d9',
+                border: 'none',
+                borderRadius: 8,
+                cursor: journalUploading ? 'not-allowed' : 'pointer',
+                fontWeight: 500,
+              }}
+            >
+              ジャーナル（撮影）
+            </button>
+          </div>
+
+          <p style={{ fontSize: 14, color: '#666', margin: '0 0 6px', textAlign: 'center' }}>
+            日常生活の写真（保存）
+          </p>
+          <input
+            ref={genericGalleryInputRef}
+            type="file"
+            accept="*/*"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) handleJournalFile(f, 'generic_image')
+              e.target.value = ''
+            }}
+          />
+          <input
+            ref={genericCameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) handleJournalFile(f, 'generic_image')
               e.target.value = ''
             }}
           />
@@ -714,9 +796,9 @@ export default function HomePage() {
               type="button"
               disabled={journalUploading}
               onClick={() => {
-                if (galleryInputRef.current) {
-                  galleryInputRef.current.value = ''
-                  galleryInputRef.current.click()
+                if (genericGalleryInputRef.current) {
+                  genericGalleryInputRef.current.value = ''
+                  genericGalleryInputRef.current.click()
                 }
               }}
               style={{
@@ -729,15 +811,15 @@ export default function HomePage() {
                 cursor: journalUploading ? 'not-allowed' : 'pointer',
               }}
             >
-              Filesから選ぶ
+              日常写真（ギャラリー）
             </button>
             <button
               type="button"
               disabled={journalUploading}
               onClick={() => {
-                if (cameraInputRef.current) {
-                  cameraInputRef.current.value = ''
-                  cameraInputRef.current.click()
+                if (genericCameraInputRef.current) {
+                  genericCameraInputRef.current.value = ''
+                  genericCameraInputRef.current.click()
                 }
               }}
               style={{
@@ -750,7 +832,7 @@ export default function HomePage() {
                 cursor: journalUploading ? 'not-allowed' : 'pointer',
               }}
             >
-              カメラで撮る
+              日常写真（撮影）
             </button>
           </div>
           {journalUploaded && (
