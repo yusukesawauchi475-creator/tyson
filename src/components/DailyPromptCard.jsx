@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getDateKey, PAIR_ID_DEMO } from '../lib/pairDaily'
+import { t } from '../lib/i18n'
 
 const TOPICS = [
   '今日は何食べた？',
@@ -53,7 +54,7 @@ function getSkipKey(pairId, role, dateKey) {
   return `dailyPrompt_skip_${pairId}_${role}_${dateKey}`
 }
 
-export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role, onTopicChange }) {
+export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role, onTopicChange, lang = 'ja' }) {
   const [topicIndex, setTopicIndex] = useState(0)
   const [isSkipped, setIsSkipped] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
@@ -162,7 +163,7 @@ export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role, onTopicCh
       fontSize: 14,
     }}>
       <p style={{ margin: '0 0 8px', fontSize: 12, color: '#666', fontWeight: 500 }}>
-        今日の話題
+        {t(lang, 'todayTopic')}
       </p>
       <p style={{ margin: '0 0 12px', fontSize: 14, color: '#333', lineHeight: 1.5 }}>
         {topic}
@@ -182,7 +183,7 @@ export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role, onTopicCh
             cursor: 'pointer',
           }}
         >
-          別の話題
+          {t(lang, 'anotherTopic')}
         </button>
         <button
           type="button"
@@ -198,7 +199,7 @@ export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role, onTopicCh
             cursor: 'pointer',
           }}
         >
-          スキップ
+          {t(lang, 'skip')}
         </button>
       </div>
     </div>

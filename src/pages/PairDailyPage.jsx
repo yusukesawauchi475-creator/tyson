@@ -2,11 +2,12 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { getDateKey, fetchAudioForPlayback, hasTodayAudio, getListenRoleMeta, markSeen, uploadAudio, getPairId, genRequestId } from '../lib/pairDaily'
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
+import { t } from '../lib/i18n'
 import DailyPromptCard from '../components/DailyPromptCard'
 import { getIdTokenForApi } from '../lib/firebase'
 import { useAudioLevel } from '../lib/useAudioLevel'
 
-export default function PairDailyPage() {
+export default function PairDailyPage({ lang = 'ja' }) {
   const [today, setToday] = useState('')
   const [dateKey, setDateKey] = useState(getDateKey())
   const [hasAudio, setHasAudio] = useState(null)
@@ -116,16 +117,16 @@ export default function PairDailyPage() {
   const handleJournalFile = async (file, kind = 'journal_image') => {
     if (!file || journalUploading) return
     if (typeof file.type !== 'string' || !file.type.startsWith('image/')) {
-      setJournalError('画像ファイルを選んでください')
+      setJournalError(t(lang, 'selectImage'))
       return
     }
     // 動作確認: ジャーナルは常に1枚、2回目はconfirmで上書き確認
-    if (kind === 'journal_image' && journalUploaded && !window.confirm('今日のジャーナルを上書きします。よろしいですか？')) return
+    if (kind === 'journal_image' && journalUploaded && !window.confirm(lang === 'en' ? 'Overwrite today\'s journal?' : '今日のジャーナルを上書きします。よろしいですか？')) return
     // 動作確認: 4枚目はアップロード拒否して画面にグレー文字で表示
     if (kind === 'generic_image') {
       const myCount = photos.filter((p) => p.role === ROLE_CHILD).length
       if (myCount >= 3) {
-        setDailyPhotoLimitMessage('本日は3枚までです')
+        setDailyPhotoLimitMessage(t(lang, 'dailyPhotoLimit'))
         return
       }
     }
@@ -149,9 +150,9 @@ export default function PairDailyPage() {
         setLastRequestId(result.requestId)
       } else {
         if (result.errorCode === 'daily_photos_limit' || (result.error && result.error.includes('limit'))) {
-          setDailyPhotoLimitMessage('本日は3枚までです')
+          setDailyPhotoLimitMessage(t(lang, 'dailyPhotoLimit'))
         } else {
-          setJournalError(result.error || 'アップロードに失敗しました')
+          setJournalError(result.error || t(lang, 'uploadError'))
         }
       }
     } catch (e) {
@@ -167,8 +168,8 @@ export default function PairDailyPage() {
         if (dateKey) setJournalDateKey(dateKey)
         setPhotos(Array.isArray(p) ? p : [])
       })
-      .catch((e) => setJournalError(e?.message || String(e)))
-  }, [])
+      .catch((e) => setJournalError(t(lang, 'initError', { msg: e?.message || String(e) })))
+  }, [lang])
 
   const fetchParentJournal = useCallback(async () => {
     setParentJournalLoading(true)
@@ -190,7 +191,7 @@ export default function PairDailyPage() {
 
   useEffect(() => {
     const d = new Date()
-    setToday(d.toLocaleDateString('ja-JP', {
+    setToday(d.toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -206,7 +207,7 @@ export default function PairDailyPage() {
       }
     })
     return () => { cancelled = true }
-  }, [])
+  }, [lang])
 
   useEffect(() => {
     const t = setTimeout(() => setShowReloadButton(true), 10000)
@@ -238,7 +239,7 @@ export default function PairDailyPage() {
 
     if (result.error) {
       const reqId = result.requestId || 'REQ-XXXX'
-      setErrorLine(`うまくいきませんでした。もう一度お試しください（ID: ${reqId}）`)
+      setErrorLine(t(lang, 'uploadFailed', { id: reqId }))
       if (import.meta.env.DEV) console.error('[PairDaily]', result.requestId, result.errorCode, result.error)
       setIsLoading(false)
       if (result.hasAudio === false) {
@@ -262,7 +263,7 @@ export default function PairDailyPage() {
         markSeen(LISTEN_ROLE_PARENT).then(() => setIsChildUnseen(false))
       }
     } catch (_) {
-      setErrorLine(`うまくいきませんでした。もう一度お試しください（ID: PLAY-ERR）`)
+      setErrorLine(t(lang, 'playFailed'))
     }
   }
 
@@ -335,7 +336,7 @@ export default function PairDailyPage() {
         const duration = recordStartRef.current ? (Date.now() - recordStartRef.current) / 1000 : 0
 
         if (duration < 1 || blob.size < 4 * 1024) {
-          setErrorLine('もう一度お試しください')
+          setErrorLine(t(lang, 'tryAgain'))
           return
         }
 
@@ -539,7 +540,7 @@ export default function PairDailyPage() {
           }, 1200 + Math.random() * 300) // 1200-1500msの間でランダム
         } else {
           const reqId = result.requestId || 'REQ-XXXX'
-          setErrorLine(`うまくいきませんでした。もう一度お試しください（ID: ${reqId}）`)
+          setErrorLine(t(lang, 'uploadFailed', { id: reqId }))
           if (import.meta.env.DEV) console.error('[PairDaily]', result.requestId, result.errorCode, result.error)
         }
         setIsUploading(false)
@@ -553,7 +554,7 @@ export default function PairDailyPage() {
       mr.start()
       setIsRecording(true)
     } catch (e) {
-      setErrorLine('マイクへのアクセスが許可されていません')
+      setErrorLine(t(lang, 'micDenied'))
       if (import.meta.env.DEV) console.error('startRecording:', e)
     }
   }
@@ -576,7 +577,7 @@ export default function PairDailyPage() {
   }
 
   const sentAtStr = sentAt
-    ? sentAt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+    ? sentAt.toLocaleTimeString(lang === 'en' ? 'en-US' : 'ja-JP', { hour: '2-digit', minute: '2-digit' })
     : ''
 
   return (
@@ -596,7 +597,7 @@ export default function PairDailyPage() {
         <div>
         <time style={{ fontSize: 14, color: '#666' }}>{today || '...'}</time>
         <p style={{ margin: '8px 0 0', fontSize: 14, color: '#888' }}>
-          {hasAudio === true ? '今日は声が届いています' : hasAudio === false ? 'まだです（今日はこれで大丈夫です）' : '確認中…'}
+          {hasAudio === true ? t(lang, 'voiceReceivedToday') : hasAudio === false ? t(lang, 'notYetOkToday') : t(lang, 'checking')}
         </p>
         </div>
         <span style={{ fontSize: 11, color: '#999' }}>pairId: {getPairId()}</span>
@@ -617,12 +618,12 @@ export default function PairDailyPage() {
       <main className="page-content page" style={{ flex: 1, maxWidth: 320, margin: '0 auto', width: '100%' }}>
         {/* (1) 相手の録音（聞く） */}
         <section className="card" style={{ width: '100%' }}>
-          <h2 className="cardHead">🎧 相手の録音（聞く）</h2>
+          <h2 className="cardHead">🎧 {t(lang, 'partnerRecordingListen')}</h2>
           {hasAudio === true ? (
             <>
               <p style={{ fontSize: 14, color: '#2e7d32', textAlign: 'center', margin: '0 0 8px', fontWeight: 500 }}>
-                届いています
-                {isChildUnseen && <span style={{ marginLeft: 4, color: '#f44336' }} title="未再生">●</span>}
+                {t(lang, 'received')}
+                {isChildUnseen && <span style={{ marginLeft: 4, color: '#f44336' }} title={lang === 'en' ? 'Unplayed' : '未再生'}>●</span>}
               </p>
               <button
                 type="button"
@@ -641,17 +642,17 @@ export default function PairDailyPage() {
                   marginBottom: 16,
                 }}
               >
-                {isLoading ? '読み込み中…' : isPlaying ? '再生中…' : '再生'}
+                {isLoading ? t(lang, 'loading') : isPlaying ? t(lang, 'playing') : t(lang, 'play')}
               </button>
             </>
           ) : hasAudio === false ? (
             <p style={{ fontSize: 14, color: '#888', textAlign: 'center', margin: '0 0 16px' }}>
-              まだ届いていません（今日はこれで大丈夫です）
+              {t(lang, 'notReceivedYetOk')}
             </p>
           ) : (
             <>
               <p style={{ fontSize: 14, color: '#888', textAlign: 'center', margin: '0 0 16px' }}>
-                確認中…
+                {t(lang, 'checking')}
               </p>
               {showReloadButton && (
                 <button
@@ -659,7 +660,7 @@ export default function PairDailyPage() {
                   onClick={() => window.location.reload()}
                   style={{ padding: '6px 12px', fontSize: 12, color: '#4a90d9', border: '1px solid #4a90d9', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
                 >
-                  再読み込み
+                  {t(lang, 'reload')}
                 </button>
               )}
             </>
@@ -679,14 +680,14 @@ export default function PairDailyPage() {
                 marginBottom: 0,
               }}
             >
-              更新
+              {t(lang, 'refresh')}
             </button>
           )}
         </section>
 
         {/* (2) 自分の録音（録る/送る） */}
         <section className="card" style={{ width: '100%' }}>
-          <h2 className="cardHead">🎙 自分の録音（録る/送る）</h2>
+          <h2 className="cardHead">🎙 {t(lang, 'myRecordingRecordSend')}</h2>
           <button
             type="button"
             onClick={handleRecordClick}
@@ -704,7 +705,7 @@ export default function PairDailyPage() {
               boxShadow: isRecording ? '0 0 0 4px rgba(200, 0, 0, 0.3)' : 'none',
             }}
           >
-            {isUploading ? '送信中…' : isRecording ? '録音中…' : '録音'}
+            {isUploading ? t(lang, 'sending') : isRecording ? t(lang, 'recording') : t(lang, 'record')}
           </button>
 
           {isRecording && isSpeaking && (
@@ -739,11 +740,11 @@ export default function PairDailyPage() {
 
           {sentAt && (
             <p style={{ fontSize: 16, color: '#2e7d32', fontWeight: 500, margin: '8px 0 0', textAlign: 'center' }}>
-              送信しました（{sentAtStr}）
+              {t(lang, 'sentAt', { time: sentAtStr })}
             </p>
           )}
 
-          <DailyPromptCard pairId={getPairId()} role={ROLE_CHILD} onTopicChange={handleTopicChange} />
+          <DailyPromptCard pairId={getPairId()} role={ROLE_CHILD} onTopicChange={handleTopicChange} lang={lang} />
 
           {oneLinerVisible && oneLiner && (
             <div style={{
@@ -780,16 +781,17 @@ export default function PairDailyPage() {
 
         {/* (3) ジャーナル（解析・共有）※1日1枚 */}
         <section className="card card-journal" style={{ width: '100%' }}>
-          <h2 className="cardHead">📝 ジャーナル（解析・共有）※1日1枚</h2>
-          <p className="title">親のジャーナル（今日）</p>
+          <h2 className="cardHead">📝 {t(lang, 'journalSharedAi')}</h2>
+          <p style={{ fontSize: 11, color: '#666', margin: '0 0 12px', lineHeight: 1.4 }}>{t(lang, 'journalNotice')}</p>
+          <p className="title">{t(lang, 'parentJournalToday')}</p>
           {parentJournalLoading && (
-            <p className="sub" style={{ margin: '0 0 8px' }}>読み込み中…</p>
+            <p className="sub" style={{ margin: '0 0 8px' }}>{t(lang, 'loading')}</p>
           )}
           {!parentJournalLoading && parentJournalUrl && (
             <>
               <img
                 src={parentJournalUrl}
-                alt="親のジャーナル"
+                alt={t(lang, 'parentJournalAlt')}
                 role="button"
                 tabIndex={0}
                 onClick={() => setPreviewOpen(true)}
@@ -803,11 +805,11 @@ export default function PairDailyPage() {
                   display: 'block',
                 }}
               />
-              <p style={{ fontSize: 12, color: '#888', margin: '4px 0 0', textAlign: 'center' }}>タップで拡大</p>
+              <p style={{ fontSize: 12, color: '#888', margin: '4px 0 0', textAlign: 'center' }}>{t(lang, 'tapToEnlarge')}</p>
             </>
           )}
           {!parentJournalLoading && !parentJournalUrl && !parentJournalError && (
-            <p className="sub" style={{ margin: '0 0 8px' }}>まだアップされていません</p>
+            <p className="sub" style={{ margin: '0 0 8px' }}>{t(lang, 'notUploadedYet')}</p>
           )}
           {parentJournalError && (
             <p style={{ fontSize: 12, color: '#666', margin: '0 0 8px', textAlign: 'center' }}>{parentJournalError}</p>
@@ -818,10 +820,10 @@ export default function PairDailyPage() {
             disabled={parentJournalLoading}
             style={{ padding: '4px 12px', fontSize: 12, color: '#4a90d9', background: 'transparent', border: '1px solid #4a90d9', borderRadius: 6, cursor: parentJournalLoading ? 'wait' : 'pointer', marginTop: 4, marginBottom: 12 }}
           >
-            更新
+            {t(lang, 'refresh')}
           </button>
 
-          <p className="title" style={{ marginTop: 12 }}>自分のジャーナル</p>
+          <p className="title" style={{ marginTop: 12 }}>{t(lang, 'myJournal')}</p>
           <input
             ref={journalGalleryInputRef}
             type="file"
@@ -858,7 +860,7 @@ export default function PairDailyPage() {
               }}
               style={{ borderColor: '#4a90d9', color: '#4a90d9', background: '#fff' }}
             >
-              ギャラリー
+              {t(lang, 'gallery')}
             </button>
             <button
               type="button"
@@ -872,12 +874,12 @@ export default function PairDailyPage() {
               }}
               style={{ background: journalUploading ? '#999' : '#4a90d9', borderColor: journalUploading ? '#999' : '#4a90d9' }}
             >
-              撮影
+              {t(lang, 'camera')}
             </button>
           </div>
           {journalUploaded && (
             <p className="sub" style={{ color: '#2e7d32', margin: '0 0 4px' }}>
-              保存済み{journalDateKey ? `（${journalDateKey}）` : ''}
+              {journalDateKey ? t(lang, 'savedWithDate', { date: journalDateKey }) : t(lang, 'saved')}
             </p>
           )}
           {(journalRequestId || lastRequestId) && (
@@ -888,7 +890,7 @@ export default function PairDailyPage() {
                 onClick={() => navigator.clipboard?.writeText(journalRequestId || lastRequestId).then(() => {}).catch(() => {})}
                 style={{ flex: '0 0 auto', padding: '2px 6px', fontSize: 11, cursor: 'pointer', border: '1px solid #ccc', borderRadius: 4, background: '#fff' }}
               >
-                Copy
+                {t(lang, 'copy')}
               </button>
             </span>
           )}
@@ -899,8 +901,8 @@ export default function PairDailyPage() {
 
         {/* (4) 日常写真（共有）※最大3枚 */}
         <section className="card card-photos" style={{ width: '100%' }}>
-          <h2 className="cardHead">📷 日常写真（共有）※最大3枚</h2>
-          <p className="title">今日の写真: {photos.filter((p) => p.role === ROLE_CHILD).length}/3</p>
+          <h2 className="cardHead">📷 {t(lang, 'dailyPhotosShared')}</h2>
+          <p className="title">{t(lang, 'todayPhotosCount', { count: photos.filter((p) => p.role === ROLE_CHILD).length })}</p>
           <input
             ref={genericGalleryInputRef}
             type="file"
@@ -937,7 +939,7 @@ export default function PairDailyPage() {
               }}
               style={{ borderColor: '#4a90d9', color: '#4a90d9', background: '#fff' }}
             >
-              ギャラリー
+              {t(lang, 'gallery')}
             </button>
             <button
               type="button"
@@ -951,7 +953,7 @@ export default function PairDailyPage() {
               }}
               style={{ borderColor: '#4a90d9', color: '#4a90d9', background: '#fff' }}
             >
-              撮影
+              {t(lang, 'camera')}
             </button>
           </div>
           {dailyPhotoLimitMessage && (
@@ -1014,7 +1016,7 @@ export default function PairDailyPage() {
         >
           <img
             src={parentJournalUrl}
-            alt="親のジャーナル（拡大）"
+            alt={t(lang, 'parentJournalZoomAlt')}
             style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8, pointerEvents: 'none' }}
           />
         </div>

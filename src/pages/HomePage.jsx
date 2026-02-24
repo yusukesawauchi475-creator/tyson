@@ -2,11 +2,12 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, getPairId, getDateKey, genRequestId } from '../lib/pairDaily'
 import { uploadJournalImage, fetchTodayJournalMeta, resizeImageIfNeeded } from '../lib/journal'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
+import { t } from '../lib/i18n'
 import DailyPromptCard from '../components/DailyPromptCard'
 import { getIdTokenForApi } from '../lib/firebase'
 import { useAudioLevel } from '../lib/useAudioLevel'
 
-export default function HomePage() {
+export default function HomePage({ lang = 'ja' }) {
   const [isRecording, setIsRecording] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [sentAt, setSentAt] = useState(null)
@@ -114,7 +115,7 @@ export default function HomePage() {
         const duration = recordStartRef.current ? (Date.now() - recordStartRef.current) / 1000 : 0
 
         if (duration < 1 || blob.size < 4 * 1024) {
-          setErrorLine('もう一度お試しください')
+          setErrorLine(t(lang, 'tryAgain'))
           return
         }
 
@@ -315,7 +316,7 @@ export default function HomePage() {
           }, 1200 + Math.random() * 300) // 1200-1500msの間でランダム
         } else {
           const reqId = result.requestId || 'REQ-XXXX'
-          setErrorLine(`うまくいきませんでした。もう一度お試しください（ID: ${reqId}）`)
+          setErrorLine(t(lang, 'uploadFailed', { id: reqId }))
           if (import.meta.env.DEV) console.error('[HomePage]', result.requestId, result.errorCode, result.error)
         }
         setIsUploading(false)
@@ -329,7 +330,7 @@ export default function HomePage() {
       mr.start()
       setIsRecording(true)
     } catch (e) {
-      setErrorLine('マイクへのアクセスが許可されていません')
+      setErrorLine(t(lang, 'micDenied'))
       if (import.meta.env.DEV) console.error('startRecording:', e)
     }
   }
@@ -348,16 +349,16 @@ export default function HomePage() {
   const handleJournalFile = async (file, kind = 'journal_image') => {
     if (!file || journalUploading) return
     if (typeof file.type !== 'string' || !file.type.startsWith('image/')) {
-      setJournalError('画像ファイルを選んでください')
+      setJournalError(t(lang, 'selectImage'))
       return
     }
     // 動作確認: ジャーナルは常に1枚、2回目はconfirmで上書き確認
-    if (kind === 'journal_image' && journalUploaded && !window.confirm('今日のジャーナルを上書きします。よろしいですか？')) return
+    if (kind === 'journal_image' && journalUploaded && !window.confirm(lang === 'en' ? 'Overwrite today\'s journal?' : '今日のジャーナルを上書きします。よろしいですか？')) return
     // 動作確認: 4枚目はアップロード拒否して画面にグレー文字で表示
     if (kind === 'generic_image') {
       const myCount = photos.filter((p) => p.role === ROLE_PARENT).length
       if (myCount >= 3) {
-        setDailyPhotoLimitMessage('本日は3枚までです')
+        setDailyPhotoLimitMessage(t(lang, 'dailyPhotoLimit'))
         return
       }
     }
@@ -381,9 +382,9 @@ export default function HomePage() {
         setLastRequestId(result.requestId)
       } else {
         if (result.errorCode === 'daily_photos_limit' || (result.error && result.error.includes('limit'))) {
-          setDailyPhotoLimitMessage('本日は3枚までです')
+          setDailyPhotoLimitMessage(t(lang, 'dailyPhotoLimit'))
         } else {
-          setJournalError(result.error || 'アップロードに失敗しました')
+          setJournalError(result.error || t(lang, 'uploadError'))
         }
       }
     } catch (e) {
@@ -431,7 +432,7 @@ export default function HomePage() {
           setIsParentUnseen(!!isUnseen)
         }
       })
-      .catch((e) => setJournalError('初期化: ' + (e?.message || String(e))))
+      .catch((e) => setJournalError(t(lang, 'initError', { msg: e?.message || String(e) })))
     return () => { cancelled = true }
   }, [])
 
@@ -488,7 +489,7 @@ export default function HomePage() {
 
     if (result.error) {
       const reqId = result.requestId || 'REQ-XXXX'
-      setErrorLine(`うまくいきませんでした。もう一度お試しください（ID: ${reqId}）`)
+      setErrorLine(t(lang, 'uploadFailed', { id: reqId }))
       if (import.meta.env.DEV) console.error('[HomePage]', result.requestId, result.errorCode, result.error)
       setIsLoadingParent(false)
       if (result.hasAudio === false) {
@@ -512,7 +513,7 @@ export default function HomePage() {
         markSeen(LISTEN_ROLE_CHILD).then(() => setIsParentUnseen(false))
       }
     } catch (_) {
-      setErrorLine(`うまくいきませんでした。もう一度お試しください（ID: PLAY-ERR）`)
+      setErrorLine(t(lang, 'playFailed'))
     }
   }
 
@@ -537,7 +538,7 @@ export default function HomePage() {
   }, [parentAudioUrl])
 
   const sentAtStr = sentAt
-    ? sentAt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+    ? sentAt.toLocaleTimeString(lang === 'en' ? 'en-US' : 'ja-JP', { hour: '2-digit', minute: '2-digit' })
     : ''
 
   return (
@@ -555,7 +556,7 @@ export default function HomePage() {
       </div>
       <header style={{ flexShrink: 0, marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
         <time style={{ fontSize: 14, color: '#666' }}>
-          {new Date().toLocaleDateString('ja-JP', {
+          {new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', {
             year: 'numeric',
             month: 'long',
             day: 'numeric',
@@ -580,12 +581,12 @@ export default function HomePage() {
       <main className="page-content page" style={{ flex: 1, maxWidth: 320, margin: '0 auto', width: '100%' }}>
         {/* (1) 相手の録音（聞く） */}
         <section className="card" style={{ width: '100%' }}>
-          <h2 className="cardHead">🎧 相手の録音（聞く）</h2>
+          <h2 className="cardHead">🎧 {t(lang, 'partnerRecordingListen')}</h2>
           {hasParentAudio === true ? (
             <>
               <p style={{ fontSize: 14, color: '#2e7d32', textAlign: 'center', margin: '0 0 8px', fontWeight: 500 }}>
-                届いています
-                {isParentUnseen && <span style={{ marginLeft: 4, color: '#f44336' }} title="未再生">●</span>}
+                {t(lang, 'received')}
+                {isParentUnseen && <span style={{ marginLeft: 4, color: '#f44336' }} title={lang === 'en' ? 'Unplayed' : '未再生'}>●</span>}
               </p>
               <button
                 type="button"
@@ -604,17 +605,17 @@ export default function HomePage() {
                   marginBottom: 16,
                 }}
               >
-                {isLoadingParent ? '読み込み中…' : isPlayingParent ? '再生中…' : '再生'}
+                {isLoadingParent ? t(lang, 'loading') : isPlayingParent ? t(lang, 'playing') : t(lang, 'play')}
               </button>
             </>
           ) : hasParentAudio === false ? (
             <p style={{ fontSize: 14, color: '#888', textAlign: 'center', margin: '0 0 16px' }}>
-              まだ届いていません
+              {t(lang, 'notReceivedYet')}
             </p>
           ) : (
             <>
               <p style={{ fontSize: 14, color: '#888', textAlign: 'center', margin: '0 0 16px' }}>
-                確認中…
+                {t(lang, 'checking')}
               </p>
               {showReloadButton && (
                 <button
@@ -622,7 +623,7 @@ export default function HomePage() {
                   onClick={() => window.location.reload()}
                   style={{ padding: '6px 12px', fontSize: 12, color: '#4a90d9', border: '1px solid #4a90d9', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
                 >
-                  再読み込み
+                  {t(lang, 'reload')}
                 </button>
               )}
             </>
@@ -642,14 +643,14 @@ export default function HomePage() {
                 marginBottom: 0,
               }}
             >
-              更新
+              {t(lang, 'refresh')}
             </button>
           )}
         </section>
 
         {/* (2) 自分の録音（録る/送る） */}
         <section className="card" style={{ width: '100%' }}>
-          <h2 className="cardHead">🎙 自分の録音（録る/送る）</h2>
+          <h2 className="cardHead">🎙 {t(lang, 'myRecordingRecordSend')}</h2>
           <button
             type="button"
             onClick={handleClick}
@@ -667,7 +668,7 @@ export default function HomePage() {
               boxShadow: isRecording ? '0 0 0 4px rgba(200, 0, 0, 0.3)' : 'none',
             }}
           >
-            {isUploading ? '送信中…' : isRecording ? '録音中…' : '録音'}
+            {isUploading ? t(lang, 'sending') : isRecording ? t(lang, 'recording') : t(lang, 'record')}
           </button>
 
           {isRecording && isSpeaking && (
@@ -702,11 +703,11 @@ export default function HomePage() {
 
           {sentAt && (
             <p style={{ fontSize: 16, color: '#2e7d32', fontWeight: 500, margin: '8px 0 0', textAlign: 'center' }}>
-              送信しました（{sentAtStr}）
+              {t(lang, 'sentAt', { time: sentAtStr })}
             </p>
           )}
 
-          <DailyPromptCard pairId={getPairId()} role={ROLE_PARENT} onTopicChange={handleTopicChange} />
+          <DailyPromptCard pairId={getPairId()} role={ROLE_PARENT} onTopicChange={handleTopicChange} lang={lang} />
 
           {oneLinerVisible && oneLiner && (
             <div style={{
@@ -743,7 +744,8 @@ export default function HomePage() {
 
         {/* (3) ジャーナル（解析・共有）※1日1枚 */}
         <section className="card card-journal" style={{ width: '100%' }}>
-          <h2 className="cardHead">📝 ジャーナル（解析・共有）※1日1枚</h2>
+          <h2 className="cardHead">📝 {t(lang, 'journalSharedAi')}</h2>
+          <p style={{ fontSize: 11, color: '#666', margin: '0 0 12px', lineHeight: 1.4 }}>{t(lang, 'journalNotice')}</p>
           <input
             ref={journalGalleryInputRef}
             type="file"
@@ -780,7 +782,7 @@ export default function HomePage() {
               }}
               style={{ borderColor: '#4a90d9', color: '#4a90d9', background: '#fff' }}
             >
-              ギャラリー
+              {t(lang, 'gallery')}
             </button>
             <button
               type="button"
@@ -794,12 +796,12 @@ export default function HomePage() {
               }}
               style={{ background: journalUploading ? '#999' : '#4a90d9', borderColor: journalUploading ? '#999' : '#4a90d9' }}
             >
-              撮影
+              {t(lang, 'camera')}
             </button>
           </div>
           {journalUploaded && (
             <p className="sub" style={{ color: '#2e7d32', margin: '0 0 4px' }}>
-              保存済み{journalDateKey ? `（${journalDateKey}）` : ''}
+              {journalDateKey ? t(lang, 'savedWithDate', { date: journalDateKey }) : t(lang, 'saved')}
             </p>
           )}
           {(journalRequestId || lastRequestId) && (
@@ -821,8 +823,8 @@ export default function HomePage() {
 
         {/* (4) 日常写真（共有）※最大3枚 */}
         <section className="card card-photos" style={{ width: '100%' }}>
-          <h2 className="cardHead">📷 日常写真（共有）※最大3枚</h2>
-          <p className="title">今日の写真: {photos.filter((p) => p.role === ROLE_PARENT).length}/3</p>
+          <h2 className="cardHead">📷 {t(lang, 'dailyPhotosShared')}</h2>
+          <p className="title">{t(lang, 'todayPhotosCount', { count: photos.filter((p) => p.role === ROLE_PARENT).length })}</p>
           <input
             ref={genericGalleryInputRef}
             type="file"
@@ -859,7 +861,7 @@ export default function HomePage() {
               }}
               style={{ borderColor: '#4a90d9', color: '#4a90d9', background: '#fff' }}
             >
-              ギャラリー
+              {t(lang, 'gallery')}
             </button>
             <button
               type="button"
@@ -873,7 +875,7 @@ export default function HomePage() {
               }}
               style={{ borderColor: '#4a90d9', color: '#4a90d9', background: '#fff' }}
             >
-              撮影
+              {t(lang, 'camera')}
             </button>
           </div>
           {dailyPhotoLimitMessage && (
