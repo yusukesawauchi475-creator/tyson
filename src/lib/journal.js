@@ -125,15 +125,15 @@ export async function uploadJournalImage(file, requestId = genRequestId(), pairI
 }
 
 /**
- * 当日のジャーナルメタを取得
+ * 当日のジャーナルメタ＋日常写真一覧を取得（GETは1回で両方返す）
  * @param {string} [pairId]
  * @param {string} [role] - 'parent' | 'child'（省略時は parent）
- * @returns {Promise<{ hasImage: boolean, requestId?: string, dateKey?: string, storagePath?: string, updatedAt?: number }>}
+ * @returns {Promise<{ hasImage: boolean, requestId?: string, dateKey?: string, storagePath?: string, updatedAt?: number, photos?: Array<{ url: string, storagePath: string, updatedAt?: number, index: number, role: string }> }>}
  */
 export async function fetchTodayJournalMeta(pairId, role = 'parent') {
   const pid = pairId ?? getPairId();
   const idToken = await getIdTokenForApi();
-  if (!idToken) return { hasImage: false };
+  if (!idToken) return { hasImage: false, photos: [] };
 
   const roleVal = role === 'child' ? 'child' : 'parent';
   const clientDateKey = getDateKeyNY();
@@ -142,7 +142,7 @@ export async function fetchTodayJournalMeta(pairId, role = 'parent') {
       `/api/journal?pairId=${encodeURIComponent(pid)}&role=${encodeURIComponent(roleVal)}&clientDateKey=${encodeURIComponent(clientDateKey)}&v=${Date.now()}`,
       { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }
     );
-    if (!res.ok) return { hasImage: false };
+    if (!res.ok) return { hasImage: false, photos: [] };
     const data = await res.json().catch(() => ({}));
     return {
       hasImage: !!data?.hasImage,
@@ -150,9 +150,10 @@ export async function fetchTodayJournalMeta(pairId, role = 'parent') {
       dateKey: data?.dateKey ?? undefined,
       storagePath: data?.storagePath ?? undefined,
       updatedAt: data?.updatedAt ?? undefined,
+      photos: Array.isArray(data?.photos) ? data.photos : [],
     };
   } catch (_) {
-    return { hasImage: false };
+    return { hasImage: false, photos: [] };
   }
 }
 

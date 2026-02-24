@@ -185,3 +185,65 @@ button:focus-visible {
     display: none !important;
   }
 }
+
+/* 4ブロックカードレイアウト（HomePage / PairDailyPage） */
+.page {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.card {
+  border: 1px solid #e6e6e6;
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 0;
+}
+.cardHead {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: #333;
+  font-weight: 600;
+}
+.card.card-journal {
+  background: rgba(33, 150, 243, 0.06);
+}
+.card.card-photos {
+  background: rgba(76, 175, 80, 0.06);
+}
+.title {
+  font-size: 14px;
+  color: #666;
+  margin: 0 0 4px;
+}
+.sub {
+  font-size: 11px;
+  color: #888;
+  margin: 0 0 8px;
+  line-height: 1.4;
+}
+.btnGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.btn {
+  padding: 8px 14px;
+  font-size: 14px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background: #fff;
+  color: #333;
+  cursor: pointer;
+}
+.btnPrimary {
+  background: #4a90d9;
+  color: #fff;
+  border-color: #4a90d9;
+  font-weight: 500;
+}
+@media (max-width: 380px) {
+  .btnGrid {
+    grid-template-columns: 1fr;
+  }
+}

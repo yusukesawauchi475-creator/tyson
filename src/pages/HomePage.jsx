@@ -29,6 +29,8 @@ export default function HomePage() {
   const [journalDateKey, setJournalDateKey] = useState(null)
   const [journalError, setJournalError] = useState(null)
   const [showReloadButton, setShowReloadButton] = useState(false)
+  const [photos, setPhotos] = useState([])
+  const [dailyPhotoLimitMessage, setDailyPhotoLimitMessage] = useState(null)
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
   const streamRef = useRef(null)
@@ -349,9 +351,16 @@ export default function HomePage() {
       setJournalError('画像ファイルを選んでください')
       return
     }
-    if (kind === 'journal_image' && journalUploaded && !window.confirm('今日のジャーナルを上書きします。OK？')) return
-    if (kind === 'generic_image' && localStorage.getItem('tyson_generic_confirmed') !== '1' && !window.confirm('日常写真は相手に表示されません。保存だけします。OK？')) return
-    if (kind === 'generic_image') localStorage.setItem('tyson_generic_confirmed', '1')
+    // 動作確認: ジャーナルは常に1枚、2回目はconfirmで上書き確認
+    if (kind === 'journal_image' && journalUploaded && !window.confirm('今日のジャーナルを上書きします。よろしいですか？')) return
+    // 動作確認: 4枚目はアップロード拒否して画面にグレー文字で表示
+    if (kind === 'generic_image') {
+      const myCount = photos.filter((p) => p.role === ROLE_PARENT).length
+      if (myCount >= 3) {
+        setDailyPhotoLimitMessage('本日は3枚までです')
+        return
+      }
+    }
     setJournalUploading(true)
     setJournalError(null)
     try {
@@ -365,9 +374,17 @@ export default function HomePage() {
           setJournalUploaded(true)
           if (result.dateKey) setJournalDateKey(result.dateKey)
         }
+        if (kind === 'generic_image') {
+          setDailyPhotoLimitMessage(null)
+          fetchTodayJournalMeta(getPairId()).then((r) => setPhotos(r.photos ?? []))
+        }
         setLastRequestId(result.requestId)
       } else {
-        setJournalError(result.error || 'アップロードに失敗しました')
+        if (result.errorCode === 'daily_photos_limit' || (result.error && result.error.includes('limit'))) {
+          setDailyPhotoLimitMessage('本日は3枚までです')
+        } else {
+          setJournalError(result.error || 'アップロードに失敗しました')
+        }
       }
     } catch (e) {
       setJournalUploading(false)
@@ -392,9 +409,10 @@ export default function HomePage() {
 
   useEffect(() => {
     fetchTodayJournalMeta(getPairId())
-      .then(({ hasImage, dateKey }) => {
+      .then(({ hasImage, dateKey, photos: p }) => {
         setJournalUploaded(!!hasImage)
         if (dateKey) setJournalDateKey(dateKey)
+        setPhotos(Array.isArray(p) ? p : [])
       })
       .catch((e) => setJournalError(e?.message || String(e)))
   }, [])
@@ -559,11 +577,10 @@ export default function HomePage() {
         )}
       </header>
 
-      <main className="page-content" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
-        <section style={{ width: '100%', maxWidth: 320 }}>
-          <p style={{ fontSize: 14, color: '#666', margin: '0 0 8px', textAlign: 'center' }}>
-            相手（子）の音声
-          </p>
+      <main className="page-content page" style={{ flex: 1, maxWidth: 320, margin: '0 auto', width: '100%' }}>
+        {/* (1) 相手の録音（聞く） */}
+        <section className="card" style={{ width: '100%' }}>
+          <h2 className="cardHead">🎧 相手の録音（聞く）</h2>
           {hasParentAudio === true ? (
             <>
               <p style={{ fontSize: 14, color: '#2e7d32', textAlign: 'center', margin: '0 0 8px', fontWeight: 500 }}>
@@ -622,7 +639,7 @@ export default function HomePage() {
                 border: '1px solid #4a90d9',
                 borderRadius: 6,
                 cursor: 'pointer',
-                marginBottom: 16,
+                marginBottom: 0,
               }}
             >
               更新
@@ -630,10 +647,9 @@ export default function HomePage() {
           )}
         </section>
 
-        <section style={{ width: '100%', maxWidth: 320 }}>
-          <p style={{ fontSize: 14, color: '#666', margin: '0 0 8px', textAlign: 'center' }}>
-            自分の録音
-          </p>
+        {/* (2) 自分の録音（録る/送る） */}
+        <section className="card" style={{ width: '100%' }}>
+          <h2 className="cardHead">🎙 自分の録音（録る/送る）</h2>
           <button
             type="button"
             onClick={handleClick}
@@ -690,12 +706,44 @@ export default function HomePage() {
             </p>
           )}
 
-          <p style={{ fontSize: 14, color: '#666', margin: '16px 0 6px', textAlign: 'center' }}>
-            ジャーナル写真（解析・共有）
-          </p>
-          <p style={{ fontSize: 11, color: '#888', margin: '0 0 8px', lineHeight: 1.4 }}>
-            ジャーナルは相手に表示＆後でAI解析。日常写真は保存のみ（相手には表示されません）。
-          </p>
+          <DailyPromptCard pairId={getPairId()} role={ROLE_PARENT} onTopicChange={handleTopicChange} />
+
+          {oneLinerVisible && oneLiner && (
+            <div style={{
+              width: '100%',
+              marginTop: 12,
+              padding: '12px 16px',
+              background: '#e8f5e9',
+              border: '1px solid #c8e6c9',
+              borderRadius: 8,
+              fontSize: 14,
+              color: '#2e7d32',
+              textAlign: 'center',
+              lineHeight: 1.5,
+            }}>
+              {oneLiner}
+            </div>
+          )}
+
+          {analysisVisible && analysisComment && (
+            <div style={{
+              width: '100%',
+              marginTop: 8,
+              padding: '8px 12px',
+              fontSize: 12,
+              color: '#666',
+              textAlign: 'center',
+              lineHeight: 1.4,
+              whiteSpace: 'pre-line',
+            }}>
+              {analysisComment}
+            </div>
+          )}
+        </section>
+
+        {/* (3) ジャーナル（解析・共有）※1日1枚 */}
+        <section className="card card-journal" style={{ width: '100%' }}>
+          <h2 className="cardHead">📝 ジャーナル（解析・共有）※1日1枚</h2>
           <input
             ref={journalGalleryInputRef}
             type="file"
@@ -719,9 +767,10 @@ export default function HomePage() {
               e.target.value = ''
             }}
           />
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+          <div className="btnGrid" style={{ marginBottom: 12 }}>
             <button
               type="button"
+              className="btn"
               disabled={journalUploading}
               onClick={() => {
                 if (journalGalleryInputRef.current) {
@@ -729,20 +778,13 @@ export default function HomePage() {
                   journalGalleryInputRef.current.click()
                 }
               }}
-              style={{
-                padding: '8px 14px',
-                fontSize: 14,
-                color: '#4a90d9',
-                background: '#fff',
-                border: '1px solid #4a90d9',
-                borderRadius: 8,
-                cursor: journalUploading ? 'not-allowed' : 'pointer',
-              }}
+              style={{ borderColor: '#4a90d9', color: '#4a90d9', background: '#fff' }}
             >
-              ジャーナル（ギャラリー）
+              ギャラリー
             </button>
             <button
               type="button"
+              className="btn btnPrimary"
               disabled={journalUploading}
               onClick={() => {
                 if (journalCameraInputRef.current) {
@@ -750,93 +792,13 @@ export default function HomePage() {
                   journalCameraInputRef.current.click()
                 }
               }}
-              style={{
-                padding: '8px 14px',
-                fontSize: 14,
-                color: '#fff',
-                background: journalUploading ? '#999' : '#4a90d9',
-                border: 'none',
-                borderRadius: 8,
-                cursor: journalUploading ? 'not-allowed' : 'pointer',
-                fontWeight: 500,
-              }}
+              style={{ background: journalUploading ? '#999' : '#4a90d9', borderColor: journalUploading ? '#999' : '#4a90d9' }}
             >
-              ジャーナル（撮影）
-            </button>
-          </div>
-
-          <p style={{ fontSize: 14, color: '#666', margin: '0 0 6px', textAlign: 'center' }}>
-            日常生活の写真（保存）
-          </p>
-          <input
-            ref={genericGalleryInputRef}
-            type="file"
-            accept="*/*"
-            style={{ display: 'none' }}
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) handleJournalFile(f, 'generic_image')
-              e.target.value = ''
-            }}
-          />
-          <input
-            ref={genericCameraInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            style={{ display: 'none' }}
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) handleJournalFile(f, 'generic_image')
-              e.target.value = ''
-            }}
-          />
-          <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              disabled={journalUploading}
-              onClick={() => {
-                if (genericGalleryInputRef.current) {
-                  genericGalleryInputRef.current.value = ''
-                  genericGalleryInputRef.current.click()
-                }
-              }}
-              style={{
-                padding: '8px 14px',
-                fontSize: 14,
-                color: '#4a90d9',
-                background: '#fff',
-                border: '1px solid #4a90d9',
-                borderRadius: 8,
-                cursor: journalUploading ? 'not-allowed' : 'pointer',
-              }}
-            >
-              日常写真（ギャラリー）
-            </button>
-            <button
-              type="button"
-              disabled={journalUploading}
-              onClick={() => {
-                if (genericCameraInputRef.current) {
-                  genericCameraInputRef.current.value = ''
-                  genericCameraInputRef.current.click()
-                }
-              }}
-              style={{
-                padding: '8px 14px',
-                fontSize: 14,
-                color: '#4a90d9',
-                background: '#fff',
-                border: '1px solid #4a90d9',
-                borderRadius: 8,
-                cursor: journalUploading ? 'not-allowed' : 'pointer',
-              }}
-            >
-              日常写真（撮影）
+              撮影
             </button>
           </div>
           {journalUploaded && (
-            <p style={{ fontSize: 13, color: '#2e7d32', margin: '0 0 4px' }}>
+            <p className="sub" style={{ color: '#2e7d32', margin: '0 0 4px' }}>
               保存済み{journalDateKey ? `（${journalDateKey}）` : ''}
             </p>
           )}
@@ -853,42 +815,88 @@ export default function HomePage() {
             </span>
           )}
           {journalError && (
-            <p style={{ fontSize: 11, color: '#666', margin: '4px 0 0' }}>{journalError}</p>
+            <p style={{ fontSize: 11, color: '#c00', margin: '4px 0 0' }}>{journalError}</p>
           )}
+        </section>
 
-          <DailyPromptCard pairId={getPairId()} role={ROLE_PARENT} onTopicChange={handleTopicChange} />
-
-          {oneLinerVisible && oneLiner && (
-            <div style={{
-              width: '100%',
-              maxWidth: 320,
-              marginTop: 16,
-              padding: '12px 16px',
-              background: '#e8f5e9',
-              border: '1px solid #c8e6c9',
-              borderRadius: 8,
-              fontSize: 14,
-              color: '#2e7d32',
-              textAlign: 'center',
-              lineHeight: 1.5,
-            }}>
-              {oneLiner}
-            </div>
+        {/* (4) 日常写真（共有）※最大3枚 */}
+        <section className="card card-photos" style={{ width: '100%' }}>
+          <h2 className="cardHead">📷 日常写真（共有）※最大3枚</h2>
+          <p className="title">今日の写真: {photos.filter((p) => p.role === ROLE_PARENT).length}/3</p>
+          <input
+            ref={genericGalleryInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f && typeof f.type === 'string' && f.type.startsWith('image/')) handleJournalFile(f, 'generic_image')
+              e.target.value = ''
+            }}
+          />
+          <input
+            ref={genericCameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) handleJournalFile(f, 'generic_image')
+              e.target.value = ''
+            }}
+          />
+          <div className="btnGrid" style={{ marginBottom: 12 }}>
+            <button
+              type="button"
+              className="btn"
+              disabled={journalUploading}
+              onClick={() => {
+                if (genericGalleryInputRef.current) {
+                  genericGalleryInputRef.current.value = ''
+                  genericGalleryInputRef.current.click()
+                }
+              }}
+              style={{ borderColor: '#4a90d9', color: '#4a90d9', background: '#fff' }}
+            >
+              ギャラリー
+            </button>
+            <button
+              type="button"
+              className="btn"
+              disabled={journalUploading}
+              onClick={() => {
+                if (genericCameraInputRef.current) {
+                  genericCameraInputRef.current.value = ''
+                  genericCameraInputRef.current.click()
+                }
+              }}
+              style={{ borderColor: '#4a90d9', color: '#4a90d9', background: '#fff' }}
+            >
+              撮影
+            </button>
+          </div>
+          {dailyPhotoLimitMessage && (
+            <p style={{ fontSize: 12, color: '#888', margin: '0 0 8px' }}>{dailyPhotoLimitMessage}</p>
           )}
-
-          {analysisVisible && analysisComment && (
-            <div style={{
-              width: '100%',
-              maxWidth: 320,
-              marginTop: 8,
-              padding: '8px 12px',
-              fontSize: 12,
-              color: '#666',
-              textAlign: 'center',
-              lineHeight: 1.4,
-              whiteSpace: 'pre-line',
-            }}>
-              {analysisComment}
+          {/* 動作確認: 親(#/)で日常写真を3枚上げる→子(#/tyson)でサムネが見える。今日の写真サムネ一覧（相手側でも見える） */}
+          {photos.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+              {photos.slice(0, 6).map((ph, i) => (
+                <img
+                  key={ph.storagePath + String(i)}
+                  src={ph.url || ''}
+                  alt=""
+                  style={{
+                    width: 100,
+                    height: 100,
+                    maxHeight: 120,
+                    objectFit: 'cover',
+                    borderRadius: 12,
+                    flexShrink: 0,
+                  }}
+                />
+              ))}
             </div>
           )}
         </section>

@@ -1,3 +1,35 @@
+/**
+ * GET/POST /api/journal
+ *
+ * 変更したファイル一覧（4ブロックUI・日常写真両者表示対応）:
+ *   api/journal.js (GET: photos配列追加, POST: generic_image 1日3枚制限)
+ *   src/lib/journal.js (fetchTodayJournalMeta が photos を返すよう拡張)
+ *   src/index.css (.page, .card, .cardHead, .card-journal, .card-photos, .btnGrid, .btn, .btnPrimary)
+ *   src/pages/HomePage.jsx (4カード化, 日常写真 X/3・サムネ・上書きconfirm・4枚目拒否メッセージ)
+ *   src/pages/PairDailyPage.jsx (同上 + 親のジャーナル表示はジャーナルカード内で維持)
+ *
+ * GET レスポンス例:
+ * {
+ *   "success": true,
+ *   "hasImage": true,
+ *   "requestId": "REQ-XXXX",
+ *   "dateKey": "2025-02-15",
+ *   "storagePath": "journal/demo/2025-02/2025-02-15/parent/journal_image/page-01.jpg",
+ *   "updatedAt": 1739612345678,
+ *   "url": "https://...",
+ *   "signedUrl": "https://...",
+ *   "photos": [
+ *     { "url": "https://...", "storagePath": "journal/.../parent/generic_image/photo-01.jpg", "updatedAt": 1739612345678, "index": 1, "role": "parent" },
+ *     { "url": "https://...", "storagePath": "journal/.../child/generic_image/photo-01.jpg", "updatedAt": 1739612350000, "index": 1, "role": "child" }
+ *   ]
+ * }
+ *
+ * POST 成功例:
+ * { "success": true, "requestId": "REQ-XXXX", "dateKey": "2025-02-15", "storagePath": "journal/.../parent/generic_image/photo-02.jpg" }
+ *
+ * POST 4枚目拒否例 (400):
+ * { "success": false, "error": "Daily photos limit reached (3).", "requestId": "REQ-XXXX", "errorCode": "daily_photos_limit" }
+ */
 import admin from 'firebase-admin';
 import {
   parseFirebaseServiceAccount,
@@ -168,6 +200,7 @@ async function handleGet(req, res) {
         dateKey,
         storagePath: null,
         updatedAt: null,
+        photos: [],
       });
     }
 
@@ -193,6 +226,40 @@ async function handleGet(req, res) {
       }
     }
 
+    // 日常写真(generic_image): 両ロール分を photos 配列で返す（相手側でも一覧で見える）
+    const photos = [];
+    const roleDataAll = data?.roleData ?? {};
+    for (const r of ['parent', 'child']) {
+      const rd = roleDataAll[r];
+      if (!rd || typeof rd !== 'object') continue;
+      let list = Array.isArray(rd.generic_images) ? rd.generic_images : [];
+      if (list.length === 0 && rd.generic_image && typeof rd.generic_image.storagePath === 'string') {
+        list = [{ ...rd.generic_image, index: 1 }];
+      }
+      for (let i = 0; i < list.length; i++) {
+        const item = list[i];
+        const path = item?.storagePath;
+        if (!path) continue;
+        let urlPhoto = null;
+        try {
+          const fileRef = storageBucket.file(path);
+          const [u] = await fileRef.getSignedUrl({
+            action: 'read',
+            expires: Date.now() + 60 * 60 * 1000,
+          });
+          urlPhoto = u || null;
+        } catch (_) {}
+        const updatedAtPhoto = item?.updatedAt?.toMillis?.() ?? item?.updatedAt ?? null;
+        photos.push({
+          url: urlPhoto,
+          storagePath: path,
+          updatedAt: updatedAtPhoto,
+          index: typeof item.index === 'number' ? item.index : i + 1,
+          role: r,
+        });
+      }
+    }
+
     logObserve({ requestId: reqId, stage: 'journal_get', status: 'ok', pairId, role, clientDateKey, serverDateKey, storagePath: roleData?.storagePath ?? null, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
     return res.status(200).json({
       success: true,
@@ -203,6 +270,7 @@ async function handleGet(req, res) {
       updatedAt,
       url: signedUrl,
       signedUrl: signedUrl,
+      photos,
     });
   } catch (e) {
     const code = e?.code || 'unknown';
@@ -273,9 +341,37 @@ async function handlePost(req, res) {
     }
 
     const firestoreDocPath = `journal/${pairId}/months/${monthKey}/days/${dateKey}`;
-    const storagePath = `journal/${pairId}/${monthKey}/${dateKey}/${role}/${kind}/page-01.${parsed.ext}`;
 
     initFirebaseAdmin();
+
+    const docRef = firestore.collection('journal').doc(pairId).collection('months').doc(monthKey).collection('days').doc(dateKey);
+    const snap = await docRef.get();
+    const existingRole = (snap.exists && snap.data()?.roleData?.[role]) ? snap.data().roleData[role] : {};
+    let updatedRole = {};
+    if (existingRole && typeof existingRole === 'object' && existingRole !== null) {
+      if (typeof existingRole.storagePath === 'string') {
+        updatedRole = { journal_image: existingRole };
+      } else {
+        updatedRole = { ...existingRole };
+      }
+    }
+
+    let storagePath;
+    if (kind === 'generic_image') {
+      // 1日最大3枚。既存は generic_images 配列 or 従来の generic_image 単体
+      let list = Array.isArray(updatedRole.generic_images) ? updatedRole.generic_images : [];
+      if (list.length === 0 && updatedRole.generic_image && typeof updatedRole.generic_image.storagePath === 'string') {
+        list = [{ ...updatedRole.generic_image, index: 1 }];
+      }
+      if (list.length >= 3) {
+        logObserve({ requestId: requestIdFromBody, stage: 'journal_post_validate', status: 'error', pairId, role, clientDateKey, serverDateKey, storagePath: null, firestoreDocPath, httpStatus: 400, errorCode: 'daily_photos_limit', errorMessage: 'Daily photos limit reached (3).' });
+        return res.status(400).json({ success: false, error: 'Daily photos limit reached (3).', requestId: requestIdFromBody, errorCode: 'daily_photos_limit' });
+      }
+      const nextIndex = list.length + 1;
+      storagePath = `journal/${pairId}/${monthKey}/${dateKey}/${role}/generic_image/photo-0${nextIndex}.${parsed.ext}`;
+    } else {
+      storagePath = `journal/${pairId}/${monthKey}/${dateKey}/${role}/${kind}/page-01.${parsed.ext}`;
+    }
 
     try {
       const fileRef = storageBucket.file(storagePath);
@@ -303,19 +399,20 @@ async function handlePost(req, res) {
       height: 0,
     };
 
-    try {
-      const docRef = firestore.collection('journal').doc(pairId).collection('months').doc(monthKey).collection('days').doc(dateKey);
-      const snap = await docRef.get();
-      const existingRole = (snap.exists && snap.data()?.roleData?.[role]) ? snap.data().roleData[role] : {};
-      let updatedRole = {};
-      if (existingRole && typeof existingRole === 'object' && existingRole !== null) {
-        if (typeof existingRole.storagePath === 'string') {
-          updatedRole = { journal_image: existingRole };
-        } else {
-          updatedRole = { ...existingRole };
-        }
+    if (kind === 'generic_image') {
+      roleDataPayload.index = (Array.isArray(updatedRole.generic_images) ? updatedRole.generic_images.length : 0) + 1;
+      let list = Array.isArray(updatedRole.generic_images) ? [...updatedRole.generic_images] : [];
+      if (list.length === 0 && updatedRole.generic_image && typeof updatedRole.generic_image.storagePath === 'string') {
+        list = [{ ...updatedRole.generic_image, index: 1 }];
       }
+      list.push(roleDataPayload);
+      updatedRole.generic_images = list;
+      delete updatedRole.generic_image;
+    } else {
       updatedRole[kind] = roleDataPayload;
+    }
+
+    try {
       await docRef.set({
         requestId: requestIdFromBody,
         dateKey,
