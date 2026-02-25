@@ -894,20 +894,36 @@ export default function HomePage({ lang = 'ja' }) {
           {dailyPhotoLimitMessage && (
             <p style={{ fontSize: 12, color: '#888', margin: '0 0 8px' }}>{dailyPhotoLimitMessage}</p>
           )}
-          {/* 動作確認: 親(#/)で日常写真を3枚上げる→子(#/tyson)でサムネが見える。今日の写真サムネ一覧（相手側でも見える） */}
-          {photos.length > 0 && (
-            (console.log('[photos render]', { count: photos.length, items: photos.map((p) => ({ role: p.role, url: p.url ? 'set' : 'empty', storagePath: p.storagePath })) }),
-            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-              {photos.slice(0, 6).map((ph, i) => (
-                <div key={ph.storagePath + String(i)} className="thumbWrap">
-                  <img src={ph.url || ''} alt="" className="photo-thumb" />
-                  <span className="thumbBadge">
-                    {ph.role === ROLE_PARENT ? t(lang, 'roleLabelParent') : t(lang, 'roleLabelChild')}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ))}
+          {photos.length > 0 &&
+          (() => {
+            const parentPhotos = photos.filter((p) => p.role === 'parent')
+            const childPhotos = photos.filter((p) => p.role === 'child')
+            const renderStrip = (list) => (
+              <div className="photo-strip">
+                {list.slice(0, 6).map((ph, i) => (
+                  <div key={ph.storagePath + String(i)} className="thumbWrap">
+                    <img src={ph.url || ''} alt="" className="photo-thumb" />
+                  </div>
+                ))}
+              </div>
+            )
+            return (
+              <>
+                {parentPhotos.length > 0 && (
+                  <div className="photo-row">
+                    <div className="photo-row-title">{t(lang, 'photoFromParent')}</div>
+                    {renderStrip(parentPhotos)}
+                  </div>
+                )}
+                {childPhotos.length > 0 && (
+                  <div className="photo-row">
+                    <div className="photo-row-title">{t(lang, 'photoFromChild')}</div>
+                    {renderStrip(childPhotos)}
+                  </div>
+                )}
+              </>
+            )
+          })()}
         </section>
 
         {errorLine && (

@@ -50,6 +50,8 @@ const dict = {
     parentJournalAlt: '親のジャーナル',
     roleLabelParent: '親',
     roleLabelChild: '子',
+    photoFromParent: '親から',
+    photoFromChild: '子から',
     parentJournalZoomAlt: '親のジャーナル（拡大）',
     // Errors / messages
     tryAgain: 'もう一度お試しください',
@@ -129,6 +131,8 @@ const dict = {
     parentJournalAlt: "Parent's journal",
     roleLabelParent: 'Parent',
     roleLabelChild: 'Child',
+    photoFromParent: 'From Parent',
+    photoFromChild: 'From Child',
     parentJournalZoomAlt: "Parent's journal (zoom)",
     tryAgain: 'Please try again',
     uploadFailed: 'Something went wrong. Please try again (ID: {{id}})',
