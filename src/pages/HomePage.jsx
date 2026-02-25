@@ -372,6 +372,7 @@ export default function HomePage({ lang = 'ja' }) {
       const result = await uploadJournalImage(toUpload, reqId, getPairId(), ROLE_PARENT, kind)
       setJournalUploading(false)
       if (result.success) {
+        console.log('[upload success]', { requestId: reqId, kind, result: { success: result.success, requestId: result.requestId, dateKey: result.dateKey, storagePath: result.storagePath } })
         setJournalRequestId(result.requestId)
         if (kind === 'journal_image') {
           setJournalUploaded(true)
@@ -895,6 +896,7 @@ export default function HomePage({ lang = 'ja' }) {
           )}
           {/* 動作確認: 親(#/)で日常写真を3枚上げる→子(#/tyson)でサムネが見える。今日の写真サムネ一覧（相手側でも見える） */}
           {photos.length > 0 && (
+            (console.log('[photos render]', { count: photos.length, items: photos.map((p) => ({ role: p.role, url: p.url ? 'set' : 'empty', storagePath: p.storagePath })) }),
             <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
               {photos.slice(0, 6).map((ph, i) => (
                 <div key={ph.storagePath + String(i)} className="thumbWrap">
@@ -905,7 +907,7 @@ export default function HomePage({ lang = 'ja' }) {
                 </div>
               ))}
             </div>
-          )}
+          ))}
         </section>
 
         {errorLine && (

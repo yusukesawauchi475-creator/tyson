@@ -82,6 +82,13 @@ export async function uploadJournalImage(file, requestId = genRequestId(), pairI
 
   const roleVal = role === 'child' ? 'child' : 'parent';
   const kindVal = kind === 'generic_image' ? 'generic_image' : 'journal_image';
+  const fileSize = typeof file.size === 'number' ? file.size : 0;
+  const fileType = file.type || '';
+
+  if (typeof console?.log === 'function') {
+    console.log('[journal upload]', { endpoint: 'POST /api/journal', pairId: pid, role: roleVal, kind: kindVal, requestId, fileName: file.name, fileType, fileSize });
+  }
+
   try {
     const res = await fetch('/api/journal', {
       method: 'POST',
@@ -100,6 +107,9 @@ export async function uploadJournalImage(file, requestId = genRequestId(), pairI
     });
 
     const data = await res.json().catch(() => ({}));
+    if (typeof console?.log === 'function') {
+      console.log('[journal upload]', { requestId: data?.requestId ?? requestId, status: res.status, ok: res.ok, success: !!data?.success, errorCode: data?.errorCode, error: data?.error });
+    }
     if (!res.ok) {
       return {
         success: false,
@@ -115,6 +125,9 @@ export async function uploadJournalImage(file, requestId = genRequestId(), pairI
       storagePath: data?.storagePath,
     };
   } catch (e) {
+    if (typeof console?.log === 'function') {
+      console.log('[journal upload]', { requestId, status: 'error', errorCode: 'network', error: e?.message || String(e) });
+    }
     return {
       success: false,
       requestId,
@@ -138,19 +151,22 @@ export async function fetchTodayJournalMeta(pairId, role = 'parent') {
   const roleVal = role === 'child' ? 'child' : 'parent';
   const clientDateKey = getDateKeyNY();
   try {
+    // cache回避: URLに v=Date.now() で毎回ユニーク + fetch cache: 'no-store'
     const res = await fetch(
       `/api/journal?pairId=${encodeURIComponent(pid)}&role=${encodeURIComponent(roleVal)}&clientDateKey=${encodeURIComponent(clientDateKey)}&v=${Date.now()}`,
       { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }
     );
     if (!res.ok) return { hasImage: false, photos: [] };
     const data = await res.json().catch(() => ({}));
+    const photos = Array.isArray(data?.photos) ? data.photos : [];
+    console.log('[photos API response]', { url: res.url, count: photos.length, roles: photos.map((p) => p?.role), storagePaths: photos.map((p) => p?.storagePath) });
     return {
       hasImage: !!data?.hasImage,
       requestId: data?.requestId ?? undefined,
       dateKey: data?.dateKey ?? undefined,
       storagePath: data?.storagePath ?? undefined,
       updatedAt: data?.updatedAt ?? undefined,
-      photos: Array.isArray(data?.photos) ? data.photos : [],
+      photos,
     };
   } catch (_) {
     return { hasImage: false, photos: [] };
