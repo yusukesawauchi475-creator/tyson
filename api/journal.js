@@ -119,6 +119,46 @@ function removeUndefinedShallow(obj) {
   return out;
 }
 
+/** setPayload 再帰走査: undefined/function/sentinelっぽい値のパスを [OBSERVE] でログ出力 */
+function debugFirestorePayload(obj, requestId) {
+  const issues = [];
+  const genericImagesKeys = [];
+
+  function walk(v, p) {
+    if (v === undefined) {
+      issues.push({ path: p, type: 'undefined' });
+      return;
+    }
+    if (typeof v === 'function') {
+      issues.push({ path: p, type: 'function' });
+      return;
+    }
+    if (v === null || typeof v !== 'object') return;
+    if (Array.isArray(v)) {
+      v.forEach((item, i) => {
+        const sub = `${p}[${i}]`;
+        if (item !== null && typeof item === 'object') {
+          if (item.constructor === Object) {
+            if (p.includes('generic_images')) genericImagesKeys.push({ path: sub, keys: Object.keys(item) });
+            walk(item, sub);
+          }
+        } else if (item === undefined) {
+          issues.push({ path: sub, type: 'undefined' });
+        } else if (typeof item === 'function') {
+          issues.push({ path: sub, type: 'function' });
+        }
+      });
+      return;
+    }
+    if (v.constructor !== Object) return;
+    for (const [k, val] of Object.entries(v)) {
+      walk(val, p ? `${p}.${k}` : k);
+    }
+  }
+  walk(obj, 'root');
+  logObserve({ stage: 'journal_payload_debug', requestId, issues, genericImagesKeys });
+}
+
 /** roleData と generic_images 配列を shallow でサニタイズ（undefined 除去、sentinel はそのまま） */
 function sanitizeForFirestore(payload) {
   if (payload === null || typeof payload !== 'object') return payload;
@@ -475,6 +515,7 @@ async function handlePost(req, res) {
         [role]: updatedRole,
       },
     });
+    debugFirestorePayload(setPayload, requestIdFromBody);
     try {
       await docRef.set(setPayload, { merge: true });
       logObserve({ requestId: requestIdFromBody, stage: 'journal_post_firestore', status: 'ok', pairId, role, clientDateKey, serverDateKey, storagePath, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
