@@ -35,6 +35,43 @@ const TOPICS = [
   '今日はどんな1日だった？',
 ]
 
+const TOPICS_EN = [
+  "What did you eat today?",
+  "How was the weather today?",
+  "What was the most fun part of today?",
+  "How do you feel today?",
+  "Where did you go today?",
+  "What left an impression on you today?",
+  "Who did you meet today?",
+  "What did you do today?",
+  "What did you notice today?",
+  "How was your day?",
+  "What was today's highlight?",
+  "What did you learn today?",
+  "What did you feel today?",
+  "What memory stands out from today?",
+  "What did you feel today?",
+  "What small happiness did you have today?",
+  "What kind of time did you have today?",
+  "What from today do you want to talk about?",
+  "What were you thinking about today?",
+  "If you put today in one word, what would it be?",
+  "What did you do today?",
+  "If your mood today was a color, what color would it be?",
+  "What went well today?",
+  "What did you feel today?",
+  "Looking back on today, how was it?",
+  "How was your day?",
+  "What left an impression on you today?",
+  "What did you enjoy today?",
+  "If you put your feelings today into words, what would you say?",
+  "How was your day?",
+]
+
+if (import.meta?.env?.DEV && TOPICS.length !== TOPICS_EN.length) {
+  console.warn('[DailyPromptCard] TOPICS.length !== TOPICS_EN.length', TOPICS.length, TOPICS_EN.length)
+}
+
 // 簡単なハッシュ関数（文字列→数値）
 function simpleHash(str) {
   let hash = 0
@@ -150,7 +187,10 @@ export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role, onTopicCh
     return null
   }
 
-  const topic = TOPICS[topicIndex] || TOPICS[0]
+  const topicJa = TOPICS[topicIndex] || TOPICS[0]
+  const topicEn = TOPICS_EN[topicIndex] || TOPICS_EN[0]
+  const isEn = String(lang) === 'en'
+  const topicDisplay = isEn ? topicEn : topicJa
 
   return (
     <div style={{
@@ -166,7 +206,7 @@ export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role, onTopicCh
         {t(lang, 'todayTopic')}
       </p>
       <p style={{ margin: '0 0 12px', fontSize: 14, color: '#333', lineHeight: 1.5 }}>
-        {topic}
+        {topicDisplay}
       </p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         <button
