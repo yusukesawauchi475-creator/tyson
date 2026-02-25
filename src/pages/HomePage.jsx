@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, getPairId, getDateKey, genRequestId } from '../lib/pairDaily'
-import { uploadJournalImage, fetchTodayJournalMeta, resizeImageIfNeeded } from '../lib/journal'
+import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import { t } from '../lib/i18n'
 import DailyPromptCard from '../components/DailyPromptCard'
@@ -34,6 +34,10 @@ export default function HomePage({ lang = 'ja' }) {
   const [showReloadButton, setShowReloadButton] = useState(false)
   const [photos, setPhotos] = useState([])
   const [dailyPhotoLimitMessage, setDailyPhotoLimitMessage] = useState(null)
+  const [childJournalUrl, setChildJournalUrl] = useState(null)
+  const [childJournalLoading, setChildJournalLoading] = useState(false)
+  const [childJournalError, setChildJournalError] = useState(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
   const streamRef = useRef(null)
@@ -377,6 +381,10 @@ export default function HomePage({ lang = 'ja' }) {
         if (kind === 'journal_image') {
           setJournalUploaded(true)
           if (result.dateKey) setJournalDateKey(result.dateKey)
+          fetchTodayJournalMeta(getPairId(), ROLE_PARENT).then((r) => {
+            setJournalUploaded(!!r.hasImage)
+            if (r.dateKey) setJournalDateKey(r.dateKey)
+          })
         }
         if (kind === 'generic_image') {
           setDailyPhotoLimitMessage(null)
@@ -420,6 +428,20 @@ export default function HomePage({ lang = 'ja' }) {
     })
   }
 
+  const fetchChildJournal = useCallback(async () => {
+    setChildJournalLoading(true)
+    setChildJournalError(null)
+    try {
+      const url = await fetchJournalViewUrl(getPairId(), 'child')
+      setChildJournalUrl(url)
+    } catch (e) {
+      setChildJournalError(e?.message || String(e))
+      setChildJournalUrl(null)
+    } finally {
+      setChildJournalLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     fetchTodayJournalMeta(getPairId())
       .then(({ hasImage, dateKey, photos: p }) => {
@@ -429,6 +451,10 @@ export default function HomePage({ lang = 'ja' }) {
       })
       .catch((e) => setJournalError(e?.message || String(e)))
   }, [])
+
+  useEffect(() => {
+    fetchChildJournal()
+  }, [fetchChildJournal])
 
   useEffect(() => {
     const t = setTimeout(() => setShowReloadButton(true), 10000)
@@ -759,6 +785,44 @@ export default function HomePage({ lang = 'ja' }) {
         <section className="card card-journal" style={{ width: '100%' }}>
           <h2 className="cardHead">📝 {t(lang, 'journalSharedAi')}</h2>
           <p style={{ fontSize: 11, color: '#666', margin: '0 0 12px', lineHeight: 1.4 }}>{t(lang, 'journalNotice')}</p>
+          <p className="title">{t(lang, 'childJournalToday')}</p>
+          {childJournalLoading && (
+            <p className="sub" style={{ margin: '0 0 8px' }}>{t(lang, 'loading')}</p>
+          )}
+          {!childJournalLoading && childJournalUrl && (
+            <>
+              <div className="thumbWrap" style={{ display: 'inline-block' }}>
+                <img
+                  src={childJournalUrl}
+                  alt={t(lang, 'childJournalAlt')}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setPreviewOpen(true)}
+                  onKeyDown={(e) => e.key === 'Enter' && setPreviewOpen(true)}
+                  className="photo-thumb"
+                  style={{ cursor: 'pointer', objectFit: 'cover' }}
+                />
+                <span className="thumbBadge">{t(lang, 'roleLabelChild')}</span>
+              </div>
+              <p style={{ fontSize: 12, color: '#888', margin: '4px 0 0', textAlign: 'center' }}>{t(lang, 'tapToEnlarge')}</p>
+            </>
+          )}
+          {!childJournalLoading && !childJournalUrl && !childJournalError && (
+            <p className="sub" style={{ margin: '0 0 8px' }}>{t(lang, 'notUploadedYet')}</p>
+          )}
+          {childJournalError && (
+            <p style={{ fontSize: 12, color: '#666', margin: '0 0 8px', textAlign: 'center' }}>{childJournalError}</p>
+          )}
+          <button
+            type="button"
+            onClick={fetchChildJournal}
+            disabled={childJournalLoading}
+            style={{ padding: '4px 12px', fontSize: 12, color: '#4a90d9', background: 'transparent', border: '1px solid #4a90d9', borderRadius: 6, cursor: childJournalLoading ? 'wait' : 'pointer', marginTop: 4, marginBottom: 12 }}
+          >
+            {t(lang, 'refresh')}
+          </button>
+
+          <p className="title" style={{ marginTop: 12 }}>{t(lang, 'myJournal')}</p>
           <input
             ref={journalGalleryInputRef}
             type="file"
@@ -939,6 +1003,33 @@ export default function HomePage({ lang = 'ja' }) {
         onPause={() => setIsPlayingParent(false)}
         style={{ display: 'none' }}
       />
+
+      {previewOpen && childJournalUrl && (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setPreviewOpen(false)}
+          onKeyDown={(e) => e.key === 'Escape' && setPreviewOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.8)',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+            boxSizing: 'border-box',
+            cursor: 'pointer',
+          }}
+        >
+          <img
+            src={childJournalUrl}
+            alt={t(lang, 'childJournalZoomAlt')}
+            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8, pointerEvents: 'none' }}
+          />
+        </div>
+      )}
     </div>
   )
 }

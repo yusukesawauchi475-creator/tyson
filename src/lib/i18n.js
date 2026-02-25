@@ -42,9 +42,9 @@ const dict = {
     tapToEnlarge: 'タップで拡大',
     dailyPhotoLimit: '本日は3枚までです',
     todayTopic: '今日の話題',
-    // Journal notice（ジャーナル=自分用/AI解析・相手に非共有 / 日常写真=相手と共有）
-    journalNotice: 'ジャーナルは自分用・AI解析用（相手には共有されません）。日常写真は相手と共有されます。',
-    journalShownToPartner: 'ジャーナルは相手に共有されません。',
+    // Journal notice（ジャーナル=相手に表示・自分の画面には出さない / 日常写真=相手と共有）
+    journalNotice: 'ジャーナルは相手に表示されます（自分の画面には表示しません）。日常写真も相手と共有されます。',
+    journalShownToPartner: 'ジャーナルは相手に表示されます。',
     journalOverwriteConfirm: '今日のジャーナルを上書きします。よろしいですか？',
     // Alts
     parentJournalAlt: '親のジャーナル',
@@ -53,6 +53,9 @@ const dict = {
     photoFromParent: '親から',
     photoFromChild: '子から',
     parentJournalZoomAlt: '親のジャーナル（拡大）',
+    childJournalToday: '子のジャーナル（今日）',
+    childJournalAlt: '子のジャーナル',
+    childJournalZoomAlt: '子のジャーナル（拡大）',
     // Errors / messages
     tryAgain: 'もう一度お試しください',
     uploadFailed: 'うまくいきませんでした。もう一度お試しください（ID: {{id}}）',
@@ -125,8 +128,8 @@ const dict = {
     tapToEnlarge: 'Tap to enlarge',
     dailyPhotoLimit: 'Up to 3 per day',
     todayTopic: "Today's topic",
-    journalNotice: 'Journal is for you and AI analysis (not shared with partner). Daily photos are shared with your partner.',
-    journalShownToPartner: 'Journal is not shared with partner.',
+    journalNotice: 'Journal is shown to your partner (not on your own screen). Daily photos are also shared.',
+    journalShownToPartner: 'Journal is shown to your partner.',
     journalOverwriteConfirm: 'This will overwrite today\'s journal. Continue?',
     parentJournalAlt: "Parent's journal",
     roleLabelParent: 'Parent',
@@ -134,6 +137,9 @@ const dict = {
     photoFromParent: 'From Parent',
     photoFromChild: 'From Child',
     parentJournalZoomAlt: "Parent's journal (zoom)",
+    childJournalToday: "Child's journal (today)",
+    childJournalAlt: "Child's journal",
+    childJournalZoomAlt: "Child's journal (zoom)",
     tryAgain: 'Please try again',
     uploadFailed: 'Something went wrong. Please try again (ID: {{id}})',
     playFailed: 'Something went wrong. Please try again (ID: PLAY-ERR)',

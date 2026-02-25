@@ -277,9 +277,12 @@ async function handleGet(req, res) {
 
     const data = snap.data();
     const roleDataRaw = data?.roleData?.[role];
-    const roleData = roleDataRaw && typeof roleDataRaw.storagePath === 'string'
-      ? roleDataRaw
-      : roleDataRaw?.journal_image ?? null;
+    // 最新優先: journal_image があればそれを使用（上書き対応）、でなければ flat storagePath
+    const roleData = (roleDataRaw?.journal_image && typeof roleDataRaw.journal_image?.storagePath === 'string')
+      ? roleDataRaw.journal_image
+      : (roleDataRaw && typeof roleDataRaw.storagePath === 'string')
+        ? roleDataRaw
+        : null;
     const hasImage = !!(roleData?.storagePath);
     const updatedAt = roleData?.updatedAt?.toMillis?.() ?? roleData?.updatedAt ?? null;
 
@@ -321,12 +324,13 @@ async function handleGet(req, res) {
           urlPhoto = u || null;
         } catch (_) {}
         const updatedAtPhoto = item?.updatedAt?.toMillis?.() ?? item?.updatedAt ?? null;
+        const roleNormalized = (r === 'child' ? 'child' : 'parent');
         photos.push({
           url: urlPhoto,
           storagePath: path,
           updatedAt: updatedAtPhoto,
           index: typeof item.index === 'number' ? item.index : i + 1,
-          role: r,
+          role: roleNormalized,
         });
       }
     }
@@ -521,7 +525,8 @@ async function handlePost(req, res) {
     debugFirestorePayload(setPayload, requestIdFromBody);
     try {
       await docRef.set(setPayload, { merge: true });
-      logObserve({ requestId: requestIdFromBody, stage: 'journal_post_firestore', status: 'ok', pairId, role, clientDateKey, serverDateKey, storagePath, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
+      const writtenPath = kind === 'journal_image' ? (updatedRole?.journal_image?.storagePath ?? storagePath) : storagePath;
+      logObserve({ requestId: requestIdFromBody, stage: 'journal_post_firestore', status: 'ok', pairId, role, clientDateKey, serverDateKey, storagePath: writtenPath, firestoreDocPath, journalImagePath: kind === 'journal_image' ? writtenPath : null, httpStatus: 200, errorCode: null, errorMessage: null });
     } catch (firestoreErr) {
       const code = firestoreErr?.code || 'unknown';
       const msg = (firestoreErr?.message || String(firestoreErr)).substring(0, 120);
@@ -547,6 +552,7 @@ export default async function handler(req, res) {
   const reqId = req.headers['x-request-id'] || genRequestId();
 
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Request-Id');
 

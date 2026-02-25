@@ -145,6 +145,10 @@ export default function PairDailyPage({ lang = 'ja' }) {
         if (kind === 'journal_image') {
           setJournalUploaded(true)
           if (result.dateKey) setJournalDateKey(result.dateKey)
+          fetchTodayJournalMeta(getPairId(), ROLE_CHILD).then((r) => {
+            setJournalUploaded(!!r.hasImage)
+            if (r.dateKey) setJournalDateKey(r.dateKey)
+          })
         }
         if (kind === 'generic_image') {
           setDailyPhotoLimitMessage(null)
