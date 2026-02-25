@@ -460,7 +460,8 @@ async function handlePost(req, res) {
       const nextIndex = list.length + 1;
       storagePath = `journal/${pairId}/${monthKey}/${dateKey}/${role}/generic_image/photo-0${nextIndex}.${parsed.ext}`;
     } else {
-      storagePath = `journal/${pairId}/${monthKey}/${dateKey}/${role}/${kind}/page-01.${parsed.ext}`;
+      const fileName = (requestIdFromBody || reqId).replace(/[^a-zA-Z0-9._-]/g, '_');
+      storagePath = `journal/${pairId}/${monthKey}/${dateKey}/${role}/journal_image/${fileName}.${parsed.ext}`;
     }
     logStoragePath = storagePath;
     logStage = 'journal_post_storage';

@@ -4,6 +4,7 @@ import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeI
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import { t } from '../lib/i18n'
 import DailyPromptCard from '../components/DailyPromptCard'
+import LanguageSwitch from '../components/LanguageSwitch'
 import { getIdTokenForApi } from '../lib/firebase'
 import { useAudioLevel } from '../lib/useAudioLevel'
 
@@ -121,7 +122,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
       return
     }
     // 動作確認: ジャーナルは常に1枚、2回目はconfirmで上書き確認
-    if (kind === 'journal_image' && journalUploaded && !window.confirm(lang === 'en' ? 'Overwrite today\'s journal?' : '今日のジャーナルを上書きします。よろしいですか？')) return
+    if (kind === 'journal_image' && journalUploaded && !window.confirm(t(lang, 'journalOverwriteConfirm'))) return
     // 動作確認: 4枚目はアップロード拒否して画面にグレー文字で表示
     if (kind === 'generic_image') {
       const myCount = photos.filter((p) => p.role === ROLE_CHILD).length
@@ -152,7 +153,14 @@ export default function PairDailyPage({ lang = 'ja' }) {
         if (result.errorCode === 'daily_photos_limit' || (result.error && result.error.includes('limit'))) {
           setDailyPhotoLimitMessage(t(lang, 'dailyPhotoLimit'))
         } else {
-          setJournalError(result.error || t(lang, 'uploadError'))
+          const errMsg = result.errorCode === 'payload_too_large'
+            ? t(lang, 'uploadErrorSize')
+            : result.errorCode === 'invalid_image_type'
+              ? t(lang, 'uploadErrorType')
+              : result.errorCode === 'network'
+                ? t(lang, 'uploadErrorNetwork')
+                : (result.error || t(lang, 'uploadError'))
+          setJournalError(errMsg)
         }
       }
     } catch (e) {
@@ -600,6 +608,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
           {hasAudio === true ? t(lang, 'voiceReceivedToday') : hasAudio === false ? t(lang, 'notYetOkToday') : t(lang, 'checking')}
         </p>
         </div>
+        <LanguageSwitch lang={lang} variant="pair" />
         <span style={{ fontSize: 11, color: '#999' }}>pairId: {getPairId()}</span>
         {lastRequestId && (
           <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12, color: '#666' }}>
@@ -782,29 +791,27 @@ export default function PairDailyPage({ lang = 'ja' }) {
         {/* (3) ジャーナル（解析・共有）※1日1枚 */}
         <section className="card card-journal" style={{ width: '100%' }}>
           <h2 className="cardHead">📝 {t(lang, 'journalSharedAi')}</h2>
-          <p style={{ fontSize: 11, color: '#666', margin: '0 0 12px', lineHeight: 1.4 }}>{t(lang, 'journalNotice')}</p>
+          <p style={{ fontSize: 11, color: '#666', margin: '0 0 4px', lineHeight: 1.4 }}>{t(lang, 'journalNotice')}</p>
+          <p style={{ fontSize: 11, color: '#666', margin: '0 0 12px', lineHeight: 1.4 }}>{t(lang, 'journalShownToPartner')}</p>
           <p className="title">{t(lang, 'parentJournalToday')}</p>
           {parentJournalLoading && (
             <p className="sub" style={{ margin: '0 0 8px' }}>{t(lang, 'loading')}</p>
           )}
           {!parentJournalLoading && parentJournalUrl && (
             <>
-              <img
-                src={parentJournalUrl}
-                alt={t(lang, 'parentJournalAlt')}
-                role="button"
-                tabIndex={0}
-                onClick={() => setPreviewOpen(true)}
-                onKeyDown={(e) => e.key === 'Enter' && setPreviewOpen(true)}
-                style={{
-                  width: '100%',
-                  borderRadius: 12,
-                  maxHeight: 260,
-                  objectFit: 'contain',
-                  cursor: 'pointer',
-                  display: 'block',
-                }}
-              />
+              <div className="thumbWrap" style={{ display: 'inline-block' }}>
+                <img
+                  src={parentJournalUrl}
+                  alt={t(lang, 'parentJournalAlt')}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setPreviewOpen(true)}
+                  onKeyDown={(e) => e.key === 'Enter' && setPreviewOpen(true)}
+                  className="photo-thumb"
+                  style={{ cursor: 'pointer', objectFit: 'cover' }}
+                />
+                <span className="thumbBadge">{t(lang, 'roleLabelParent')}</span>
+              </div>
               <p style={{ fontSize: 12, color: '#888', margin: '4px 0 0', textAlign: 'center' }}>{t(lang, 'tapToEnlarge')}</p>
             </>
           )}
@@ -963,19 +970,12 @@ export default function PairDailyPage({ lang = 'ja' }) {
           {photos.length > 0 && (
             <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
               {photos.slice(0, 6).map((ph, i) => (
-                <img
-                  key={ph.storagePath + String(i)}
-                  src={ph.url || ''}
-                  alt=""
-                  style={{
-                    width: 100,
-                    height: 100,
-                    maxHeight: 120,
-                    objectFit: 'cover',
-                    borderRadius: 12,
-                    flexShrink: 0,
-                  }}
-                />
+                <div key={ph.storagePath + String(i)} className="thumbWrap">
+                  <img src={ph.url || ''} alt="" className="photo-thumb" />
+                  <span className="thumbBadge">
+                    {ph.role === ROLE_CHILD ? t(lang, 'roleLabelChild') : t(lang, 'roleLabelParent')}
+                  </span>
+                </div>
               ))}
             </div>
           )}
