@@ -108,6 +108,37 @@ function logObserve(obj) {
   console.log('[OBSERVE]', JSON.stringify(obj));
 }
 
+/** 1段階のみ undefined を除去（Firestore sentinel/Timestamp は触らない） */
+function removeUndefinedShallow(obj) {
+  if (obj === null || typeof obj !== 'object') return obj;
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v === undefined) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
+/** roleData と generic_images 配列を shallow でサニタイズ（undefined 除去、sentinel はそのまま） */
+function sanitizeForFirestore(payload) {
+  if (payload === null || typeof payload !== 'object') return payload;
+  const cleaned = removeUndefinedShallow(payload);
+  const roleData = cleaned.roleData;
+  if (roleData && typeof roleData === 'object' && !Array.isArray(roleData)) {
+    for (const r of Object.keys(roleData)) {
+      const roleObj = roleData[r];
+      if (roleObj && typeof roleObj === 'object') {
+        roleData[r] = removeUndefinedShallow(roleObj);
+        const arr = roleData[r].generic_images;
+        if (Array.isArray(arr)) {
+          roleData[r].generic_images = arr.map((item) => (item && typeof item === 'object' ? removeUndefinedShallow(item) : item));
+        }
+      }
+    }
+  }
+  return cleaned;
+}
+
 async function verifyIdToken(idToken) {
   initFirebaseAdmin();
   const decoded = await admin.auth().verifyIdToken(idToken);
@@ -280,12 +311,19 @@ async function handleGet(req, res) {
   }
 }
 
+const MAX_IMAGE_BYTES = 6 * 1024 * 1024; // 6MB (base64 decode 後)
+
 /** POST: JSON body { pairId, role, requestId, imageDataUrl } → Storage + Firestore。Vercel Function 用。 */
 async function handlePost(req, res) {
   const reqId = req.headers['x-request-id'] || genRequestId();
   const serverDateKey = getDateKeyNY();
   const dateKey = serverDateKey;
   const monthKey = serverDateKey.slice(0, 7);
+  let logPairId = null;
+  let logRole = null;
+  let logDateKey = dateKey;
+  let logStoragePath = null;
+  let logStage = 'journal_post_validate';
 
   const authHeader = req.headers.authorization || '';
   const idToken = authHeader.replace(/^Bearer\s+/i, '').trim();
@@ -311,12 +349,15 @@ async function handlePost(req, res) {
       } catch (parseErr) {
         const msg = (parseErr?.message || String(parseErr)).substring(0, 100);
         logObserve({ requestId: reqId, stage: 'journal_post_validate', status: 'error', pairId: null, role: null, clientDateKey: null, serverDateKey, storagePath: null, firestoreDocPath: null, httpStatus: 400, errorCode: 'parse_failed', errorMessage: msg });
-        return res.status(400).json({ success: false, error: 'Invalid JSON body', requestId: reqId });
+        return res.status(400).json({ success: false, error: 'Invalid JSON body', requestId: reqId, errorCode: 'parse_failed' });
       }
     }
 
     const pairId = body.pairId || body.pair_id || 'demo';
     const role = body.role || 'parent';
+    logPairId = pairId;
+    logRole = role;
+
     const kind = (body.kind || 'journal_image') === 'generic_image' ? 'generic_image' : 'journal_image';
     const requestIdFromBody = (body.requestId || body.request_id || '').trim() || reqId;
     const clientDateKey = body.dateKey || body.clientDateKey || null;
@@ -338,6 +379,15 @@ async function handlePost(req, res) {
     if (!parsed || !parsed.buffer?.length) {
       logObserve({ requestId: reqId, stage: 'journal_post_validate', status: 'error', pairId, role, clientDateKey, serverDateKey, storagePath: null, firestoreDocPath: null, httpStatus: 400, errorCode: 'missing_image', errorMessage: 'imageDataUrl (data URL) required' });
       return res.status(400).json({ success: false, error: 'imageDataUrl (data URL) is required', requestId: reqId });
+    }
+
+    if (parsed.mimeType === 'image/heic' || parsed.mimeType === 'image/heif') {
+      logObserve({ requestId: reqId, stage: 'journal_post_validate', status: 'error', pairId, role, clientDateKey, serverDateKey, storagePath: null, firestoreDocPath: null, httpStatus: 400, errorCode: 'invalid_image_type', errorMessage: 'HEIC/HEIF not supported', fileName: null, fileType: parsed.mimeType, fileSize: parsed.buffer.length });
+      return res.status(400).json({ success: false, error: 'HEIC/HEIF is not supported. Use JPEG or PNG.', requestId: reqId, errorCode: 'invalid_image_type' });
+    }
+    if (parsed.buffer.length > MAX_IMAGE_BYTES) {
+      logObserve({ requestId: reqId, stage: 'journal_post_validate', status: 'error', pairId, role, clientDateKey, serverDateKey, storagePath: null, firestoreDocPath: null, httpStatus: 413, errorCode: 'payload_too_large', errorMessage: 'image too large', fileType: parsed.mimeType, fileSize: parsed.buffer.length });
+      return res.status(413).json({ success: false, error: 'Image is too large.', requestId: reqId, errorCode: 'payload_too_large' });
     }
 
     const firestoreDocPath = `journal/${pairId}/months/${monthKey}/days/${dateKey}`;
@@ -372,6 +422,9 @@ async function handlePost(req, res) {
     } else {
       storagePath = `journal/${pairId}/${monthKey}/${dateKey}/${role}/${kind}/page-01.${parsed.ext}`;
     }
+    logStoragePath = storagePath;
+    logStage = 'journal_post_storage';
+    logObserve({ requestId: requestIdFromBody, stage: 'journal_upload_start', endpoint: 'POST /api/journal', pairId, role, dateKey: clientDateKey || serverDateKey, kind, fileName: storagePath.split('/').pop(), fileType: parsed.mimeType, fileSize: parsed.buffer.length, storagePath, firestoreDocPath });
 
     try {
       const fileRef = storageBucket.file(storagePath);
@@ -382,51 +435,54 @@ async function handlePost(req, res) {
       logObserve({ requestId: requestIdFromBody, stage: 'journal_post_storage', status: 'ok', pairId, role, clientDateKey, serverDateKey, storagePath, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
     } catch (uploadErr) {
       const code = uploadErr?.code || 'unknown';
-      const msg = (uploadErr?.message || String(uploadErr)).substring(0, 100);
+      const msg = (uploadErr?.message || String(uploadErr)).substring(0, 120);
       logObserve({ requestId: requestIdFromBody, stage: 'journal_post_storage', status: 'error', pairId, role, clientDateKey, serverDateKey, storagePath, firestoreDocPath, httpStatus: 500, errorCode: code, errorMessage: msg });
-      throw uploadErr;
+      return res.status(500).json({ success: false, error: msg || 'Storage upload failed', requestId: requestIdFromBody, errorCode: code, errorMessage: msg });
     }
 
     const bytes = parsed.buffer.length;
-    const roleDataPayload = {
+    const serverTs = admin.firestore.FieldValue.serverTimestamp();
+    const roleDataPayload = removeUndefinedShallow({
       storagePath,
       kind,
       uploadId: requestIdFromBody,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: serverTs,
       bytes,
       contentType: parsed.mimeType || 'image/jpeg',
       width: 0,
       height: 0,
-    };
+    });
 
     if (kind === 'generic_image') {
       roleDataPayload.index = (Array.isArray(updatedRole.generic_images) ? updatedRole.generic_images.length : 0) + 1;
       let list = Array.isArray(updatedRole.generic_images) ? [...updatedRole.generic_images] : [];
       if (list.length === 0 && updatedRole.generic_image && typeof updatedRole.generic_image.storagePath === 'string') {
-        list = [{ ...updatedRole.generic_image, index: 1 }];
+        list = [removeUndefinedShallow({ ...updatedRole.generic_image, index: 1 })];
       }
       list.push(roleDataPayload);
-      updatedRole.generic_images = list;
+      updatedRole.generic_images = list.map((item) => (item && typeof item === 'object' ? removeUndefinedShallow(item) : item));
       delete updatedRole.generic_image;
     } else {
       updatedRole[kind] = roleDataPayload;
     }
 
+    logStage = 'journal_post_firestore';
+    const setPayload = sanitizeForFirestore({
+      requestId: requestIdFromBody,
+      dateKey,
+      monthKey,
+      roleData: {
+        [role]: updatedRole,
+      },
+    });
     try {
-      await docRef.set({
-        requestId: requestIdFromBody,
-        dateKey,
-        monthKey,
-        roleData: {
-          [role]: updatedRole,
-        },
-      }, { merge: true });
+      await docRef.set(setPayload, { merge: true });
       logObserve({ requestId: requestIdFromBody, stage: 'journal_post_firestore', status: 'ok', pairId, role, clientDateKey, serverDateKey, storagePath, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
     } catch (firestoreErr) {
       const code = firestoreErr?.code || 'unknown';
-      const msg = (firestoreErr?.message || String(firestoreErr)).substring(0, 100);
+      const msg = (firestoreErr?.message || String(firestoreErr)).substring(0, 120);
       logObserve({ requestId: requestIdFromBody, stage: 'journal_post_firestore', status: 'error', pairId, role, clientDateKey, serverDateKey, storagePath, firestoreDocPath, httpStatus: 500, errorCode: code, errorMessage: msg });
-      throw firestoreErr;
+      return res.status(500).json({ success: false, error: msg || 'Firestore update failed', requestId: requestIdFromBody, errorCode: code, errorMessage: msg });
     }
 
     return res.status(200).json({
@@ -437,9 +493,9 @@ async function handlePost(req, res) {
     });
   } catch (e) {
     const code = e?.code || 'unknown';
-    const msg = (e?.message || String(e)).substring(0, 100);
-    logObserve({ requestId: reqId, stage: 'journal_post_firestore', status: 'error', pairId: null, role: null, clientDateKey: null, serverDateKey: getDateKeyNY(), storagePath: null, firestoreDocPath: null, httpStatus: 500, errorCode: code, errorMessage: msg });
-    return res.status(500).json({ success: false, error: 'Upload failed', requestId: reqId, errorCode: code });
+    const msg = (e?.message || String(e)).substring(0, 120);
+    logObserve({ requestId: reqId, stage: logStage, status: 'error', pairId: logPairId, role: logRole, clientDateKey: null, serverDateKey: getDateKeyNY(), storagePath: logStoragePath, firestoreDocPath: null, httpStatus: 500, errorCode: code, errorMessage: msg });
+    return res.status(500).json({ success: false, error: msg || 'Upload failed', requestId: reqId, errorCode: code, errorMessage: msg });
   }
 }
 
