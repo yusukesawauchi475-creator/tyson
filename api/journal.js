@@ -481,12 +481,14 @@ async function handlePost(req, res) {
     }
 
     const bytes = parsed.buffer.length;
-    const serverTs = admin.firestore.FieldValue.serverTimestamp();
+    const updatedAtVal = kind === 'generic_image'
+      ? Date.now()
+      : admin.firestore.FieldValue.serverTimestamp();
     const roleDataPayload = removeUndefinedShallow({
       storagePath,
       kind,
       uploadId: requestIdFromBody,
-      updatedAt: serverTs,
+      updatedAt: updatedAtVal,
       bytes,
       contentType: parsed.mimeType || 'image/jpeg',
       width: 0,
