@@ -36,9 +36,9 @@ export default function PairDailyPage({ lang = 'ja' }) {
   const [journalUploaded, setJournalUploaded] = useState(false)
   const [journalDateKey, setJournalDateKey] = useState(null)
   const [journalError, setJournalError] = useState(null)
-  const [parentJournalUrl, setParentJournalUrl] = useState(null)
-  const [parentJournalLoading, setParentJournalLoading] = useState(false)
-  const [parentJournalError, setParentJournalError] = useState(null)
+  const [myJournalUrl, setMyJournalUrl] = useState(null)
+  const [myJournalLoading, setMyJournalLoading] = useState(false)
+  const [myJournalError, setMyJournalError] = useState(null)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [photos, setPhotos] = useState([])
   const [dailyPhotoLimitMessage, setDailyPhotoLimitMessage] = useState(null)
@@ -149,6 +149,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
             setJournalUploaded(!!r.hasImage)
             if (r.dateKey) setJournalDateKey(r.dateKey)
           })
+          fetchMyJournal()
         }
         if (kind === 'generic_image') {
           setDailyPhotoLimitMessage(null)
@@ -187,23 +188,23 @@ export default function PairDailyPage({ lang = 'ja' }) {
       .catch((e) => setJournalError(t(lang, 'initError', { msg: e?.message || String(e) })))
   }, [lang])
 
-  const fetchParentJournal = useCallback(async () => {
-    setParentJournalLoading(true)
-    setParentJournalError(null)
+  const fetchMyJournal = useCallback(async () => {
+    setMyJournalLoading(true)
+    setMyJournalError(null)
     try {
-      const url = await fetchJournalViewUrl(getPairId(), 'parent')
-      setParentJournalUrl(url)
+      const url = await fetchJournalViewUrl(getPairId(), 'child')
+      setMyJournalUrl(url)
     } catch (e) {
-      setParentJournalError(e?.message || String(e))
-      setParentJournalUrl(null)
+      setMyJournalError(e?.message || String(e))
+      setMyJournalUrl(null)
     } finally {
-      setParentJournalLoading(false)
+      setMyJournalLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    fetchParentJournal()
-  }, [fetchParentJournal])
+    fetchMyJournal()
+  }, [fetchMyJournal])
 
   useEffect(() => {
     const d = new Date()
@@ -796,48 +797,45 @@ export default function PairDailyPage({ lang = 'ja' }) {
           ) : null}
         </section>
 
-        {/* (3) ジャーナル（解析・共有）※1日1枚 */}
+        {/* (3) ジャーナル（自分だけ見れる）※1日1枚 */}
         <section className="card card-journal" style={{ width: '100%' }}>
           <h2 className="cardHead">📝 {t(lang, 'journalSharedAi')}</h2>
           <p style={{ fontSize: 11, color: '#666', margin: '0 0 12px', lineHeight: 1.4 }}>{t(lang, 'journalNotice')}</p>
-          <p className="title">{t(lang, 'parentJournalToday')}</p>
-          {parentJournalLoading && (
+          <p className="title">{t(lang, 'myJournal')}</p>
+          {myJournalLoading && (
             <p className="sub" style={{ margin: '0 0 8px' }}>{t(lang, 'loading')}</p>
           )}
-          {!parentJournalLoading && parentJournalUrl && (
+          {!myJournalLoading && myJournalUrl && (
             <>
               <div className="thumbWrap" style={{ display: 'inline-block' }}>
                 <img
-                  src={parentJournalUrl}
-                  alt={t(lang, 'parentJournalAlt')}
+                  src={myJournalUrl}
+                  alt={t(lang, 'myJournal')}
                   role="button"
                   tabIndex={0}
                   onClick={() => setPreviewOpen(true)}
                   onKeyDown={(e) => e.key === 'Enter' && setPreviewOpen(true)}
-                  className="photo-thumb"
-                  style={{ cursor: 'pointer', objectFit: 'cover' }}
+                  className="media-thumb"
+                  style={{ cursor: 'pointer' }}
                 />
-                <span className="thumbBadge">{t(lang, 'roleLabelParent')}</span>
               </div>
               <p style={{ fontSize: 12, color: '#888', margin: '4px 0 0', textAlign: 'center' }}>{t(lang, 'tapToEnlarge')}</p>
             </>
           )}
-          {!parentJournalLoading && !parentJournalUrl && !parentJournalError && (
+          {!myJournalLoading && !myJournalUrl && !myJournalError && (
             <p className="sub" style={{ margin: '0 0 8px' }}>{t(lang, 'notUploadedYet')}</p>
           )}
-          {parentJournalError && (
-            <p style={{ fontSize: 12, color: '#666', margin: '0 0 8px', textAlign: 'center' }}>{parentJournalError}</p>
+          {myJournalError && (
+            <p style={{ fontSize: 12, color: '#666', margin: '0 0 8px', textAlign: 'center' }}>{myJournalError}</p>
           )}
           <button
             type="button"
-            onClick={fetchParentJournal}
-            disabled={parentJournalLoading}
-            style={{ padding: '4px 12px', fontSize: 12, color: '#4a90d9', background: 'transparent', border: '1px solid #4a90d9', borderRadius: 6, cursor: parentJournalLoading ? 'wait' : 'pointer', marginTop: 4, marginBottom: 12 }}
+            onClick={fetchMyJournal}
+            disabled={myJournalLoading}
+            style={{ padding: '4px 12px', fontSize: 12, color: '#4a90d9', background: 'transparent', border: '1px solid #4a90d9', borderRadius: 6, cursor: myJournalLoading ? 'wait' : 'pointer', marginTop: 4, marginBottom: 12 }}
           >
             {t(lang, 'refresh')}
           </button>
-
-          <p className="title" style={{ marginTop: 12 }}>{t(lang, 'myJournal')}</p>
           <input
             ref={journalGalleryInputRef}
             type="file"
@@ -977,11 +975,12 @@ export default function PairDailyPage({ lang = 'ja' }) {
           (() => {
             const parentPhotos = photos.filter((p) => p.role === 'parent')
             const childPhotos = photos.filter((p) => p.role === 'child')
+            const unknownPhotos = photos.filter((p) => p.role !== 'parent' && p.role !== 'child')
             const renderStrip = (list) => (
               <div className="photo-strip">
                 {list.slice(0, 6).map((ph, i) => (
                   <div key={ph.storagePath + String(i)} className="thumbWrap">
-                    <img src={ph.url || ''} alt="" className="photo-thumb" />
+                    <img src={ph.url || ''} alt="" className="media-thumb" />
                   </div>
                 ))}
               </div>
@@ -998,6 +997,12 @@ export default function PairDailyPage({ lang = 'ja' }) {
                   <div className="photo-row">
                     <div className="photo-row-title">{t(lang, 'photoFromChild')}</div>
                     {renderStrip(childPhotos)}
+                  </div>
+                )}
+                {unknownPhotos.length > 0 && (
+                  <div className="photo-row">
+                    <div className="photo-row-title">{t(lang, 'photoFromUnknown')}</div>
+                    {renderStrip(unknownPhotos)}
                   </div>
                 )}
               </>
@@ -1019,7 +1024,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
         style={{ display: 'none' }}
       />
 
-      {previewOpen && parentJournalUrl && (
+      {previewOpen && myJournalUrl && (
         <div
           role="button"
           tabIndex={0}
@@ -1039,8 +1044,8 @@ export default function PairDailyPage({ lang = 'ja' }) {
           }}
         >
           <img
-            src={parentJournalUrl}
-            alt={t(lang, 'parentJournalZoomAlt')}
+            src={myJournalUrl}
+            alt={t(lang, 'myJournal')}
             style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8, pointerEvents: 'none' }}
           />
         </div>

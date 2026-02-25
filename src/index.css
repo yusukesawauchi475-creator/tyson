@@ -230,7 +230,7 @@ button:focus-visible {
   line-height: 1.2;
   white-space: nowrap;
 }
-.photo-thumb {
+.media-thumb {
   width: 96px;
   height: 96px;
   object-fit: cover;

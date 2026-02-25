@@ -324,7 +324,10 @@ async function handleGet(req, res) {
           urlPhoto = u || null;
         } catch (_) {}
         const updatedAtPhoto = item?.updatedAt?.toMillis?.() ?? item?.updatedAt ?? null;
-        const roleNormalized = (r === 'child' ? 'child' : 'parent');
+        let roleNormalized = 'unknown';
+        if (r === 'child') roleNormalized = 'child';
+        else if (r === 'parent') roleNormalized = 'parent';
+        else logObserve({ requestId: reqId, stage: 'journal_get_photos', photoRoleUnknown: r, storagePath: path });
         photos.push({
           url: urlPhoto,
           storagePath: path,

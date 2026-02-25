@@ -34,9 +34,9 @@ export default function HomePage({ lang = 'ja' }) {
   const [showReloadButton, setShowReloadButton] = useState(false)
   const [photos, setPhotos] = useState([])
   const [dailyPhotoLimitMessage, setDailyPhotoLimitMessage] = useState(null)
-  const [childJournalUrl, setChildJournalUrl] = useState(null)
-  const [childJournalLoading, setChildJournalLoading] = useState(false)
-  const [childJournalError, setChildJournalError] = useState(null)
+  const [myJournalUrl, setMyJournalUrl] = useState(null)
+  const [myJournalLoading, setMyJournalLoading] = useState(false)
+  const [myJournalError, setMyJournalError] = useState(null)
   const [previewOpen, setPreviewOpen] = useState(false)
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
@@ -385,6 +385,7 @@ export default function HomePage({ lang = 'ja' }) {
             setJournalUploaded(!!r.hasImage)
             if (r.dateKey) setJournalDateKey(r.dateKey)
           })
+          fetchMyJournal()
         }
         if (kind === 'generic_image') {
           setDailyPhotoLimitMessage(null)
@@ -428,17 +429,17 @@ export default function HomePage({ lang = 'ja' }) {
     })
   }
 
-  const fetchChildJournal = useCallback(async () => {
-    setChildJournalLoading(true)
-    setChildJournalError(null)
+  const fetchMyJournal = useCallback(async () => {
+    setMyJournalLoading(true)
+    setMyJournalError(null)
     try {
-      const url = await fetchJournalViewUrl(getPairId(), 'child')
-      setChildJournalUrl(url)
+      const url = await fetchJournalViewUrl(getPairId(), 'parent')
+      setMyJournalUrl(url)
     } catch (e) {
-      setChildJournalError(e?.message || String(e))
-      setChildJournalUrl(null)
+      setMyJournalError(e?.message || String(e))
+      setMyJournalUrl(null)
     } finally {
-      setChildJournalLoading(false)
+      setMyJournalLoading(false)
     }
   }, [])
 
@@ -453,8 +454,8 @@ export default function HomePage({ lang = 'ja' }) {
   }, [])
 
   useEffect(() => {
-    fetchChildJournal()
-  }, [fetchChildJournal])
+    fetchMyJournal()
+  }, [fetchMyJournal])
 
   useEffect(() => {
     const t = setTimeout(() => setShowReloadButton(true), 10000)
@@ -781,48 +782,45 @@ export default function HomePage({ lang = 'ja' }) {
           )}
         </section>
 
-        {/* (3) ジャーナル（解析・共有）※1日1枚 */}
+        {/* (3) ジャーナル（自分だけ見れる）※1日1枚 */}
         <section className="card card-journal" style={{ width: '100%' }}>
           <h2 className="cardHead">📝 {t(lang, 'journalSharedAi')}</h2>
           <p style={{ fontSize: 11, color: '#666', margin: '0 0 12px', lineHeight: 1.4 }}>{t(lang, 'journalNotice')}</p>
-          <p className="title">{t(lang, 'childJournalToday')}</p>
-          {childJournalLoading && (
+          <p className="title">{t(lang, 'myJournal')}</p>
+          {myJournalLoading && (
             <p className="sub" style={{ margin: '0 0 8px' }}>{t(lang, 'loading')}</p>
           )}
-          {!childJournalLoading && childJournalUrl && (
+          {!myJournalLoading && myJournalUrl && (
             <>
               <div className="thumbWrap" style={{ display: 'inline-block' }}>
                 <img
-                  src={childJournalUrl}
-                  alt={t(lang, 'childJournalAlt')}
+                  src={myJournalUrl}
+                  alt={t(lang, 'myJournal')}
                   role="button"
                   tabIndex={0}
                   onClick={() => setPreviewOpen(true)}
                   onKeyDown={(e) => e.key === 'Enter' && setPreviewOpen(true)}
-                  className="photo-thumb"
-                  style={{ cursor: 'pointer', objectFit: 'cover' }}
+                  className="media-thumb"
+                  style={{ cursor: 'pointer' }}
                 />
-                <span className="thumbBadge">{t(lang, 'roleLabelChild')}</span>
               </div>
               <p style={{ fontSize: 12, color: '#888', margin: '4px 0 0', textAlign: 'center' }}>{t(lang, 'tapToEnlarge')}</p>
             </>
           )}
-          {!childJournalLoading && !childJournalUrl && !childJournalError && (
+          {!myJournalLoading && !myJournalUrl && !myJournalError && (
             <p className="sub" style={{ margin: '0 0 8px' }}>{t(lang, 'notUploadedYet')}</p>
           )}
-          {childJournalError && (
-            <p style={{ fontSize: 12, color: '#666', margin: '0 0 8px', textAlign: 'center' }}>{childJournalError}</p>
+          {myJournalError && (
+            <p style={{ fontSize: 12, color: '#666', margin: '0 0 8px', textAlign: 'center' }}>{myJournalError}</p>
           )}
           <button
             type="button"
-            onClick={fetchChildJournal}
-            disabled={childJournalLoading}
-            style={{ padding: '4px 12px', fontSize: 12, color: '#4a90d9', background: 'transparent', border: '1px solid #4a90d9', borderRadius: 6, cursor: childJournalLoading ? 'wait' : 'pointer', marginTop: 4, marginBottom: 12 }}
+            onClick={fetchMyJournal}
+            disabled={myJournalLoading}
+            style={{ padding: '4px 12px', fontSize: 12, color: '#4a90d9', background: 'transparent', border: '1px solid #4a90d9', borderRadius: 6, cursor: myJournalLoading ? 'wait' : 'pointer', marginTop: 4, marginBottom: 12 }}
           >
             {t(lang, 'refresh')}
           </button>
-
-          <p className="title" style={{ marginTop: 12 }}>{t(lang, 'myJournal')}</p>
           <input
             ref={journalGalleryInputRef}
             type="file"
@@ -962,11 +960,12 @@ export default function HomePage({ lang = 'ja' }) {
           (() => {
             const parentPhotos = photos.filter((p) => p.role === 'parent')
             const childPhotos = photos.filter((p) => p.role === 'child')
+            const unknownPhotos = photos.filter((p) => p.role !== 'parent' && p.role !== 'child')
             const renderStrip = (list) => (
               <div className="photo-strip">
                 {list.slice(0, 6).map((ph, i) => (
                   <div key={ph.storagePath + String(i)} className="thumbWrap">
-                    <img src={ph.url || ''} alt="" className="photo-thumb" />
+                    <img src={ph.url || ''} alt="" className="media-thumb" />
                   </div>
                 ))}
               </div>
@@ -983,6 +982,12 @@ export default function HomePage({ lang = 'ja' }) {
                   <div className="photo-row">
                     <div className="photo-row-title">{t(lang, 'photoFromChild')}</div>
                     {renderStrip(childPhotos)}
+                  </div>
+                )}
+                {unknownPhotos.length > 0 && (
+                  <div className="photo-row">
+                    <div className="photo-row-title">{t(lang, 'photoFromUnknown')}</div>
+                    {renderStrip(unknownPhotos)}
                   </div>
                 )}
               </>
@@ -1004,7 +1009,7 @@ export default function HomePage({ lang = 'ja' }) {
         style={{ display: 'none' }}
       />
 
-      {previewOpen && childJournalUrl && (
+      {previewOpen && myJournalUrl && (
         <div
           role="button"
           tabIndex={0}
@@ -1024,8 +1029,8 @@ export default function HomePage({ lang = 'ja' }) {
           }}
         >
           <img
-            src={childJournalUrl}
-            alt={t(lang, 'childJournalZoomAlt')}
+            src={myJournalUrl}
+            alt={t(lang, 'myJournal')}
             style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8, pointerEvents: 'none' }}
           />
         </div>
