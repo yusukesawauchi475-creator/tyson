@@ -8,7 +8,7 @@ const dict = {
     // Headings
     partnerRecordingListen: '相手の録音（聞く）',
     myRecordingRecordSend: '自分の録音（録る/送る）',
-    journalSharedAi: 'ジャーナル（解析・共有）※1日1枚',
+    journalSharedAi: 'ジャーナル（非公開・1日1枚）',
     dailyPhotosShared: '日常写真（共有）※最大3枚',
     parentJournalToday: '親のジャーナル（今日）',
     myJournal: '自分のジャーナル',
@@ -42,8 +42,8 @@ const dict = {
     tapToEnlarge: 'タップで拡大',
     dailyPhotoLimit: '本日は3枚までです',
     todayTopic: '今日の話題',
-    // Journal notice（ジャーナル=自分だけ見れる / 日常写真=相手と共有）
-    journalNotice: 'ジャーナルは自分だけに表示されます。日常写真は相手と共有されます。',
+    // Journal notice（ジャーナル=自分だけに保存、相手には見せない / 日常写真=相手と共有）
+    journalNotice: 'ジャーナルは自分だけに保存され、相手には見せません。日常写真は相手と共有されます。',
     journalShownToPartner: 'ジャーナルは自分だけに表示されます。',
     journalOverwriteConfirm: '今日のジャーナルを上書きします。よろしいですか？',
     // Alts
@@ -97,7 +97,7 @@ const dict = {
   en: {
     partnerRecordingListen: "Partner's recording (listen)",
     myRecordingRecordSend: 'My recording (record/send)',
-    journalSharedAi: 'Journal (shared + AI) • 1 per day',
+    journalSharedAi: 'Journal (private • 1 per day)',
     dailyPhotosShared: 'Daily photos (shared) • up to 3',
     parentJournalToday: "Parent's journal (today)",
     myJournal: 'My journal',
@@ -129,7 +129,7 @@ const dict = {
     tapToEnlarge: 'Tap to enlarge',
     dailyPhotoLimit: 'Up to 3 per day',
     todayTopic: "Today's topic",
-    journalNotice: 'Journal is private (visible only to you). Daily photos are shared with your partner.',
+    journalNotice: 'Journal is saved only for you (not shown to partner). Daily photos are shared with your partner.',
     journalShownToPartner: 'Journal is private (visible only to you).',
     journalOverwriteConfirm: 'This will overwrite today\'s journal. Continue?',
     parentJournalAlt: "Parent's journal",

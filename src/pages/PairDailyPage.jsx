@@ -6,7 +6,7 @@ import { t } from '../lib/i18n'
 import DailyPromptCard from '../components/DailyPromptCard'
 import LanguageSwitch from '../components/LanguageSwitch'
 import { getIdTokenForApi } from '../lib/firebase'
-import { formatBuildTimeLocal } from '../lib/dateFormat'
+import { formatDeployedAtLocal } from '../lib/dateFormat'
 import { useAudioLevel } from '../lib/useAudioLevel'
 
 export default function PairDailyPage({ lang = 'ja' }) {
@@ -150,6 +150,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
             if (r.dateKey) setJournalDateKey(r.dateKey)
           })
           fetchMyJournal()
+          setTimeout(() => fetchMyJournal(), 600)
         }
         if (kind === 'generic_image') {
           setDailyPhotoLimitMessage(null)
@@ -608,7 +609,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
       color: '#333',
     }}>
       <div style={{ position: 'fixed', top: 6, right: 6, zIndex: 9999, fontSize: 10, color: '#999', background: 'rgba(255,255,255,0.8)', padding: '2px 4px', borderRadius: 4 }}>
-        Build: {import.meta.env.MODE === 'production' ? 'prod' : import.meta.env.MODE} {formatBuildTimeLocal()}
+        Deployed at (local): {formatDeployedAtLocal()} · {import.meta.env.MODE === 'production' ? 'prod' : import.meta.env.MODE}
       </div>
       <header style={{ flexShrink: 0, marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
         <div>
@@ -807,7 +808,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
           )}
           {!myJournalLoading && myJournalUrl && (
             <>
-              <div className="thumbWrap" style={{ display: 'inline-block' }}>
+              <div className="thumbWrap" style={{ display: 'inline-block', width: 96, height: 96 }}>
                 <img
                   src={myJournalUrl}
                   alt={t(lang, 'myJournal')}
@@ -816,7 +817,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
                   onClick={() => setPreviewOpen(true)}
                   onKeyDown={(e) => e.key === 'Enter' && setPreviewOpen(true)}
                   className="media-thumb"
-                  style={{ cursor: 'pointer' }}
+                  style={{ cursor: 'pointer', width: 96, height: 96 }}
                 />
               </div>
               <p style={{ fontSize: 12, color: '#888', margin: '4px 0 0', textAlign: 'center' }}>{t(lang, 'tapToEnlarge')}</p>
@@ -979,8 +980,8 @@ export default function PairDailyPage({ lang = 'ja' }) {
             const renderStrip = (list) => (
               <div className="photo-strip">
                 {list.slice(0, 6).map((ph, i) => (
-                  <div key={ph.storagePath + String(i)} className="thumbWrap">
-                    <img src={ph.url || ''} alt="" className="media-thumb" />
+                  <div key={ph.storagePath + String(i)} className="thumbWrap" style={{ flexShrink: 0 }}>
+                    <img src={ph.url || ''} alt="" className="media-thumb" width={96} height={96} />
                   </div>
                 ))}
               </div>

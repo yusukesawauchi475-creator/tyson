@@ -39,16 +39,16 @@ export function formatTodayJSTDateOnly() {
   return new Intl.DateTimeFormat('ja-JP', opt).format(getDisplayDate())
 }
 
-/** ビルド時刻をローカル時刻で表示（UTC Z 表示を避ける） */
-export function formatBuildTimeLocal() {
+/** デプロイ時刻をローカル時刻で表示（UTC Z を避け、誤解防止） */
+export function formatDeployedAtLocal() {
   const t = import.meta.env?.VITE_BUILD_TIME
-  if (!t || typeof t !== 'string') return 'no_time'
+  if (!t || typeof t !== 'string') return '(no deploy time)'
   try {
     const d = new Date(t)
-    if (Number.isNaN(d.getTime())) return t
-    return d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) + ' (Local)'
+    if (Number.isNaN(d.getTime())) return '(invalid)'
+    return d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
   } catch (_) {
-    return t
+    return '(parse error)'
   }
 }
 

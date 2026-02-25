@@ -233,9 +233,14 @@ button:focus-visible {
 .media-thumb {
   width: 96px;
   height: 96px;
+  min-width: 96px;
+  min-height: 96px;
+  max-width: 96px;
+  max-height: 96px;
   object-fit: cover;
   border-radius: 12px;
   display: block;
+  flex-shrink: 0;
 }
 .photo-row {
   margin-top: 8px;
