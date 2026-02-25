@@ -39,6 +39,19 @@ export function formatTodayJSTDateOnly() {
   return new Intl.DateTimeFormat('ja-JP', opt).format(getDisplayDate())
 }
 
+/** ビルド時刻をローカル時刻で表示（UTC Z 表示を避ける） */
+export function formatBuildTimeLocal() {
+  const t = import.meta.env?.VITE_BUILD_TIME
+  if (!t || typeof t !== 'string') return 'no_time'
+  try {
+    const d = new Date(t)
+    if (Number.isNaN(d.getTime())) return t
+    return d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' }) + ' (Local)'
+  } catch (_) {
+    return t
+  }
+}
+
 /** ビルドハッシュ（あれば）: vite.config で埋め込まれたもののみ。Vercel環境変数は使わない */
 export function getBuildHash() {
   try {

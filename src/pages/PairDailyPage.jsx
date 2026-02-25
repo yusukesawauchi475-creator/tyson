@@ -6,6 +6,7 @@ import { t } from '../lib/i18n'
 import DailyPromptCard from '../components/DailyPromptCard'
 import LanguageSwitch from '../components/LanguageSwitch'
 import { getIdTokenForApi } from '../lib/firebase'
+import { formatBuildTimeLocal } from '../lib/dateFormat'
 import { useAudioLevel } from '../lib/useAudioLevel'
 
 export default function PairDailyPage({ lang = 'ja' }) {
@@ -146,7 +147,9 @@ export default function PairDailyPage({ lang = 'ja' }) {
         }
         if (kind === 'generic_image') {
           setDailyPhotoLimitMessage(null)
-          fetchTodayJournalMeta(getPairId(), 'child').then((r) => setPhotos(r.photos ?? []))
+          const doRefresh = () => fetchTodayJournalMeta(getPairId(), ROLE_CHILD).then((r) => setPhotos(r.photos ?? []))
+          doRefresh()
+          setTimeout(doRefresh, 400)
         }
         setLastRequestId(result.requestId)
       } else {
@@ -599,7 +602,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
       color: '#333',
     }}>
       <div style={{ position: 'fixed', top: 6, right: 6, zIndex: 9999, fontSize: 10, color: '#999', background: 'rgba(255,255,255,0.8)', padding: '2px 4px', borderRadius: 4 }}>
-        Build: {import.meta.env.MODE === 'production' ? 'prod' : import.meta.env.MODE} {import.meta.env.VITE_BUILD_TIME || 'no_time'}
+        Build: {import.meta.env.MODE === 'production' ? 'prod' : import.meta.env.MODE} {formatBuildTimeLocal()}
       </div>
       <header style={{ flexShrink: 0, marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
         <div>
@@ -791,8 +794,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
         {/* (3) ジャーナル（解析・共有）※1日1枚 */}
         <section className="card card-journal" style={{ width: '100%' }}>
           <h2 className="cardHead">📝 {t(lang, 'journalSharedAi')}</h2>
-          <p style={{ fontSize: 11, color: '#666', margin: '0 0 4px', lineHeight: 1.4 }}>{t(lang, 'journalNotice')}</p>
-          <p style={{ fontSize: 11, color: '#666', margin: '0 0 12px', lineHeight: 1.4 }}>{t(lang, 'journalShownToPartner')}</p>
+          <p style={{ fontSize: 11, color: '#666', margin: '0 0 12px', lineHeight: 1.4 }}>{t(lang, 'journalNotice')}</p>
           <p className="title">{t(lang, 'parentJournalToday')}</p>
           {parentJournalLoading && (
             <p className="sub" style={{ margin: '0 0 8px' }}>{t(lang, 'loading')}</p>
