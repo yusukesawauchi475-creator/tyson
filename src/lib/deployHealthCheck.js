@@ -2,14 +2,16 @@
  * デプロイ健全性チェック（Bulletproof）
  *
  * 1. BUILD_TIME が古い（48時間以上）→ キャッシュ or デプロイ失敗の疑い
- * 2. GIT_COMMIT が 'unknown' → ビルド時に git が利用できなかった（Vercel では通常ありえない）
+ * 2. BUILD_SHA が 'dev' → ローカルビルド（Vercel では VITE_BUILD_SHA が注入される）
  * 3. BUILD_TIME が未来 → ブラウザ時刻の不整合 or ビルドサーバー時刻異常
  *
  * @returns {{ healthy: boolean, warnings: string[], buildTime: string, gitCommit: string }}
  */
+import { BUILD_SHA } from '../buildInfo';
+
 export function checkDeployHealth() {
   const buildTime = import.meta.env.VITE_BUILD_TIME || null;
-  const gitCommit = import.meta.env.VITE_GIT_COMMIT || 'unknown';
+  const gitCommit = BUILD_SHA || 'unknown';
   const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || null;
 
   const warnings = [];
@@ -43,10 +45,10 @@ export function checkDeployHealth() {
     }
   }
 
-  // 2. GIT_COMMIT 検証
-  if (gitCommit === 'unknown') {
+  // 2. BUILD_SHA 検証（Vercel では build:vercel で VITE_BUILD_SHA が注入される）
+  if (!gitCommit || gitCommit === 'dev' || gitCommit === 'unknown') {
     warnings.push(
-      'GIT_COMMIT が unknown です。Vercel ビルド時に git が利用できなかった可能性があります。ローカルビルドの場合は .git ディレクトリの存在を確認してください。'
+      'BUILD_SHA が未設定です。Vercel では Build Command に npm run build:vercel を指定してください。'
     );
     healthy = false;
   }

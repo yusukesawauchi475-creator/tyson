@@ -19,9 +19,8 @@
 })()
 
 // キャッシュ完全破壊: ファイル最上位で即時実行。try-catch で囲み、失敗しても root.render は止めない [cite: 2026-01-25]
-const VERSION = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GIT_COMMIT)
-  ? String(import.meta.env.VITE_GIT_COMMIT).slice(0, 7)
-  : 'force-reload'
+import { BUILD_SHA } from './buildInfo'
+const VERSION = (BUILD_SHA && BUILD_SHA !== 'dev') ? BUILD_SHA.slice(0, 7) : 'force-reload'
 let skipReload = false
 try {
   if (typeof localStorage !== 'undefined' && localStorage.getItem('APP_VERSION') !== VERSION) {

@@ -2,6 +2,7 @@
  * 日付表示: new Date() でユーザーのデバイス時刻をJST基準で表示
  * 環境変数（VITE_BUILD_TIME等）に依存せず、ハイドレーションエラーを起こさない
  */
+import { BUILD_SHA } from '../buildInfo'
 const JST = 'Asia/Tokyo'
 
 /** モック日付（CEO試行用）: ?mockDate=2026-01-31 または localStorage.tyson_mock_date */
@@ -52,13 +53,10 @@ export function formatDeployedAtLocal() {
   }
 }
 
-/** ビルドハッシュ（あれば）: vite.config で埋め込まれたもののみ。Vercel環境変数は使わない */
+/** ビルドSHA（Vercel環境変数 VITE_BUILD_SHA から注入） */
 export function getBuildHash() {
-  try {
-    const h = import.meta.env?.VITE_GIT_COMMIT
-    if (typeof h === 'string' && h && h !== 'unknown') return h.substring(0, 7)
-  } catch (_) {}
-  return null
+  if (BUILD_SHA && BUILD_SHA !== 'dev') return BUILD_SHA.slice(0, 7)
+  return 'dev'
 }
 
 export function formatDateJST(timestamp, options = {}) {
