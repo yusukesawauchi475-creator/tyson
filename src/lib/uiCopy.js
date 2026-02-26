@@ -1,68 +1,59 @@
 /**
  * UI文言の共通化
  * 2秒以内に出る/短い/感謝ベース/決めつけない
+ * i18n経由で lang に応じた文言を返す
  */
+
+import { t } from './i18n.js'
+
+/** topic から種別を判定（JA/ENどちらのtopicでもOK） */
+function getTopicType(topic) {
+  if (!topic || typeof topic !== 'string') return null
+  const lower = topic.toLowerCase()
+  if (topic.includes('何食べた') || lower.includes('eat') || lower.includes('ate')) return 'eat'
+  if (topic.includes('天気') || lower.includes('weather')) return 'weather'
+  if (topic.includes('一番楽しかった') || topic.includes('ハイライト') || lower.includes('fun') || lower.includes('highlight')) return 'fun'
+  if (topic.includes('誰に会った') || lower.includes('meet') || lower.includes('met')) return 'meet'
+  if (topic.includes('気分') || topic.includes('色') || lower.includes('mood') || lower.includes('color') || lower.includes('feel')) return 'mood'
+  return null
+}
 
 /**
  * 送信成功後のfinal一言（300ms後）
+ * @param {'ja'|'en'} lang
  * @param {string | null} topic - DailyPromptCardの話題
  * @param {string} role - 'parent' | 'child'
  * @returns {string}
  */
-export function getFinalOneLiner(topic, role) {
-  if (!topic) {
-    return 'いいですね！今日のいちばんはどれでした？'
+export function getFinalOneLiner(lang, topic, role) {
+  const type = getTopicType(topic)
+  if (type === 'eat') return t(lang, 'finalOneLiner_eat')
+  if (type === 'weather') return t(lang, 'finalOneLiner_weather')
+  if (type === 'fun') return t(lang, 'finalOneLiner_fun')
+  if (type === 'meet') return t(lang, 'finalOneLiner_meet')
+  if (type === 'mood') return t(lang, 'finalOneLiner_mood')
+  if (topic && type === null) {
+    const clean = String(topic).replace(/[？?]\s*$/, '').trim()
+    return t(lang, 'finalOneLiner_topic', { topic: clean })
   }
-
-  if (topic.includes('何食べた')) {
-    return 'いいですね！いちばんおいしかったのはどれでした？'
-  }
-  if (topic.includes('天気')) {
-    return 'いいね！今日の空で印象に残ったのはどんな感じ？'
-  }
-  if (topic.includes('一番楽しかった') || topic.includes('ハイライト')) {
-    return '最高。いちばん嬉しかったのはどれ？'
-  }
-  if (topic.includes('誰に会った')) {
-    return 'いいね！その人と何話した？'
-  }
-  if (topic.includes('気分') || topic.includes('色')) {
-    return 'いいね。今の気分、もう少し言葉にすると？'
-  }
-
-  // topicがあるのに既存ifに当たらなかった場合、topicを埋め込む
-  const clean = String(topic).replace(/[？?]\s*$/, '').trim()
-  return `いいですね！「${clean}」で印象に残ったのは？`
+  return t(lang, 'finalOneLiner_default')
 }
 
 /**
  * 解析コメントのプレースホルダー（1000ms後）
+ * @param {'ja'|'en'} lang
  * @param {string | null} topic - DailyPromptCardの話題
  * @param {string} role - 'parent' | 'child'
  * @returns {string}
  */
-export function getAnalysisPlaceholder(topic, role) {
-  if (!topic) {
-    return '今日の記録、ありがとうございます'
-  }
-
-  if (topic.includes('何食べた')) {
-    return '食事の記録、ありがとうございます'
-  }
-  if (topic.includes('天気')) {
-    return '今日の空の様子、ありがとうございます'
-  }
-  if (topic.includes('一番楽しかった') || topic.includes('ハイライト')) {
-    return '今日のハイライト、ありがとうございます'
-  }
-  if (topic.includes('誰に会った')) {
-    return '今日の出会い、ありがとうございます'
-  }
-  if (topic.includes('気分') || topic.includes('色')) {
-    return '今日の気持ち、ありがとうございます'
-  }
-
-  return '今日の記録、ありがとうございます'
+export function getAnalysisPlaceholder(lang, topic, role) {
+  const type = getTopicType(topic)
+  if (type === 'eat') return t(lang, 'analysisPlaceholder_eat')
+  if (type === 'weather') return t(lang, 'analysisPlaceholder_weather')
+  if (type === 'fun') return t(lang, 'analysisPlaceholder_fun')
+  if (type === 'meet') return t(lang, 'analysisPlaceholder_meet')
+  if (type === 'mood') return t(lang, 'analysisPlaceholder_mood')
+  return t(lang, 'analysisPlaceholder_default')
 }
 
 /**
@@ -75,12 +66,12 @@ export function getAnalysisPlaceholder(topic, role) {
  */
 export function getAnalysisComment(topic, role, durationSec = null) {
   const thanks = role === 'parent' ? 'ありがとうございます' : 'ありがとう'
-  
+
   // 2行目：durationSecが有効なら「XX秒残せました。」、無効なら「残せました。」
   const secondLine = (typeof durationSec === 'number' && durationSec >= 5 && durationSec <= 6000)
     ? `${durationSec}秒残せました。`
     : '残せました。'
-  
+
   // 汎用フォールバック（topicがnullの場合）
   const defaultText = `今日の記録、${thanks}。\n${secondLine}`
 

@@ -51,10 +51,10 @@ async function main() {
   console.log('=== uiCopy.js Smoke Test ===\n')
 
   // 1) getFinalOneLiner の検証（全 topic）
-  console.log('1) getFinalOneLiner(topic, "child") 検証:')
+  console.log('1) getFinalOneLiner("ja", topic, "child") 検証:')
   for (const topic of TOPICS) {
     try {
-      const result = getFinalOneLiner(topic, 'child')
+      const result = getFinalOneLiner('ja', topic, 'child')
       if (!result || result.trim() === '') {
         failures.push({ test: 'getFinalOneLiner', topic, error: '空文字' })
         failCount++
@@ -74,9 +74,9 @@ async function main() {
   }
 
   // 2) getFinalOneLiner(topic=null) の検証
-  console.log('\n2) getFinalOneLiner(null, "child") 検証:')
+  console.log('\n2) getFinalOneLiner("ja", null, "child") 検証:')
   try {
-    const result = getFinalOneLiner(null, 'child')
+    const result = getFinalOneLiner('ja', null, 'child')
     if (!result || result.trim() === '') {
       failures.push({ test: 'getFinalOneLiner(null)', error: '空文字' })
       failCount++

@@ -391,13 +391,13 @@ export default function PairDailyPage({ lang = 'ja' }) {
           setSentAt(new Date())
           setErrorLine(null)
           // 一言表示開始（0-200msで即時表示）
-          setOneLiner('録音ありがとうございます！送信できました。')
+          setOneLiner(t(lang, 'uploadSuccessThanks'))
           setOneLinerStage('immediate')
           setOneLinerVisible(true)
           // 300ms後にtopicに応じたテンプレに差し替え
           oneLinerTimerRef.current = setTimeout(() => {
             const topic = topicRef.current
-            const finalMessage = getFinalOneLiner(topic, ROLE_CHILD)
+            const finalMessage = getFinalOneLiner(lang, topic, ROLE_CHILD)
             setOneLiner(finalMessage)
             setOneLinerStage('final')
             oneLinerTimerRef.current = null
@@ -405,7 +405,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
           // さらに700ms後（送信成功から1000ms後）に解析コメントを表示
           analysisTimerRef.current = setTimeout(() => {
             const topic = topicRef.current
-            const placeholder = getAnalysisPlaceholder(topic, ROLE_CHILD)
+            const placeholder = getAnalysisPlaceholder(lang, topic, ROLE_CHILD)
             setAnalysisComment(placeholder)
             setAnalysisVisible(true)
             analysisTimerRef.current = null
