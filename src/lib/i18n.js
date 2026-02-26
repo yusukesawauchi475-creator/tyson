@@ -42,8 +42,8 @@ const dict = {
     tapToEnlarge: 'タップで拡大',
     dailyPhotoLimit: '本日は3枚までです',
     todayTopic: '今日の話題',
-    // Journal notice（ジャーナル=自分だけに保存、相手には見せない / 日常写真=相手と共有）
-    journalNotice: 'ジャーナルは自分だけに保存され、相手には見せません。日常写真は相手と共有されます。',
+    // Journal notice（ジャーナル=自分だけに表示、相手には共有しない / 日常写真=相手と共有）
+    journalNotice: 'ジャーナルは自分だけに表示（相手には共有しません）。日常写真は相手と共有されます。',
     journalShownToPartner: 'ジャーナルは自分だけに表示されます。',
     journalOverwriteConfirm: '今日のジャーナルを上書きします。よろしいですか？',
     // Alts
@@ -129,7 +129,7 @@ const dict = {
     tapToEnlarge: 'Tap to enlarge',
     dailyPhotoLimit: 'Up to 3 per day',
     todayTopic: "Today's topic",
-    journalNotice: 'Journal is saved only for you (not shown to partner). Daily photos are shared with your partner.',
+    journalNotice: 'Journal is private (visible only to you). Daily photos are shared with your partner.',
     journalShownToPartner: 'Journal is private (visible only to you).',
     journalOverwriteConfirm: 'This will overwrite today\'s journal. Continue?',
     parentJournalAlt: "Parent's journal",

@@ -215,6 +215,14 @@ button:focus-visible {
   position: relative;
   flex-shrink: 0;
 }
+.thumbWrap.media-thumb-wrap {
+  width: 96px;
+  height: 96px;
+  min-width: 96px;
+  min-height: 96px;
+  overflow: hidden;
+  border-radius: 12px;
+}
 .thumbBadge {
   position: absolute;
   bottom: 4px;

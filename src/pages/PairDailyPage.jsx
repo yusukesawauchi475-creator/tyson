@@ -6,7 +6,7 @@ import { t } from '../lib/i18n'
 import DailyPromptCard from '../components/DailyPromptCard'
 import LanguageSwitch from '../components/LanguageSwitch'
 import { getIdTokenForApi } from '../lib/firebase'
-import { formatDeployedAtLocal } from '../lib/dateFormat'
+import { formatDeployedAtLocal, getBuildHash } from '../lib/dateFormat'
 import { useAudioLevel } from '../lib/useAudioLevel'
 
 export default function PairDailyPage({ lang = 'ja' }) {
@@ -609,7 +609,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
       color: '#333',
     }}>
       <div style={{ position: 'fixed', top: 6, right: 6, zIndex: 9999, fontSize: 10, color: '#999', background: 'rgba(255,255,255,0.8)', padding: '2px 4px', borderRadius: 4 }}>
-        Deployed at (local): {formatDeployedAtLocal()} · {import.meta.env.MODE === 'production' ? 'prod' : import.meta.env.MODE}
+        Deployed at (local): {formatDeployedAtLocal()} · {getBuildHash() || 'dev'}
       </div>
       <header style={{ flexShrink: 0, marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
         <div>
@@ -808,7 +808,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
           )}
           {!myJournalLoading && myJournalUrl && (
             <>
-              <div className="thumbWrap" style={{ display: 'inline-block', width: 96, height: 96 }}>
+              <div className="thumbWrap media-thumb-wrap">
                 <img
                   src={myJournalUrl}
                   alt={t(lang, 'myJournal')}
@@ -817,7 +817,9 @@ export default function PairDailyPage({ lang = 'ja' }) {
                   onClick={() => setPreviewOpen(true)}
                   onKeyDown={(e) => e.key === 'Enter' && setPreviewOpen(true)}
                   className="media-thumb"
-                  style={{ cursor: 'pointer', width: 96, height: 96 }}
+                  width={96}
+                  height={96}
+                  style={{ cursor: 'pointer' }}
                 />
               </div>
               <p style={{ fontSize: 12, color: '#888', margin: '4px 0 0', textAlign: 'center' }}>{t(lang, 'tapToEnlarge')}</p>

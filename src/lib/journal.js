@@ -90,13 +90,14 @@ export async function uploadJournalImage(file, requestId = genRequestId(), pairI
   }
 
   try {
-    const res = await fetch('/api/journal', {
+    const res = await fetch(`/api/journal?v=${Date.now()}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${idToken}`,
         'X-Request-Id': requestId,
       },
+      cache: 'no-store',
       body: JSON.stringify({
         pairId: pid,
         role: roleVal,
