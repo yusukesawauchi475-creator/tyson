@@ -1,33 +1,41 @@
 /**
  * Demo Reset / Restore admin page.
- * Only visible when ?admin=RESET_SECRET matches VITE_RESET_SECRET.
+ * Unlock via secret input (saved to localStorage).
  */
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { getIdTokenForApi } from '../lib/firebase.js'
 import { getPairId, getDateKey, genRequestId } from '../lib/pairDaily.js'
 
-function getAdminParam() {
-  try {
-    const hash = window.location.hash || ''
-    const qIndex = hash.indexOf('?')
-    const query = qIndex >= 0 ? hash.slice(qIndex + 1) : ''
-    return new URLSearchParams(query).get('admin') || ''
-  } catch (_) {
-    return ''
-  }
-}
+const STORAGE_KEY = 'tyson_admin_secret'
 
 export default function AdminPage({ lang = 'ja' }) {
+  const [secretInput, setSecretInput] = useState('')
+  const [isUnlocked, setIsUnlocked] = useState(false)
   const [resetResult, setResetResult] = useState(null)
   const [restoreResult, setRestoreResult] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  const isAuthorized = useMemo(() => {
-    const secret = import.meta.env.VITE_RESET_SECRET || ''
-    const param = getAdminParam()
-    return !!secret && secret === param
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      if (saved && typeof saved === 'string') {
+        setSecretInput(saved)
+        const secret = import.meta.env.VITE_RESET_SECRET || ''
+        if (saved.trim() === secret) setIsUnlocked(true)
+      }
+    } catch (_) {}
   }, [])
+
+  const handleUnlock = () => {
+    const secret = import.meta.env.VITE_RESET_SECRET || ''
+    if (secretInput.trim() === secret) {
+      setIsUnlocked(true)
+      try {
+        localStorage.setItem(STORAGE_KEY, secretInput.trim())
+      } catch (_) {}
+    }
+  }
 
   const pairId = getPairId()
   const dateKey = getDateKey()
@@ -122,10 +130,44 @@ export default function AdminPage({ lang = 'ja' }) {
       </p>
       <Link to="/" style={{ fontSize: 14, color: '#4a90d9', textDecoration: 'none' }}>← Home</Link>
 
-      {!isAuthorized ? (
-        <p style={{ marginTop: 24, fontSize: 14, color: '#999' }}>
-          Add ?admin=RESET_SECRET to the URL. (Secret must match VITE_RESET_SECRET)
-        </p>
+      {!isUnlocked ? (
+        <div style={{ marginTop: 24 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              type="password"
+              value={secretInput}
+              onChange={(e) => setSecretInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
+              placeholder="Secret"
+              style={{
+                padding: '8px 12px',
+                fontSize: 14,
+                border: '1px solid #ccc',
+                borderRadius: 6,
+                minWidth: 120,
+              }}
+            />
+            <button
+              type="button"
+              onClick={handleUnlock}
+              style={{
+                padding: '8px 16px',
+                fontSize: 14,
+                fontWeight: 500,
+                background: '#4a90d9',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 6,
+                cursor: 'pointer',
+              }}
+            >
+              Unlock
+            </button>
+          </div>
+          <p style={{ marginTop: 12, fontSize: 14, color: '#999' }}>
+            Enter secret to unlock
+          </p>
+        </div>
       ) : (
         <div style={{ marginTop: 24 }}>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
