@@ -591,9 +591,6 @@ export default function HomePage({ lang = 'ja' }) {
       background: '#fff',
       color: '#333',
     }}>
-      <div style={{ position: 'fixed', top: 6, right: 6, zIndex: 9999, fontSize: 10, color: '#999', background: 'rgba(255,255,255,0.8)', padding: '2px 4px', borderRadius: 4 }}>
-        Deployed at (local): {formatDeployedAtLocal()} · {getBuildHash() || 'dev'}
-      </div>
       <header style={{ flexShrink: 0, marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
         <time style={{ fontSize: 14, color: '#666' }}>
           {new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', {
