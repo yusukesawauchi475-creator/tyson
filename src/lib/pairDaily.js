@@ -249,6 +249,44 @@ export async function hasTodayAudio(listenRole, pairId = getPairId()) {
   }
 }
 
+/** streakを取得。戻り値 { count, lastDateKey } */
+export async function getStreak(pairId = getPairId()) {
+  const idToken = await getIdTokenForApi();
+  if (!idToken) return { count: 0, lastDateKey: null };
+  try {
+    const res = await fetch(`/api/streak?pairId=${encodeURIComponent(pairId)}`, {
+      headers: { Authorization: `Bearer ${idToken}` },
+      cache: 'no-store',
+    });
+    if (!res.ok) return { count: 0, lastDateKey: null };
+    const data = await res.json();
+    return { count: data.count ?? 0, lastDateKey: data.lastDateKey ?? null };
+  } catch {
+    return { count: 0, lastDateKey: null };
+  }
+}
+
+/** streakを更新。親と子の両方が録音した日に呼ぶ */
+export async function updateStreak(pairId = getPairId()) {
+  const idToken = await getIdTokenForApi();
+  if (!idToken) return { success: false };
+  try {
+    const res = await fetch('/api/streak', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${idToken}`,
+      },
+      body: JSON.stringify({ pairId, dateKey: getDateKeyNY() }),
+    });
+    if (!res.ok) return { success: false };
+    const data = await res.json();
+    return { success: true, count: data.count ?? 0 };
+  } catch {
+    return { success: false };
+  }
+}
+
 /** hasAudio + isUnseen（未再生バッジ用）。updatedAt > seenAt または seenAt なしで未再生 */
 export async function getListenRoleMeta(listenRole, pairId = getPairId()) {
   const dateKey = getDateKeyNY();

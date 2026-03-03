@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { getDateKey, fetchAudioForPlayback, hasTodayAudio, getListenRoleMeta, markSeen, uploadAudio, getPairId, genRequestId } from '../lib/pairDaily'
+import { getDateKey, fetchAudioForPlayback, hasTodayAudio, getListenRoleMeta, markSeen, uploadAudio, getPairId, genRequestId, getStreak, updateStreak } from '../lib/pairDaily'
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import { t } from '../lib/i18n'
@@ -11,6 +11,7 @@ import { useAudioLevel } from '../lib/useAudioLevel'
 
 export default function PairDailyPage({ lang = 'ja' }) {
   const [today, setToday] = useState('')
+  const [streakCount, setStreakCount] = useState(null)
   const [dateKey, setDateKey] = useState(getDateKey())
   const [hasAudio, setHasAudio] = useState(null)
   const [isChildUnseen, setIsChildUnseen] = useState(false)
@@ -228,6 +229,10 @@ export default function PairDailyPage({ lang = 'ja' }) {
   }, [lang])
 
   useEffect(() => {
+    getStreak(getPairId()).then(({ count }) => setStreakCount(count))
+  }, [])
+
+  useEffect(() => {
     const t = setTimeout(() => setShowReloadButton(true), 10000)
     return () => clearTimeout(t)
   }, [])
@@ -390,6 +395,12 @@ export default function PairDailyPage({ lang = 'ja' }) {
           const seq = analysisReqSeqRef.current
           setSentAt(new Date())
           setErrorLine(null)
+          // 親と子の両方が録音済みならstreakを更新
+          if (hasAudio === true) {
+            updateStreak(getPairId()).then(({ success, count }) => {
+              if (success) setStreakCount(count)
+            })
+          }
           // 一言表示開始（0-200msで即時表示）
           setOneLiner(t(lang, 'uploadSuccessThanks'))
           setOneLinerStage('immediate')
@@ -611,6 +622,11 @@ export default function PairDailyPage({ lang = 'ja' }) {
       <header style={{ flexShrink: 0, marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
         <div>
         <time style={{ fontSize: 14, color: '#666' }}>{today || '...'}</time>
+        {streakCount > 0 && (
+          <p style={{ margin: '4px 0 0', fontSize: 13, color: '#e65c00', fontWeight: 600 }}>
+            🔥 {streakCount}日連続
+          </p>
+        )}
         <p style={{ margin: '8px 0 0', fontSize: 14, color: '#888' }}>
           {hasAudio === true ? t(lang, 'voiceReceivedToday') : hasAudio === false ? t(lang, 'notYetOkToday') : t(lang, 'checking')}
         </p>
