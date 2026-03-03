@@ -607,6 +607,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
       fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
       background: '#fff',
       color: '#333',
+    }}>
       <header style={{ flexShrink: 0, marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
         <div>
         <time style={{ fontSize: 14, color: '#666' }}>{today || '...'}</time>
