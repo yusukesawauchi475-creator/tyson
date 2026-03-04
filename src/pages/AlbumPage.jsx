@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { getPairId } from '../lib/pairDaily'
 import { fetchAlbum } from '../lib/journal'
 
 export default function AlbumPage({ lang = 'ja' }) {
   const navigate = useNavigate()
+  const location = useLocation()
+  const scrollToDate = location.state?.scrollToDate ?? null
   const [days, setDays] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -35,6 +37,12 @@ export default function AlbumPage({ lang = 'ja' }) {
   const nextPhoto = useCallback(() => {
     setLightbox((prev) => prev ? { ...prev, index: Math.min(prev.photos.length - 1, prev.index + 1) } : null)
   }, [])
+
+  useEffect(() => {
+    if (loading || !scrollToDate) return
+    const el = document.getElementById(`date-${scrollToDate}`)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [loading, scrollToDate])
 
   useEffect(() => {
     if (!lightbox) return
@@ -107,7 +115,7 @@ export default function AlbumPage({ lang = 'ja' }) {
           </p>
         )}
         {!loading && days.map(({ dateKey, photos }) => (
-          <section key={dateKey} style={{ marginBottom: 28 }}>
+          <section key={dateKey} id={`date-${dateKey}`} style={{ marginBottom: 28 }}>
             <p style={{ fontSize: 13, fontWeight: 700, color: '#7a6a55', margin: '0 0 10px', letterSpacing: '0.03em' }}>
               {formatDate(dateKey)}
             </p>

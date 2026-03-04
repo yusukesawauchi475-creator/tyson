@@ -989,54 +989,21 @@ export default function PairDailyPage({ lang = 'ja' }) {
           {dailyPhotoLimitMessage && (
             <p style={{ fontSize: 12, color: '#888', margin: '0 0 8px' }}>{dailyPhotoLimitMessage}</p>
           )}
-          {photos.length > 0 &&
-          (() => {
-            const parentPhotos = photos.filter((p) => p.role === 'parent')
-            const childPhotos = photos.filter((p) => p.role === 'child')
-            const unknownPhotos = photos.filter((p) => p.role !== 'parent' && p.role !== 'child')
-            const renderStrip = (list) => (
-              <div className="photo-strip">
-                {list.slice(0, 6).map((ph, i) => (
-                  <div key={ph.storagePath + String(i)} className="thumbWrap" style={{ flexShrink: 0 }}>
-                    <img src={ph.url || ''} alt="" className="media-thumb" width={96} height={96} />
-                  </div>
-                ))}
-              </div>
-            )
-            return (
-              <>
-                {parentPhotos.length > 0 && (
-                  <div className="photo-row">
-                    <div className="photo-row-title">{t(lang, 'photoFromParent')}</div>
-                    {renderStrip(parentPhotos)}
-                  </div>
-                )}
-                {childPhotos.length > 0 && (
-                  <div className="photo-row">
-                    <div className="photo-row-title">{t(lang, 'photoFromChild')}</div>
-                    {renderStrip(childPhotos)}
-                  </div>
-                )}
-                {unknownPhotos.length > 0 && (
-                  <div className="photo-row">
-                    <div className="photo-row-title">{t(lang, 'photoFromUnknown')}</div>
-                    {renderStrip(unknownPhotos)}
-                  </div>
-                )}
-              </>
-            )
-          })()}
-
-          <div style={{ marginTop: 14 }}>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album')}
-              style={{ width: '100%', borderColor: '#c17f3e', color: '#c17f3e' }}
-            >
-              📷 {lang === 'en' ? 'View Album' : 'アルバムを見る'}
-            </button>
-          </div>
+          {photos.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 4 }}>
+              {photos.slice(0, 9).map((ph, i) => (
+                <button
+                  key={ph.storagePath + String(i)}
+                  type="button"
+                  onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album', { state: { scrollToDate: dateKey } })}
+                  style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 6, overflow: 'hidden', flexShrink: 0 }}
+                  aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}
+                >
+                  <img src={ph.url || ''} alt="" width={48} height={48} style={{ width: 48, height: 48, objectFit: 'cover', display: 'block', borderRadius: 6 }} />
+                </button>
+              ))}
+            </div>
+          )}
         </section>
 
         {errorLine && (
