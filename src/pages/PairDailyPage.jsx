@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { getDateKey, fetchAudioForPlayback, hasTodayAudio, getListenRoleMeta, markSeen, uploadAudio, getPairId, genRequestId, getStreak, updateStreak } from '../lib/pairDaily'
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
@@ -59,6 +60,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
   const analysisReqSeqRef = useRef(0)
   const { level, isSpeaking, start: startAudioLevel, stop: stopAudioLevel } = useAudioLevel()
 
+  const navigate = useNavigate()
   const ROLE_CHILD = 'child'
   const LISTEN_ROLE_PARENT = 'parent'
 
@@ -1024,6 +1026,17 @@ export default function PairDailyPage({ lang = 'ja' }) {
               </>
             )
           })()}
+
+          <div style={{ marginTop: 14 }}>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album')}
+              style={{ width: '100%', borderColor: '#c17f3e', color: '#c17f3e' }}
+            >
+              📷 {lang === 'en' ? 'View Album' : 'アルバムを見る'}
+            </button>
+          </div>
         </section>
 
         {errorLine && (

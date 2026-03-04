@@ -175,6 +175,28 @@ export async function fetchTodayJournalMeta(pairId, role = 'parent') {
 }
 
 /**
+ * アルバム（過去全日付の写真一覧）を取得。新しい日付順。
+ * @param {string} [pairId]
+ * @returns {Promise<{ days: Array<{ dateKey: string, photos: Array<{ url: string, storagePath: string, role: string, kind: string, updatedAt: number|null }> }> }>}
+ */
+export async function fetchAlbum(pairId) {
+  const pid = pairId ?? getPairId();
+  const idToken = await getIdTokenForApi();
+  if (!idToken) return { days: [] };
+  try {
+    const res = await fetch(
+      `/api/album?pairId=${encodeURIComponent(pid)}&v=${Date.now()}`,
+      { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }
+    );
+    if (!res.ok) return { days: [] };
+    const data = await res.json().catch(() => ({}));
+    return { days: Array.isArray(data?.days) ? data.days : [] };
+  } catch {
+    return { days: [] };
+  }
+}
+
+/**
  * 親/子の今日のジャーナル画像表示用URLを取得（GET /api/journal の url/signedUrl を返す）
  * @param {string} [pairId]
  * @param {string} [role] - 'parent' | 'child'（省略時は parent）
