@@ -33,6 +33,7 @@ export default function HomePage({ lang = 'ja' }) {
   const [journalDateKey, setJournalDateKey] = useState(null)
   const [journalError, setJournalError] = useState(null)
   const [showReloadButton, setShowReloadButton] = useState(false)
+  const [toastMsg, setToastMsg] = useState(null)
   const [photos, setPhotos] = useState([])
   const [dailyPhotoLimitMessage, setDailyPhotoLimitMessage] = useState(null)
   const [myJournalUrl, setMyJournalUrl] = useState(null)
@@ -422,6 +423,25 @@ export default function HomePage({ lang = 'ja' }) {
     }
   }
 
+  const handleShare = async () => {
+    const pairId = getPairId()
+    const url = `https://tyson-two.vercel.app/#/?pairId=${encodeURIComponent(pairId)}`
+    const text = lang === 'en'
+      ? "Let's exchange voices every day on Tyson. Listen to today's message 👋"
+      : 'Tysonで毎日声を交換しよう。今日のメッセージを聞いてね 👋'
+    if (navigator.share) {
+      try { await navigator.share({ text, url }) } catch (_) {}
+    } else {
+      try {
+        await navigator.clipboard.writeText(`${text}\n${url}`)
+        setToastMsg(lang === 'en' ? 'Copied!' : 'コピーしました！')
+      } catch (_) {
+        setToastMsg(lang === 'en' ? 'Copy failed' : 'コピーに失敗しました')
+      }
+      setTimeout(() => setToastMsg(null), 2000)
+    }
+  }
+
   const handleClick = () => {
     if (isUploading) return
     if (isRecording) stopRecording()
@@ -619,6 +639,13 @@ export default function HomePage({ lang = 'ja' }) {
           )}
         </div>
         <LanguageSwitch lang={lang} variant="home" />
+        <button
+          type="button"
+          onClick={handleShare}
+          style={{ padding: '4px 10px', fontSize: 13, color: '#4a90d9', border: '1px solid #4a90d9', borderRadius: 6, background: '#fff', cursor: 'pointer', whiteSpace: 'nowrap' }}
+        >
+          {lang === 'en' ? 'Invite' : '招待'}
+        </button>
         <span style={{ fontSize: 11, color: '#999' }}>pairId: {getPairId()}</span>
         {lastRequestId && (
           <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12, color: '#666' }}>
@@ -1051,6 +1078,25 @@ export default function HomePage({ lang = 'ja' }) {
             alt={t(lang, 'myJournal')}
             style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8, pointerEvents: 'none' }}
           />
+        </div>
+      )}
+
+      {toastMsg && (
+        <div style={{
+          position: 'fixed',
+          bottom: 32,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(0,0,0,0.75)',
+          color: '#fff',
+          fontSize: 14,
+          padding: '8px 20px',
+          borderRadius: 20,
+          zIndex: 20000,
+          whiteSpace: 'nowrap',
+          pointerEvents: 'none',
+        }}>
+          {toastMsg}
         </div>
       )}
     </div>
