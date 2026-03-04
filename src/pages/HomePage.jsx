@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, getPairId, getDateKey, genRequestId } from '../lib/pairDaily'
+import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, getPairId, getDateKey, genRequestId, getStreak, updateStreak } from '../lib/pairDaily'
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import { t } from '../lib/i18n'
@@ -10,6 +10,7 @@ import { formatDeployedAtLocal, getBuildHash } from '../lib/dateFormat'
 import { useAudioLevel } from '../lib/useAudioLevel'
 
 export default function HomePage({ lang = 'ja' }) {
+  const [streakCount, setStreakCount] = useState(null)
   const [isRecording, setIsRecording] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [sentAt, setSentAt] = useState(null)
@@ -157,6 +158,12 @@ export default function HomePage({ lang = 'ja' }) {
           const seq = analysisReqSeqRef.current
           setSentAt(new Date())
           setErrorLine(null)
+          // 親と子の両方が録音済みならstreakを更新
+          if (hasParentAudio === true) {
+            updateStreak(getPairId()).then(({ success, count }) => {
+              if (success) setStreakCount(count)
+            })
+          }
           // 一言表示開始（0-200msで即時表示）
           setOneLiner(t(lang, 'uploadSuccessThanks'))
           setOneLinerStage('immediate')
@@ -459,6 +466,10 @@ export default function HomePage({ lang = 'ja' }) {
   }, [fetchMyJournal])
 
   useEffect(() => {
+    getStreak(getPairId()).then(({ count }) => setStreakCount(count))
+  }, [])
+
+  useEffect(() => {
     const t = setTimeout(() => setShowReloadButton(true), 10000)
     return () => clearTimeout(t)
   }, [])
@@ -591,15 +602,22 @@ export default function HomePage({ lang = 'ja' }) {
       background: '#fff',
       color: '#333',
     }}>
-      <header style={{ flexShrink: 0, marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-        <time style={{ fontSize: 14, color: '#666' }}>
-          {new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            weekday: 'short',
-          })}
-        </time>
+      <header style={{ flexShrink: 0, marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+        <div>
+          <time style={{ fontSize: 14, color: '#666' }}>
+            {new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              weekday: 'short',
+            })}
+          </time>
+          {streakCount > 0 && (
+            <p style={{ margin: '4px 0 0', fontSize: 13, color: '#e65c00', fontWeight: 600 }}>
+              🔥 {streakCount}日連続
+            </p>
+          )}
+        </div>
         <LanguageSwitch lang={lang} variant="home" />
         <span style={{ fontSize: 11, color: '#999' }}>pairId: {getPairId()}</span>
         {lastRequestId && (
