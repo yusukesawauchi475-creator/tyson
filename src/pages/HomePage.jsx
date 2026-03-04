@@ -434,11 +434,10 @@ export default function HomePage({ lang = 'ja' }) {
     } else {
       try {
         await navigator.clipboard.writeText(`${text}\n${url}`)
-        setToastMsg(lang === 'en' ? 'Copied!' : 'コピーしました！')
+        alert(lang === 'en' ? 'Link copied!' : 'リンクをコピーしました')
       } catch (_) {
-        setToastMsg(lang === 'en' ? 'Copy failed' : 'コピーに失敗しました')
+        alert(lang === 'en' ? 'Copy failed' : 'コピーに失敗しました')
       }
-      setTimeout(() => setToastMsg(null), 2000)
     }
   }
 
@@ -644,7 +643,7 @@ export default function HomePage({ lang = 'ja' }) {
           onClick={handleShare}
           style={{ padding: '4px 10px', fontSize: 13, color: '#4a90d9', border: '1px solid #4a90d9', borderRadius: 6, background: '#fff', cursor: 'pointer', whiteSpace: 'nowrap' }}
         >
-          {lang === 'en' ? 'Invite' : '招待'}
+          {lang === 'en' ? '👋 Invite' : '👋 招待'}
         </button>
         <span style={{ fontSize: 11, color: '#999' }}>pairId: {getPairId()}</span>
         {lastRequestId && (
