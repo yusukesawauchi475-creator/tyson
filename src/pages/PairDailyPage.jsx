@@ -613,11 +613,10 @@ export default function PairDailyPage({ lang = 'ja' }) {
     } else {
       try {
         await navigator.clipboard.writeText(`${text}\n${url}`)
-        setToastMsg(lang === 'en' ? 'Copied!' : 'コピーしました！')
+        alert(lang === 'en' ? 'Link copied!' : 'リンクをコピーしました')
       } catch (_) {
-        setToastMsg(lang === 'en' ? 'Copy failed' : 'コピーに失敗しました')
+        alert(lang === 'en' ? 'Copy failed' : 'コピーに失敗しました')
       }
-      setTimeout(() => setToastMsg(null), 2000)
     }
   }
 
@@ -637,38 +636,38 @@ export default function PairDailyPage({ lang = 'ja' }) {
       display: 'flex',
       flexDirection: 'column',
       padding: '24px 20px',
-      fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
-      background: '#fff',
-      color: '#333',
+      fontFamily: 'var(--font-sans)',
+      background: 'var(--color-bg)',
+      color: 'var(--color-text)',
     }}>
       <header style={{ flexShrink: 0, marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
         <div>
-        <time style={{ fontSize: 14, color: '#666' }}>{today || '...'}</time>
-        {streakCount > 0 && (
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: '#e65c00', fontWeight: 600 }}>
-            🔥 {streakCount}日連続
+          <time style={{ fontSize: 14, color: 'var(--color-text-sub)' }}>{today || '...'}</time>
+          {streakCount > 0 && (
+            <p style={{ margin: '4px 0 0', fontSize: 13, color: '#e65c00', fontWeight: 600 }}>
+              🔥 {streakCount}日連続
+            </p>
+          )}
+          <p style={{ margin: '8px 0 0', fontSize: 14, color: 'var(--color-text-muted)' }}>
+            {hasAudio === true ? t(lang, 'voiceReceivedToday') : hasAudio === false ? t(lang, 'notYetOkToday') : t(lang, 'checking')}
           </p>
-        )}
-        <p style={{ margin: '8px 0 0', fontSize: 14, color: '#888' }}>
-          {hasAudio === true ? t(lang, 'voiceReceivedToday') : hasAudio === false ? t(lang, 'notYetOkToday') : t(lang, 'checking')}
-        </p>
         </div>
         <LanguageSwitch lang={lang} variant="pair" />
         <button
           type="button"
           onClick={handleShare}
-          style={{ padding: '4px 10px', fontSize: 13, color: '#4a90d9', border: '1px solid #4a90d9', borderRadius: 6, background: '#fff', cursor: 'pointer', whiteSpace: 'nowrap' }}
+          style={{ padding: '4px 10px', fontSize: 13, color: 'var(--color-primary)', border: '1px solid var(--color-primary)', borderRadius: 6, background: 'var(--color-surface)', cursor: 'pointer', whiteSpace: 'nowrap' }}
         >
-          {lang === 'en' ? 'Invite' : '招待'}
+          {lang === 'en' ? '👋 Invite' : '👋 招待'}
         </button>
-        <span style={{ fontSize: 11, color: '#999' }}>pairId: {getPairId()}</span>
+        <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>pairId: {getPairId()}</span>
         {lastRequestId && (
-          <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12, color: '#666' }}>
+          <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--color-text-sub)' }}>
             <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>REQ: {lastRequestId}</span>
             <button
               type="button"
               onClick={() => navigator.clipboard?.writeText(lastRequestId).then(() => {}).catch(() => {})}
-              style={{ flex: '0 0 auto', padding: '2px 6px', fontSize: 11, cursor: 'pointer', border: '1px solid #ccc', borderRadius: 4, background: '#fff' }}
+              style={{ flex: '0 0 auto', padding: '2px 6px', fontSize: 11, cursor: 'pointer', border: '1px solid var(--color-border)', borderRadius: 4, background: 'var(--color-surface)' }}
             >
               Copy
             </button>

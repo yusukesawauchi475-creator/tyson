@@ -1,10 +1,16 @@
+import { useEffect } from 'react'
 import { HashRouter, Routes, Route } from 'react-router-dom'
 import PairDailyPage from './pages/PairDailyPage'
 import HomePage from './pages/HomePage'
 import AdminPage from './pages/AdminPage'
 import AlbumPage from './pages/AlbumPage'
+import { initPairId } from './lib/pairDaily'
 
 function App() {
+  useEffect(() => {
+    initPairId()
+  }, [])
+
   return (
     <>
       <div className="mobile-white-overlay" aria-hidden="true" />

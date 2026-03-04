@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, getPairId, getDateKey, genRequestId, getStreak, updateStreak } from '../lib/pairDaily'
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
@@ -10,6 +11,7 @@ import { formatDeployedAtLocal, getBuildHash } from '../lib/dateFormat'
 import { useAudioLevel } from '../lib/useAudioLevel'
 
 export default function HomePage({ lang = 'ja' }) {
+  const navigate = useNavigate()
   const [streakCount, setStreakCount] = useState(null)
   const [isRecording, setIsRecording] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -40,6 +42,7 @@ export default function HomePage({ lang = 'ja' }) {
   const [myJournalLoading, setMyJournalLoading] = useState(false)
   const [myJournalError, setMyJournalError] = useState(null)
   const [previewOpen, setPreviewOpen] = useState(false)
+  const [dateKey] = useState(getDateKey())
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
   const streamRef = useRef(null)
@@ -78,55 +81,29 @@ export default function HomePage({ lang = 'ja' }) {
     if (isUploading) return
     setErrorLine(null)
     setSentAt(null)
-    // 録音開始時に一言を非表示
     setOneLinerVisible(false)
     setAnalysisVisible(false)
-    // 録音開始＝過去の解析結果は全部無効
     analysisReqSeqRef.current += 1
-    if (oneLinerTimerRef.current) {
-      clearTimeout(oneLinerTimerRef.current)
-      oneLinerTimerRef.current = null
-    }
-    if (analysisTimerRef.current) {
-      clearTimeout(analysisTimerRef.current)
-      analysisTimerRef.current = null
-    }
-    if (analysisFetchTimerRef.current) {
-      clearTimeout(analysisFetchTimerRef.current)
-      analysisFetchTimerRef.current = null
-    }
+    if (oneLinerTimerRef.current) { clearTimeout(oneLinerTimerRef.current); oneLinerTimerRef.current = null }
+    if (analysisTimerRef.current) { clearTimeout(analysisTimerRef.current); analysisTimerRef.current = null }
+    if (analysisFetchTimerRef.current) { clearTimeout(analysisFetchTimerRef.current); analysisFetchTimerRef.current = null }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       streamRef.current = stream
-
-      // 音量レベル監視を開始
       startAudioLevel(stream)
-
       let mimeType = 'audio/webm'
       if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4'
       else if (MediaRecorder.isTypeSupported('audio/aac')) mimeType = 'audio/aac'
-
       const mr = new MediaRecorder(stream, { mimeType })
       mediaRecorderRef.current = mr
       chunksRef.current = []
-
-      mr.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data)
-      }
-
+      mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
       recordStartRef.current = Date.now()
-
       mr.onstop = async () => {
-        // 音量レベル監視を停止
         stopAudioLevel()
         const blob = new Blob(chunksRef.current, { type: mr.mimeType })
         const duration = recordStartRef.current ? (Date.now() - recordStartRef.current) / 1000 : 0
-
-        if (duration < 1 || blob.size < 4 * 1024) {
-          setErrorLine(t(lang, 'tryAgain'))
-          return
-        }
-
+        if (duration < 1 || blob.size < 4 * 1024) { setErrorLine(t(lang, 'tryAgain')); return }
         const reqId = genRequestId()
         setLastRequestId(reqId)
         setIsUploading(true)
@@ -134,213 +111,110 @@ export default function HomePage({ lang = 'ja' }) {
           ? Math.max(1, Math.min(6000, Math.round((Date.now() - recordStartRef.current) / 1000)))
           : null
         const result = await uploadAudio(blob, ROLE_PARENT, getPairId(), getDateKey(), reqId)
-
         if (result.success) {
-          // 古いタイマーをクリア（連続録音対策）
-          if (oneLinerTimerRef.current) {
-            clearTimeout(oneLinerTimerRef.current)
-            oneLinerTimerRef.current = null
-          }
-          if (analysisTimerRef.current) {
-            clearTimeout(analysisTimerRef.current)
-            analysisTimerRef.current = null
-          }
-          if (analysisFetchTimerRef.current) {
-            clearTimeout(analysisFetchTimerRef.current)
-            analysisFetchTimerRef.current = null
-          }
+          if (oneLinerTimerRef.current) { clearTimeout(oneLinerTimerRef.current); oneLinerTimerRef.current = null }
+          if (analysisTimerRef.current) { clearTimeout(analysisTimerRef.current); analysisTimerRef.current = null }
+          if (analysisFetchTimerRef.current) { clearTimeout(analysisFetchTimerRef.current); analysisFetchTimerRef.current = null }
           setAnalysisVisible(false)
-          // 送信成功時のtopicをrefに保持（競合対策）
           if (dailyTopic) topicRef.current = dailyTopic
-          // dateKeyを固定（このupload用に1回だけ作る）
           const dateKeyForThisUpload = result?.dateKey || getDateKey()
-          // リクエストシーケンス番号をインクリメント
           analysisReqSeqRef.current += 1
           const seq = analysisReqSeqRef.current
           setSentAt(new Date())
           setErrorLine(null)
-          // 親と子の両方が録音済みならstreakを更新
           if (hasParentAudio === true) {
-            updateStreak(getPairId()).then(({ success, count }) => {
-              if (success) setStreakCount(count)
-            })
+            updateStreak(getPairId()).then(({ success, count }) => { if (success) setStreakCount(count) })
           }
-          // 一言表示開始（0-200msで即時表示）
           setOneLiner(t(lang, 'uploadSuccessThanks'))
           setOneLinerStage('immediate')
           setOneLinerVisible(true)
-          // 300ms後にtopicに応じたテンプレに差し替え
           oneLinerTimerRef.current = setTimeout(() => {
             const topic = topicRef.current
-            const finalMessage = getFinalOneLiner(lang, topic, ROLE_PARENT)
-            setOneLiner(finalMessage)
+            setOneLiner(getFinalOneLiner(lang, topic, ROLE_PARENT))
             setOneLinerStage('final')
             oneLinerTimerRef.current = null
           }, 300)
-          // さらに700ms後（送信成功から1000ms後）に解析コメントを表示
           analysisTimerRef.current = setTimeout(() => {
             const topic = topicRef.current
-            const placeholder = getAnalysisPlaceholder(lang, topic, ROLE_PARENT)
-            setAnalysisComment(placeholder)
+            setAnalysisComment(getAnalysisPlaceholder(lang, topic, ROLE_PARENT))
             setAnalysisVisible(true)
             analysisTimerRef.current = null
           }, 1000)
-
-          // 非同期で解析コメントAPIをPOST（awaitしない、失敗しても無視）
           ;(async () => {
             try {
               const idToken = await getIdTokenForApi()
               if (!idToken) return
               await fetch('/api/analysis-comment', {
                 method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${idToken}`,
-                },
-                body: JSON.stringify({
-                  pairId: getPairId(),
-                  dateKey: dateKeyForThisUpload,
-                  role: ROLE_PARENT,
-                  topic: topicRef.current,
-                  durationSec: durationSec,
-                }),
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+                body: JSON.stringify({ pairId: getPairId(), dateKey: dateKeyForThisUpload, role: ROLE_PARENT, topic: topicRef.current, durationSec }),
               })
-            } catch (e) {
-              // エラーは無視（UIを止めない）
-            }
+            } catch {}
           })()
-
-          // 非同期でAI解析を開始（fire-and-forget、awaitしない）
           ;(async () => {
             try {
               const idToken = await getIdTokenForApi()
               if (!idToken) return
-              
-              // uploadAudioのレスポンスからversionを取得
               const sourceVersion = result?.version
-              if (!sourceVersion) {
-                console.error('[HomePage] uploadAudio result missing version, skipping analyze')
-                return
-              }
-              
+              if (!sourceVersion) return
               fetch('/api/analyze', {
                 method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${idToken}`,
-                },
-                body: JSON.stringify({
-                  pairId: getPairId(),
-                  dateKey: dateKeyForThisUpload,
-                  role: ROLE_PARENT,
-                  sourceVersion,
-                  version: sourceVersion, // 互換性のため
-                }),
-              }).catch(() => {
-                // エラーは無視（UIを止めない）
-              })
-            } catch (e) {
-              // エラーは無視（UIを止めない）
-            }
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+                body: JSON.stringify({ pairId: getPairId(), dateKey: dateKeyForThisUpload, role: ROLE_PARENT, sourceVersion, version: sourceVersion }),
+              }).catch(() => {})
+            } catch {}
           })()
-
-          // 1200-1500ms後にGETして、取れたら差し替え（ポーリング開始）
           analysisFetchTimerRef.current = setTimeout(() => {
             ;(async () => {
-              // 古いリクエストの結果が刺さらないようにガード
               if (analysisReqSeqRef.current !== seq) return
-              
               const maxPollCount = 20
-              const pollInterval = 2000 // 2秒間隔
+              const pollInterval = 2000
               let pollCount = 0
-              
               const pollAnalysis = async () => {
-                // seqガード（各ポーリング開始時）
                 if (analysisReqSeqRef.current !== seq) return false
-                
                 try {
                   const idToken = await getIdTokenForApi()
                   if (!idToken) return false
-                  
-                  // 再度チェック（非同期処理中にseqが変わった可能性）
                   if (analysisReqSeqRef.current !== seq) return false
-                  
                   const res = await fetch(`/api/analysis-comment?pairId=${getPairId()}&dateKey=${dateKeyForThisUpload}&role=${ROLE_PARENT}`, {
-                    headers: {
-                      Authorization: `Bearer ${idToken}`,
-                    },
+                    headers: { Authorization: `Bearer ${idToken}` },
                   })
-                  
-                  // レスポンス取得後もチェック
                   if (analysisReqSeqRef.current !== seq) return false
-                  
                   if (res.ok) {
                     const data = await res.json()
                     if (data.success) {
-                      // aiStatusがdoneならaiTextを表示して終了
                       if (data.aiStatus === 'done' && data.aiText) {
-                        if (analysisReqSeqRef.current === seq) {
-                          setAnalysisComment(data.aiText)
-                        }
-                        return true // 完了
+                        if (analysisReqSeqRef.current === seq) setAnalysisComment(data.aiText)
+                        return true
                       }
-                      
-                      // aiStatusがerrorなら静かに終了（placeholderのまま）
-                      if (data.aiStatus === 'error') {
-                        return true // 終了（エラーでもUIは止めない）
-                      }
-                      
-                      // aiTextがあれば優先、なければtextを使用（初期表示用）
+                      if (data.aiStatus === 'error') return true
                       const displayText = data.aiText || data.text
-                      if (displayText && pollCount === 0) {
-                        // 最初のポーリングで既存textがあれば表示
-                        if (analysisReqSeqRef.current === seq) {
-                          setAnalysisComment(displayText)
-                        }
-                      }
+                      if (displayText && pollCount === 0 && analysisReqSeqRef.current === seq) setAnalysisComment(displayText)
                     }
                   }
-                } catch (e) {
-                  // エラーは無視（UIを止めない）
-                }
-                
-                return false // 継続
+                } catch {}
+                return false
               }
-              
-              // 最初のポーリング
               const done = await pollAnalysis()
               if (done) return
-              
-              // 最大回数までポーリング
               const pollLoop = setInterval(async () => {
                 pollCount++
-                
-                if (analysisReqSeqRef.current !== seq) {
-                  clearInterval(pollLoop)
-                  return
-                }
-                
+                if (analysisReqSeqRef.current !== seq) { clearInterval(pollLoop); return }
                 const done = await pollAnalysis()
-                if (done || pollCount >= maxPollCount) {
-                  clearInterval(pollLoop)
-                  // 最大回数に達しても静かに終了（placeholderのまま）
-                }
+                if (done || pollCount >= maxPollCount) clearInterval(pollLoop)
               }, pollInterval)
             })()
-          }, 1200 + Math.random() * 300) // 1200-1500msの間でランダム
+          }, 1200 + Math.random() * 300)
         } else {
           const reqId = result.requestId || 'REQ-XXXX'
           setErrorLine(t(lang, 'uploadFailed', { id: reqId }))
           if (import.meta.env.DEV) console.error('[HomePage]', result.requestId, result.errorCode, result.error)
         }
         setIsUploading(false)
-
         streamRef.current?.getTracks().forEach((t) => t.stop())
         streamRef.current = null
-        // 音量レベル監視を停止（念のため）
         stopAudioLevel()
       }
-
       mr.start()
       setIsRecording(true)
     } catch (e) {
@@ -352,11 +226,7 @@ export default function HomePage({ lang = 'ja' }) {
   const stopRecording = () => {
     if (!isRecording || isUploading) return
     const mr = mediaRecorderRef.current
-    if (mr?.state === 'recording') {
-      mr.stop()
-      // 音量レベル監視を停止
-      stopAudioLevel()
-    }
+    if (mr?.state === 'recording') { mr.stop(); stopAudioLevel() }
     setIsRecording(false)
   }
 
@@ -366,15 +236,10 @@ export default function HomePage({ lang = 'ja' }) {
       setJournalError(t(lang, 'selectImage'))
       return
     }
-    // 動作確認: ジャーナルは常に1枚、2回目はconfirmで上書き確認
     if (kind === 'journal_image' && journalUploaded && !window.confirm(t(lang, 'journalOverwriteConfirm'))) return
-    // 動作確認: 4枚目はアップロード拒否して画面にグレー文字で表示
     if (kind === 'generic_image') {
       const myCount = photos.filter((p) => p.role === ROLE_PARENT).length
-      if (myCount >= 3) {
-        setDailyPhotoLimitMessage(t(lang, 'dailyPhotoLimit'))
-        return
-      }
+      if (myCount >= 3) { setDailyPhotoLimitMessage(t(lang, 'dailyPhotoLimit')); return }
     }
     setJournalUploading(true)
     setJournalError(null)
@@ -384,7 +249,6 @@ export default function HomePage({ lang = 'ja' }) {
       const result = await uploadJournalImage(toUpload, reqId, getPairId(), ROLE_PARENT, kind)
       setJournalUploading(false)
       if (result.success) {
-        console.log('[upload success]', { requestId: reqId, kind, result: { success: result.success, requestId: result.requestId, dateKey: result.dateKey, storagePath: result.storagePath } })
         setJournalRequestId(result.requestId)
         if (kind === 'journal_image') {
           setJournalUploaded(true)
@@ -480,33 +344,27 @@ export default function HomePage({ lang = 'ja' }) {
       .catch((e) => setJournalError(e?.message || String(e)))
   }, [])
 
-  useEffect(() => {
-    fetchMyJournal()
-  }, [fetchMyJournal])
+  useEffect(() => { fetchMyJournal() }, [fetchMyJournal])
 
   useEffect(() => {
     getStreak(getPairId()).then(({ count }) => setStreakCount(count))
   }, [])
 
   useEffect(() => {
-    const t = setTimeout(() => setShowReloadButton(true), 10000)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => setShowReloadButton(true), 10000)
+    return () => clearTimeout(timer)
   }, [])
 
   useEffect(() => {
     let cancelled = false
     getListenRoleMeta(LISTEN_ROLE_CHILD)
       .then(({ hasAudio, isUnseen }) => {
-        if (!cancelled) {
-          setHasParentAudio(hasAudio)
-          setIsParentUnseen(!!isUnseen)
-        }
+        if (!cancelled) { setHasParentAudio(hasAudio); setIsParentUnseen(!!isUnseen) }
       })
       .catch((e) => setJournalError(t(lang, 'initError', { msg: e?.message || String(e) })))
     return () => { cancelled = true }
   }, [])
 
-  // 60秒ポーリング（visible時のみ、送信中/再生中はスキップ）
   useEffect(() => {
     const tick = () => {
       if (document.visibilityState !== 'visible') return
@@ -514,65 +372,35 @@ export default function HomePage({ lang = 'ja' }) {
       getListenRoleMeta(LISTEN_ROLE_CHILD).then(({ hasAudio, isUnseen }) => {
         setHasParentAudio(hasAudio)
         setIsParentUnseen(!!isUnseen)
-      }).catch((e) => { if (import.meta.env.DEV) console.debug('[HomePage] poll', e?.message) })
+      }).catch(() => {})
     }
-    const start = () => {
-      if (pollIntervalRef.current != null) return
-      pollIntervalRef.current = setInterval(tick, 60 * 1000)
-    }
-    const stop = () => {
-      if (pollIntervalRef.current != null) {
-        clearInterval(pollIntervalRef.current)
-        pollIntervalRef.current = null
-      }
-    }
+    const start = () => { if (pollIntervalRef.current != null) return; pollIntervalRef.current = setInterval(tick, 60 * 1000) }
+    const stop = () => { if (pollIntervalRef.current != null) { clearInterval(pollIntervalRef.current); pollIntervalRef.current = null } }
     if (document.visibilityState === 'visible') start()
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') start()
-      else stop()
-    }
+    const onVisibility = () => { if (document.visibilityState === 'visible') start(); else stop() }
     document.addEventListener('visibilitychange', onVisibility)
-    return () => {
-      stop()
-      document.removeEventListener('visibilitychange', onVisibility)
-    }
+    return () => { stop(); document.removeEventListener('visibilitychange', onVisibility) }
   }, [])
 
   const handlePlayParent = async () => {
     if (hasParentAudio === false) return
-
     setIsLoadingParent(true)
     setErrorLine(null)
-
     const el = parentAudioRef.current
-    if (el) {
-      el.pause()
-      el.src = ''
-      el.load()
-    }
-    if (parentAudioUrl && parentAudioUrl.startsWith('blob:')) {
-      URL.revokeObjectURL(parentAudioUrl)
-    }
+    if (el) { el.pause(); el.src = ''; el.load() }
+    if (parentAudioUrl && parentAudioUrl.startsWith('blob:')) URL.revokeObjectURL(parentAudioUrl)
     setParentAudioUrl(null)
-    
     const result = await fetchAudioForPlayback(LISTEN_ROLE_CHILD)
-
     if (result.error) {
       const reqId = result.requestId || 'REQ-XXXX'
       setErrorLine(t(lang, 'uploadFailed', { id: reqId }))
-      if (import.meta.env.DEV) console.error('[HomePage]', result.requestId, result.errorCode, result.error)
       setIsLoadingParent(false)
-      if (result.hasAudio === false) {
-        setHasParentAudio(false)
-        setIsParentUnseen(false)
-      }
+      if (result.hasAudio === false) { setHasParentAudio(false); setIsParentUnseen(false) }
       return
     }
-
     setParentAudioUrl(result.url)
     setIsLoadingParent(false)
     if (result.hasAudio !== undefined) setHasParentAudio(result.hasAudio)
-
     try {
       const el = parentAudioRef.current
       if (el) {
@@ -582,28 +410,17 @@ export default function HomePage({ lang = 'ja' }) {
         setIsPlayingParent(true)
         markSeen(LISTEN_ROLE_CHILD).then(() => setIsParentUnseen(false))
       }
-    } catch (_) {
-      setErrorLine(t(lang, 'playFailed'))
-    }
+    } catch (_) { setErrorLine(t(lang, 'playFailed')) }
   }
 
   const handleParentEnded = () => setIsPlayingParent(false)
 
-  // unmount時にObjectURLを破棄
   useEffect(() => {
     return () => {
-      if (parentAudioUrl && parentAudioUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(parentAudioUrl)
-      }
-      if (oneLinerTimerRef.current) {
-        clearTimeout(oneLinerTimerRef.current)
-      }
-      if (analysisTimerRef.current) {
-        clearTimeout(analysisTimerRef.current)
-      }
-      if (analysisFetchTimerRef.current) {
-        clearTimeout(analysisFetchTimerRef.current)
-      }
+      if (parentAudioUrl && parentAudioUrl.startsWith('blob:')) URL.revokeObjectURL(parentAudioUrl)
+      if (oneLinerTimerRef.current) clearTimeout(oneLinerTimerRef.current)
+      if (analysisTimerRef.current) clearTimeout(analysisTimerRef.current)
+      if (analysisFetchTimerRef.current) clearTimeout(analysisFetchTimerRef.current)
     }
   }, [parentAudioUrl])
 
@@ -611,48 +428,48 @@ export default function HomePage({ lang = 'ja' }) {
     ? sentAt.toLocaleTimeString(lang === 'en' ? 'en-US' : 'ja-JP', { hour: '2-digit', minute: '2-digit' })
     : ''
 
+  const today = new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', {
+    year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
+  })
+
   return (
     <div style={{
       minHeight: '100dvh',
       display: 'flex',
       flexDirection: 'column',
       padding: '24px 20px',
-      fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
-      background: '#fff',
-      color: '#333',
+      fontFamily: 'var(--font-sans)',
+      background: 'var(--color-bg)',
+      color: 'var(--color-text)',
     }}>
       <header style={{ flexShrink: 0, marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
         <div>
-          <time style={{ fontSize: 14, color: '#666' }}>
-            {new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-              weekday: 'short',
-            })}
-          </time>
+          <time style={{ fontSize: 14, color: 'var(--color-text-sub)' }}>{today}</time>
           {streakCount > 0 && (
             <p style={{ margin: '4px 0 0', fontSize: 13, color: '#e65c00', fontWeight: 600 }}>
               🔥 {streakCount}日連続
             </p>
           )}
+          <p style={{ margin: '8px 0 0', fontSize: 14, color: 'var(--color-text-muted)' }}>
+            {hasParentAudio === true ? t(lang, 'voiceReceivedToday') : hasParentAudio === false ? t(lang, 'notYetOkToday') : t(lang, 'checking')}
+          </p>
         </div>
         <LanguageSwitch lang={lang} variant="home" />
         <button
           type="button"
           onClick={handleShare}
-          style={{ padding: '4px 10px', fontSize: 13, color: '#4a90d9', border: '1px solid #4a90d9', borderRadius: 6, background: '#fff', cursor: 'pointer', whiteSpace: 'nowrap' }}
+          style={{ padding: '4px 10px', fontSize: 13, color: 'var(--color-primary)', border: '1px solid var(--color-primary)', borderRadius: 6, background: 'var(--color-surface)', cursor: 'pointer', whiteSpace: 'nowrap' }}
         >
           {lang === 'en' ? '👋 Invite' : '👋 招待'}
         </button>
-        <span style={{ fontSize: 11, color: '#999' }}>pairId: {getPairId()}</span>
+        <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>pairId: {getPairId()}</span>
         {lastRequestId && (
-          <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12, color: '#666' }}>
+          <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--color-text-sub)' }}>
             <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>REQ: {lastRequestId}</span>
             <button
               type="button"
               onClick={() => navigator.clipboard?.writeText(lastRequestId).then(() => {}).catch(() => {})}
-              style={{ flex: '0 0 auto', padding: '2px 6px', fontSize: 11, cursor: 'pointer', border: '1px solid #ccc', borderRadius: 4, background: '#fff' }}
+              style={{ flex: '0 0 auto', padding: '2px 6px', fontSize: 11, cursor: 'pointer', border: '1px solid var(--color-border)', borderRadius: 4, background: 'var(--color-surface)' }}
             >
               Copy
             </button>
@@ -666,9 +483,9 @@ export default function HomePage({ lang = 'ja' }) {
           <h2 className="cardHead">🎧 {t(lang, 'partnerRecordingListen')}</h2>
           {hasParentAudio === true ? (
             <>
-              <p style={{ fontSize: 14, color: '#2e7d32', textAlign: 'center', margin: '0 0 8px', fontWeight: 500 }}>
+              <p style={{ fontSize: 14, color: 'var(--color-success)', textAlign: 'center', margin: '0 0 8px', fontWeight: 500 }}>
                 {t(lang, 'received')}
-                {isParentUnseen && <span style={{ marginLeft: 4, color: '#f44336' }} title={lang === 'en' ? 'Unplayed' : '未再生'}>●</span>}
+                {isParentUnseen && <span style={{ marginLeft: 4, color: 'var(--color-danger)' }} title={lang === 'en' ? 'Unplayed' : '未再生'}>●</span>}
               </p>
               <button
                 type="button"
@@ -680,7 +497,7 @@ export default function HomePage({ lang = 'ja' }) {
                   fontSize: 16,
                   fontWeight: 500,
                   color: '#fff',
-                  background: isLoadingParent ? '#999' : '#4a90d9',
+                  background: isLoadingParent ? 'var(--color-text-muted)' : '#4a90d9',
                   border: 'none',
                   borderRadius: 8,
                   cursor: isLoadingParent ? 'wait' : 'pointer',
@@ -691,19 +508,19 @@ export default function HomePage({ lang = 'ja' }) {
               </button>
             </>
           ) : hasParentAudio === false ? (
-            <p style={{ fontSize: 14, color: '#888', textAlign: 'center', margin: '0 0 16px' }}>
+            <p style={{ fontSize: 14, color: 'var(--color-text-muted)', textAlign: 'center', margin: '0 0 16px' }}>
               {t(lang, 'notReceivedYet')}
             </p>
           ) : (
             <>
-              <p style={{ fontSize: 14, color: '#888', textAlign: 'center', margin: '0 0 16px' }}>
+              <p style={{ fontSize: 14, color: 'var(--color-text-muted)', textAlign: 'center', margin: '0 0 16px' }}>
                 {t(lang, 'checking')}
               </p>
               {showReloadButton && (
                 <button
                   type="button"
                   onClick={() => window.location.reload()}
-                  style={{ padding: '6px 12px', fontSize: 12, color: '#4a90d9', border: '1px solid #4a90d9', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
+                  style={{ padding: '6px 12px', fontSize: 12, color: '#4a90d9', border: '1px solid #4a90d9', borderRadius: 6, background: 'var(--color-surface)', cursor: 'pointer' }}
                 >
                   {t(lang, 'reload')}
                 </button>
@@ -714,16 +531,7 @@ export default function HomePage({ lang = 'ja' }) {
             <button
               type="button"
               onClick={refreshParentStatus}
-              style={{
-                padding: '4px 12px',
-                fontSize: 12,
-                color: '#4a90d9',
-                background: 'transparent',
-                border: '1px solid #4a90d9',
-                borderRadius: 6,
-                cursor: 'pointer',
-                marginBottom: 0,
-              }}
+              style={{ padding: '4px 12px', fontSize: 12, color: '#4a90d9', background: 'transparent', border: '1px solid #4a90d9', borderRadius: 6, cursor: 'pointer', marginBottom: 0 }}
             >
               {t(lang, 'refresh')}
             </button>
@@ -743,48 +551,30 @@ export default function HomePage({ lang = 'ja' }) {
               fontSize: 18,
               fontWeight: 500,
               color: '#fff',
-              background: isUploading ? '#999' : isRecording ? '#c00' : '#4a90d9',
+              background: isUploading ? 'var(--color-text-muted)' : isRecording ? 'var(--color-danger)' : '#4a90d9',
               border: 'none',
               borderRadius: 12,
               cursor: isUploading ? 'wait' : 'pointer',
-              boxShadow: isRecording ? '0 0 0 4px rgba(200, 0, 0, 0.3)' : 'none',
+              boxShadow: isRecording ? '0 0 0 4px rgba(192,57,43,0.25)' : 'none',
             }}
           >
             {isUploading ? t(lang, 'sending') : isRecording ? t(lang, 'recording') : t(lang, 'record')}
           </button>
 
           {isRecording && isSpeaking && (
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: 4,
-              marginTop: 8,
-              height: 24,
-            }}>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 4, marginTop: 8, height: 24 }}>
               {[0, 1, 2, 3, 4].map((i) => {
                 const jitter = (Math.random() - 0.5) * 0.1
                 const scale = Math.max(0.2, Math.min(1.0, level * 8 + jitter))
                 return (
-                  <span
-                    key={i}
-                    style={{
-                      width: 3,
-                      height: '100%',
-                      background: '#4a90d9',
-                      borderRadius: 2,
-                      transform: `scaleY(${scale})`,
-                      transformOrigin: 'center',
-                      transition: 'transform 0.1s ease-out',
-                    }}
-                  />
+                  <span key={i} style={{ width: 3, height: '100%', background: '#4a90d9', borderRadius: 2, transform: `scaleY(${scale})`, transformOrigin: 'center', transition: 'transform 0.1s ease-out' }} />
                 )
               })}
             </div>
           )}
 
           {sentAt && (
-            <p style={{ fontSize: 16, color: '#2e7d32', fontWeight: 500, margin: '8px 0 0', textAlign: 'center' }}>
+            <p style={{ fontSize: 16, color: 'var(--color-success)', fontWeight: 500, margin: '8px 0 0', textAlign: 'center' }}>
               {t(lang, 'sentAt', { time: sentAtStr })}
             </p>
           )}
@@ -792,33 +582,13 @@ export default function HomePage({ lang = 'ja' }) {
           <DailyPromptCard pairId={getPairId()} role={ROLE_PARENT} onTopicChange={handleTopicChange} lang={lang} />
 
           {oneLinerVisible && oneLiner && (
-            <div style={{
-              width: '100%',
-              marginTop: 12,
-              padding: '12px 16px',
-              background: '#e8f5e9',
-              border: '1px solid #c8e6c9',
-              borderRadius: 8,
-              fontSize: 14,
-              color: '#2e7d32',
-              textAlign: 'center',
-              lineHeight: 1.5,
-            }}>
+            <div style={{ width: '100%', marginTop: 12, padding: '12px 16px', background: '#e8f5e9', border: '1px solid #c8e6c9', borderRadius: 8, fontSize: 14, color: 'var(--color-success)', textAlign: 'center', lineHeight: 1.5 }}>
               {oneLiner}
             </div>
           )}
 
           {analysisVisible && analysisComment && (
-            <div style={{
-              width: '100%',
-              marginTop: 8,
-              padding: '8px 12px',
-              fontSize: 12,
-              color: '#666',
-              textAlign: 'center',
-              lineHeight: 1.4,
-              whiteSpace: 'pre-line',
-            }}>
+            <div style={{ width: '100%', marginTop: 8, padding: '8px 12px', fontSize: 12, color: 'var(--color-text-sub)', textAlign: 'center', lineHeight: 1.4, whiteSpace: 'pre-line' }}>
               {analysisComment}
             </div>
           )}
@@ -827,7 +597,7 @@ export default function HomePage({ lang = 'ja' }) {
         {/* (3) ジャーナル（自分だけ見れる）※1日1枚 */}
         <section className="card card-journal" style={{ width: '100%' }}>
           <h2 className="cardHead">📝 {t(lang, 'journalSharedAi')}</h2>
-          <p style={{ fontSize: 11, color: '#666', margin: '0 0 12px', lineHeight: 1.4 }}>{t(lang, 'journalNotice')}</p>
+          <p style={{ fontSize: 11, color: 'var(--color-text-sub)', margin: '0 0 12px', lineHeight: 1.4 }}>{t(lang, 'journalNotice')}</p>
           <p className="title">{t(lang, 'myJournal')}</p>
           {myJournalLoading && (
             <p className="sub" style={{ margin: '0 0 8px' }}>{t(lang, 'loading')}</p>
@@ -848,14 +618,14 @@ export default function HomePage({ lang = 'ja' }) {
                   style={{ cursor: 'pointer' }}
                 />
               </div>
-              <p style={{ fontSize: 12, color: '#888', margin: '4px 0 0', textAlign: 'center' }}>{t(lang, 'tapToEnlarge')}</p>
+              <p style={{ fontSize: 12, color: 'var(--color-text-muted)', margin: '4px 0 0', textAlign: 'center' }}>{t(lang, 'tapToEnlarge')}</p>
             </>
           )}
           {!myJournalLoading && !myJournalUrl && !myJournalError && (
             <p className="sub" style={{ margin: '0 0 8px' }}>{t(lang, 'notUploadedYet')}</p>
           )}
           {myJournalError && (
-            <p style={{ fontSize: 12, color: '#666', margin: '0 0 8px', textAlign: 'center' }}>{myJournalError}</p>
+            <p style={{ fontSize: 12, color: 'var(--color-text-sub)', margin: '0 0 8px', textAlign: 'center' }}>{myJournalError}</p>
           )}
           <button
             type="button"
@@ -865,78 +635,51 @@ export default function HomePage({ lang = 'ja' }) {
           >
             {t(lang, 'refresh')}
           </button>
-          <input
-            ref={journalGalleryInputRef}
-            type="file"
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) handleJournalFile(f, 'journal_image')
-              e.target.value = ''
-            }}
+          <input ref={journalGalleryInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'journal_image'); e.target.value = '' }}
           />
-          <input
-            ref={journalCameraInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            style={{ display: 'none' }}
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) handleJournalFile(f, 'journal_image')
-              e.target.value = ''
-            }}
+          <input ref={journalCameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'journal_image'); e.target.value = '' }}
           />
           <div className="btnGrid" style={{ marginBottom: 12 }}>
             <button
               type="button"
               className="btn"
               disabled={journalUploading}
-              onClick={() => {
-                if (journalGalleryInputRef.current) {
-                  journalGalleryInputRef.current.value = ''
-                  journalGalleryInputRef.current.click()
-                }
-              }}
-              style={{ borderColor: '#4a90d9', color: '#4a90d9', background: '#fff' }}
+              onClick={() => { if (journalGalleryInputRef.current) { journalGalleryInputRef.current.value = ''; journalGalleryInputRef.current.click() } }}
+              style={{ borderColor: '#4a90d9', color: '#4a90d9', background: 'var(--color-surface)' }}
             >
-              {t(lang, 'gallery')}
+              {lang === 'en' ? 'Upload' : 'アップロード'}
             </button>
             <button
               type="button"
               className="btn btnPrimary"
               disabled={journalUploading}
-              onClick={() => {
-                if (journalCameraInputRef.current) {
-                  journalCameraInputRef.current.value = ''
-                  journalCameraInputRef.current.click()
-                }
-              }}
-              style={{ background: journalUploading ? '#999' : '#4a90d9', borderColor: journalUploading ? '#999' : '#4a90d9' }}
+              onClick={() => { if (journalCameraInputRef.current) { journalCameraInputRef.current.value = ''; journalCameraInputRef.current.click() } }}
+              style={{ background: journalUploading ? 'var(--color-text-muted)' : '#4a90d9', borderColor: journalUploading ? 'var(--color-text-muted)' : '#4a90d9' }}
             >
               {t(lang, 'camera')}
             </button>
           </div>
           {journalUploaded && (
-            <p className="sub" style={{ color: '#2e7d32', margin: '0 0 4px' }}>
+            <p className="sub" style={{ color: 'var(--color-success)', margin: '0 0 4px' }}>
               {journalDateKey ? t(lang, 'savedWithDate', { date: journalDateKey }) : t(lang, 'saved')}
             </p>
           )}
           {(journalRequestId || lastRequestId) && (
-            <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12, color: '#666', marginTop: 4 }}>
+            <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--color-text-sub)', marginTop: 4 }}>
               <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>REQ: {journalRequestId || lastRequestId}</span>
               <button
                 type="button"
                 onClick={() => navigator.clipboard?.writeText(journalRequestId || lastRequestId).then(() => {}).catch(() => {})}
-                style={{ flex: '0 0 auto', padding: '2px 6px', fontSize: 11, cursor: 'pointer', border: '1px solid #ccc', borderRadius: 4, background: '#fff' }}
+                style={{ flex: '0 0 auto', padding: '2px 6px', fontSize: 11, cursor: 'pointer', border: '1px solid var(--color-border)', borderRadius: 4, background: 'var(--color-surface)' }}
               >
-                Copy
+                {t(lang, 'copy')}
               </button>
             </span>
           )}
           {journalError && (
-            <p style={{ fontSize: 11, color: '#c00', margin: '4px 0 0' }}>{journalError}</p>
+            <p style={{ fontSize: 11, color: 'var(--color-danger)', margin: '4px 0 0' }}>{journalError}</p>
           )}
         </section>
 
@@ -944,114 +687,68 @@ export default function HomePage({ lang = 'ja' }) {
         <section className="card card-photos" style={{ width: '100%' }}>
           <h2 className="cardHead">📷 {t(lang, 'dailyPhotosShared')}</h2>
           <p className="title">{t(lang, 'todayPhotosCount', { count: photos.filter((p) => p.role === ROLE_PARENT).length })}</p>
-          <input
-            ref={genericGalleryInputRef}
-            type="file"
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f && typeof f.type === 'string' && f.type.startsWith('image/')) handleJournalFile(f, 'generic_image')
-              e.target.value = ''
-            }}
+          <input ref={genericGalleryInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f && typeof f.type === 'string' && f.type.startsWith('image/')) handleJournalFile(f, 'generic_image'); e.target.value = '' }}
           />
-          <input
-            ref={genericCameraInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            style={{ display: 'none' }}
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) handleJournalFile(f, 'generic_image')
-              e.target.value = ''
-            }}
+          <input ref={genericCameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'generic_image'); e.target.value = '' }}
           />
-          <div className="btnGrid" style={{ marginBottom: 12 }}>
+          <div className="btnGrid" style={{ marginBottom: 10 }}>
             <button
               type="button"
               className="btn"
               disabled={journalUploading}
-              onClick={() => {
-                if (genericGalleryInputRef.current) {
-                  genericGalleryInputRef.current.value = ''
-                  genericGalleryInputRef.current.click()
-                }
-              }}
-              style={{ borderColor: '#4a90d9', color: '#4a90d9', background: '#fff' }}
+              onClick={() => { if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }}
+              style={{ borderColor: '#4a90d9', color: '#4a90d9', background: 'var(--color-surface)' }}
             >
-              {t(lang, 'gallery')}
+              {lang === 'en' ? 'Upload' : 'アップ'}
             </button>
             <button
               type="button"
               className="btn"
               disabled={journalUploading}
-              onClick={() => {
-                if (genericCameraInputRef.current) {
-                  genericCameraInputRef.current.value = ''
-                  genericCameraInputRef.current.click()
-                }
-              }}
-              style={{ borderColor: '#4a90d9', color: '#4a90d9', background: '#fff' }}
+              onClick={() => { if (genericCameraInputRef.current) { genericCameraInputRef.current.value = ''; genericCameraInputRef.current.click() } }}
+              style={{ borderColor: '#4a90d9', color: '#4a90d9', background: 'var(--color-surface)' }}
             >
               {t(lang, 'camera')}
             </button>
           </div>
           {dailyPhotoLimitMessage && (
-            <p style={{ fontSize: 12, color: '#888', margin: '0 0 8px' }}>{dailyPhotoLimitMessage}</p>
+            <p style={{ fontSize: 12, color: 'var(--color-text-muted)', margin: '0 0 8px' }}>{dailyPhotoLimitMessage}</p>
           )}
-          {photos.length > 0 &&
-          (() => {
-            const parentPhotos = photos.filter((p) => p.role === 'parent')
-            const childPhotos = photos.filter((p) => p.role === 'child')
-            const unknownPhotos = photos.filter((p) => p.role !== 'parent' && p.role !== 'child')
-            const renderStrip = (list) => (
-              <div className="photo-strip">
-                {list.slice(0, 6).map((ph, i) => (
-                  <div key={ph.storagePath + String(i)} className="thumbWrap" style={{ flexShrink: 0 }}>
-                    <img src={ph.url || ''} alt="" className="media-thumb" width={96} height={96} />
-                  </div>
-                ))}
-              </div>
-            )
-            return (
-              <>
-                {parentPhotos.length > 0 && (
-                  <div className="photo-row">
-                    <div className="photo-row-title">{t(lang, 'photoFromParent')}</div>
-                    {renderStrip(parentPhotos)}
-                  </div>
-                )}
-                {childPhotos.length > 0 && (
-                  <div className="photo-row">
-                    <div className="photo-row-title">{t(lang, 'photoFromChild')}</div>
-                    {renderStrip(childPhotos)}
-                  </div>
-                )}
-                {unknownPhotos.length > 0 && (
-                  <div className="photo-row">
-                    <div className="photo-row-title">{t(lang, 'photoFromUnknown')}</div>
-                    {renderStrip(unknownPhotos)}
-                  </div>
-                )}
-              </>
-            )
-          })()}
+          {photos.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+              {photos.slice(0, 9).map((ph, i) => (
+                <button
+                  key={ph.storagePath + String(i)}
+                  type="button"
+                  onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album', { state: { scrollToDate: dateKey } })}
+                  style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 6, overflow: 'hidden', flexShrink: 0 }}
+                  aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}
+                >
+                  <img src={ph.url || ''} alt="" width={48} height={48} style={{ width: 48, height: 48, objectFit: 'cover', display: 'block', borderRadius: 6 }} />
+                </button>
+              ))}
+            </div>
+          )}
+          <button
+            type="button"
+            className="btn"
+            onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album', { state: { scrollToDate: dateKey } })}
+            style={{ width: '100%', borderColor: 'var(--color-primary)', color: 'var(--color-primary)', background: 'var(--color-surface)' }}
+          >
+            🗂 {lang === 'en' ? 'View Library' : 'ライブラリを見る'}
+          </button>
         </section>
 
         {errorLine && (
-          <p style={{ fontSize: 14, color: '#c00', textAlign: 'center', margin: 0 }}>
+          <p style={{ fontSize: 14, color: 'var(--color-danger)', textAlign: 'center', margin: 0 }}>
             {errorLine}
           </p>
         )}
       </main>
 
-      <audio
-        ref={parentAudioRef}
-        onEnded={handleParentEnded}
-        onPause={() => setIsPlayingParent(false)}
-        style={{ display: 'none' }}
-      />
+      <audio ref={parentAudioRef} onEnded={handleParentEnded} onPause={() => setIsPlayingParent(false)} style={{ display: 'none' }} />
 
       {previewOpen && myJournalUrl && (
         <div
@@ -1059,42 +756,14 @@ export default function HomePage({ lang = 'ja' }) {
           tabIndex={0}
           onClick={() => setPreviewOpen(false)}
           onKeyDown={(e) => e.key === 'Escape' && setPreviewOpen(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.8)',
-            zIndex: 10000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 16,
-            boxSizing: 'border-box',
-            cursor: 'pointer',
-          }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, boxSizing: 'border-box', cursor: 'pointer' }}
         >
-          <img
-            src={myJournalUrl}
-            alt={t(lang, 'myJournal')}
-            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8, pointerEvents: 'none' }}
-          />
+          <img src={myJournalUrl} alt={t(lang, 'myJournal')} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8, pointerEvents: 'none' }} />
         </div>
       )}
 
       {toastMsg && (
-        <div style={{
-          position: 'fixed',
-          bottom: 32,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'rgba(0,0,0,0.75)',
-          color: '#fff',
-          fontSize: 14,
-          padding: '8px 20px',
-          borderRadius: 20,
-          zIndex: 20000,
-          whiteSpace: 'nowrap',
-          pointerEvents: 'none',
-        }}>
+        <div style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.75)', color: '#fff', fontSize: 14, padding: '8px 20px', borderRadius: 20, zIndex: 20000, whiteSpace: 'nowrap', pointerEvents: 'none' }}>
           {toastMsg}
         </div>
       )}
