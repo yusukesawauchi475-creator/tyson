@@ -956,7 +956,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
               e.target.value = ''
             }}
           />
-          <div className="btnGrid" style={{ marginBottom: 12, gridTemplateColumns: '1fr 1fr 1fr' }}>
+          <div className="btnGrid" style={{ marginBottom: 10 }}>
             <button
               type="button"
               className="btn"
@@ -985,20 +985,12 @@ export default function PairDailyPage({ lang = 'ja' }) {
             >
               {t(lang, 'camera')}
             </button>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album', { state: { scrollToDate: dateKey } })}
-              style={{ borderColor: '#c17f3e', color: '#c17f3e', background: '#fff' }}
-            >
-              {lang === 'en' ? 'Album' : 'ライブラリ'}
-            </button>
           </div>
           {dailyPhotoLimitMessage && (
             <p style={{ fontSize: 12, color: '#888', margin: '0 0 8px' }}>{dailyPhotoLimitMessage}</p>
           )}
           {photos.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 4 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
               {photos.slice(0, 9).map((ph, i) => (
                 <button
                   key={ph.storagePath + String(i)}
@@ -1012,6 +1004,14 @@ export default function PairDailyPage({ lang = 'ja' }) {
               ))}
             </div>
           )}
+          <button
+            type="button"
+            className="btn"
+            onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album', { state: { scrollToDate: dateKey } })}
+            style={{ width: '100%', borderColor: '#c17f3e', color: '#c17f3e', background: '#fff' }}
+          >
+            🗂 {lang === 'en' ? 'View Library' : 'ライブラリを見る'}
+          </button>
         </section>
 
         {errorLine && (
