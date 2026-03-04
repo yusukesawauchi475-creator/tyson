@@ -890,7 +890,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
               }}
               style={{ borderColor: '#4a90d9', color: '#4a90d9', background: '#fff' }}
             >
-              {t(lang, 'gallery')}
+              {lang === 'en' ? 'Upload' : 'アップロード'}
             </button>
             <button
               type="button"
@@ -956,7 +956,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
               e.target.value = ''
             }}
           />
-          <div className="btnGrid" style={{ marginBottom: 12 }}>
+          <div className="btnGrid" style={{ marginBottom: 12, gridTemplateColumns: '1fr 1fr 1fr' }}>
             <button
               type="button"
               className="btn"
@@ -969,7 +969,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
               }}
               style={{ borderColor: '#4a90d9', color: '#4a90d9', background: '#fff' }}
             >
-              {t(lang, 'gallery')}
+              {lang === 'en' ? 'Upload' : 'アップ'}
             </button>
             <button
               type="button"
@@ -984,6 +984,14 @@ export default function PairDailyPage({ lang = 'ja' }) {
               style={{ borderColor: '#4a90d9', color: '#4a90d9', background: '#fff' }}
             >
               {t(lang, 'camera')}
+            </button>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album', { state: { scrollToDate: dateKey } })}
+              style={{ borderColor: '#c17f3e', color: '#c17f3e', background: '#fff' }}
+            >
+              {lang === 'en' ? 'Album' : 'ライブラリ'}
             </button>
           </div>
           {dailyPhotoLimitMessage && (
