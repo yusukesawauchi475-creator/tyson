@@ -24,26 +24,14 @@ export function getDateKeyNY() {
 /** getDateKeyNY のエイリアス（後方互換） */
 export const getDateKey = getDateKeyNY;
 
-/** MVP用固定 pairId（フォールバック専用、通常は使用しない） */
+/** MVP用固定 pairId。単一ソース。 */
 export const PAIR_ID_DEMO = 'demo';
 
 const PAIR_ID_STORAGE_KEY = 'tyson_pairId';
 
-const PAIR_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-
-/** TYSON-XXXX 形式のランダムpairIdを生成（4文字英数字） */
-function generateNewPairId() {
-  let result = 'TYSON-';
-  for (let i = 0; i < 4; i++) {
-    result += PAIR_CHARS[Math.floor(Math.random() * PAIR_CHARS.length)];
-  }
-  return result;
-}
-
 /**
- * pairId を取得。優先順位: URLクエリ(?pairId=) > localStorage(tyson_pairId) > 新規生成。
+ * pairId を取得。優先順位: URLクエリ(?pairId=) > localStorage(tyson_pairId) > 'demo'。
  * HashRouter では /#/?pairId=XXX のクエリを参照。クエリで取得した場合は localStorage に保存する。
- * localStorage にも URL にもない場合は TYSON-XXXX 形式で新規生成して localStorage に保存する。
  */
 export function getPairId() {
   if (typeof window === 'undefined') return PAIR_ID_DEMO;
@@ -61,37 +49,8 @@ export function getPairId() {
     }
     const fromStorage = localStorage.getItem(PAIR_ID_STORAGE_KEY)?.trim?.();
     if (fromStorage) return fromStorage;
-    // 初回アクセス: 新規pairIdを生成してlocalStorageに保存
-    const newPairId = generateNewPairId();
-    try {
-      localStorage.setItem(PAIR_ID_STORAGE_KEY, newPairId);
-    } catch (_) {}
-    return newPairId;
   } catch (_) {}
   return PAIR_ID_DEMO;
-}
-
-/**
- * 初回アクセス時にFirestoreのpairs/{pairId}にドキュメントを作成する（fire-and-forget）。
- * App起動時に1度だけ呼ぶ。
- */
-export async function initPairId() {
-  const pairId = getPairId();
-  if (!pairId || !pairId.startsWith('TYSON-')) return;
-  try {
-    const idToken = await getIdTokenForApi();
-    if (!idToken) return;
-    await fetch('/api/invite', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${idToken}`,
-      },
-      body: JSON.stringify({ pairId }),
-    });
-  } catch (_) {
-    // Non-blocking: エラーは無視
-  }
 }
 
 /** requestId生成: REQ- + base36 timestamp + 乱数 */
