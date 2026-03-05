@@ -27,11 +27,42 @@ export const getDateKey = getDateKeyNY;
 /** MVP用固定 pairId。単一ソース。 */
 export const PAIR_ID_DEMO = 'demo';
 
-const PAIR_ID_STORAGE_KEY = 'tyson_pairId';
+export const PAIR_ID_STORAGE_KEY = 'tyson_pairId';
+
+/** ランダムなユニーク pairId を生成: "PAIR-" + 6文字（誤読しにくい文字のみ）*/
+function generatePairId() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // I, O, 0, 1 を除外
+  let id = 'PAIR-';
+  for (let i = 0; i < 6; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  return id; // 例: "PAIR-A3F7C9"
+}
 
 /**
- * pairId を取得。優先順位: URLクエリ(?pairId=) > localStorage(tyson_pairId) > 'demo'。
- * HashRouter では /#/?pairId=XXX のクエリを参照。クエリで取得した場合は localStorage に保存する。
+ * アプリ起動時に1回だけ呼ぶ。pairId を確定して localStorage に保存する。
+ *
+ * 優先順位:
+ *   1. URL に ?pairId=XXXX がある → localStorage に保存（招待リンク経由）
+ *   2. localStorage に既に pairId がある → 何もしない（再生成しない ← 前回の失敗原因）
+ *   3. localStorage が空 → 新規生成して保存（初回アクセス）
+ */
+export function initPairId() {
+  if (typeof window === 'undefined') return;
+  try {
+    const hash = window.location.hash || '';
+    const qs = hash.indexOf('?') >= 0 ? hash.slice(hash.indexOf('?') + 1) : '';
+    const fromQuery = new URLSearchParams(qs).get('pairId')?.trim?.();
+    if (fromQuery) {
+      localStorage.setItem(PAIR_ID_STORAGE_KEY, fromQuery);
+      return;
+    }
+    if (localStorage.getItem(PAIR_ID_STORAGE_KEY)?.trim?.()) return; // 既存を維持
+    localStorage.setItem(PAIR_ID_STORAGE_KEY, generatePairId()); // 初回生成
+  } catch (_) {}
+}
+
+/**
+ * pairId を取得（同期）。優先順位: URLクエリ > localStorage > 'demo'。
+ * URLクエリに pairId がある場合は localStorage に保存する。
  */
 export function getPairId() {
   if (typeof window === 'undefined') return PAIR_ID_DEMO;
@@ -42,9 +73,7 @@ export function getPairId() {
     const params = new URLSearchParams(queryString);
     const fromQuery = params.get('pairId')?.trim?.();
     if (fromQuery) {
-      try {
-        localStorage.setItem(PAIR_ID_STORAGE_KEY, fromQuery);
-      } catch (_) {}
+      try { localStorage.setItem(PAIR_ID_STORAGE_KEY, fromQuery); } catch (_) {}
       return fromQuery;
     }
     const fromStorage = localStorage.getItem(PAIR_ID_STORAGE_KEY)?.trim?.();

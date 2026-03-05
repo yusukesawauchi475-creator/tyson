@@ -20,6 +20,7 @@
 
 // キャッシュ完全破壊: ファイル最上位で即時実行。try-catch で囲み、失敗しても root.render は止めない [cite: 2026-01-25]
 import { BUILD_SHA } from './buildInfo'
+import { initPairId, PAIR_ID_STORAGE_KEY } from './lib/pairDaily.js'
 const VERSION = (BUILD_SHA && BUILD_SHA !== 'dev') ? BUILD_SHA.slice(0, 7) : 'force-reload'
 let skipReload = false
 try {
@@ -28,7 +29,10 @@ try {
       indexedDB.deleteDatabase('tyson-db')
       indexedDB.deleteDatabase('TysonAudioBackup')
     }
+    // pairId を clear 前に退避して clear 後に復元（デプロイ毎のリセットで消えないように）
+    const savedPairId = localStorage.getItem(PAIR_ID_STORAGE_KEY) || null
     localStorage.clear()
+    if (savedPairId) localStorage.setItem(PAIR_ID_STORAGE_KEY, savedPairId)
     localStorage.setItem('APP_VERSION', VERSION)
     if (typeof window !== 'undefined' && window.location) {
       window.location.reload()
@@ -59,6 +63,7 @@ console.log("ENV CHECK", {
 
 
 if (!skipReload) {
+  initPairId() // pairId 確定（URL → localStorage → 新規生成）
   createRoot(document.getElementById('root')).render(
     <StrictMode>
       <App />
