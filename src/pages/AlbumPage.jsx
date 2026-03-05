@@ -75,6 +75,7 @@ export default function AlbumPage({ lang = 'ja' }) {
       background: '#fff',
       fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
       color: '#333',
+      overscrollBehavior: 'none',
     }}>
       <header style={{
         position: 'sticky',

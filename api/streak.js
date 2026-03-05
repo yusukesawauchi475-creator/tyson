@@ -9,12 +9,6 @@ function initFirebaseAdmin() {
   if (adminInitError) throw adminInitError;
   if (adminApp) return;
 
-  if (admin.apps && admin.apps.length > 0) {
-    adminApp = admin.app();
-    firestore = admin.firestore();
-    return;
-  }
-
   try {
     const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
     const parsedResult = parseFirebaseServiceAccount(raw);
@@ -28,10 +22,19 @@ function initFirebaseAdmin() {
 
     const parsed = parsedResult.data;
     const projectId = parsed.project_id ?? process.env.VITE_FIREBASE_PROJECT_ID;
+    const envBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET || '';
+    const storageBucketName = envBucket || `${projectId}.firebasestorage.app`;
+
+    // 既存appがある場合もstorageBucketNameを渡す（他のAPIがstorageBucketなしで初期化した場合のバグを回避）
+    if (admin.apps && admin.apps.length > 0) {
+      adminApp = admin.app();
+      firestore = admin.firestore();
+      return;
+    }
 
     adminApp = admin.initializeApp({
       credential: admin.credential.cert(parsed),
-      projectId,
+      storageBucket: storageBucketName,
     });
 
     firestore = admin.firestore();
