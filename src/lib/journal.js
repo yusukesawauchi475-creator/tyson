@@ -182,18 +182,14 @@ export async function fetchTodayJournalMeta(pairId, role = 'parent') {
 export async function fetchAlbum(pairId) {
   const pid = pairId ?? getPairId();
   const idToken = await getIdTokenForApi();
-  if (!idToken) return { days: [] };
-  try {
-    const res = await fetch(
-      `/api/album?pairId=${encodeURIComponent(pid)}&v=${Date.now()}`,
-      { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }
-    );
-    if (!res.ok) return { days: [] };
-    const data = await res.json().catch(() => ({}));
-    return { days: Array.isArray(data?.days) ? data.days : [] };
-  } catch {
-    return { days: [] };
-  }
+  if (!idToken) throw new Error('認証できません（idToken取得失敗）');
+  const res = await fetch(
+    `/api/album?pairId=${encodeURIComponent(pid)}&v=${Date.now()}`,
+    { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error || `API error HTTP ${res.status}`);
+  return { days: Array.isArray(data?.days) ? data.days : [] };
 }
 
 /**

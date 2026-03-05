@@ -10,13 +10,6 @@ function initFirebaseAdmin() {
   if (adminInitError) throw adminInitError;
   if (adminApp) return;
 
-  if (admin.apps && admin.apps.length > 0) {
-    adminApp = admin.app();
-    firestore = admin.firestore();
-    storageBucket = admin.storage().bucket();
-    return;
-  }
-
   try {
     const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
     const parsedResult = parseFirebaseServiceAccount(raw);
@@ -33,6 +26,16 @@ function initFirebaseAdmin() {
     const envBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET || '';
     const storageBucketName = envBucket || `${projectId}.firebasestorage.app`;
 
+    // 既存のアプリがある場合でも、明示的なbucket名を使って初期化
+    // (streak.js等がstorageBucket未設定でinitした場合のfallbackバグを回避)
+    if (admin.apps && admin.apps.length > 0) {
+      adminApp = admin.app();
+      firestore = admin.firestore();
+      storageBucket = admin.storage().bucket(storageBucketName);
+      console.log('[album] reused existing Firebase Admin app, bucket:', storageBucketName);
+      return;
+    }
+
     adminApp = admin.initializeApp({
       credential: admin.credential.cert(parsed),
       storageBucket: storageBucketName,
@@ -40,6 +43,7 @@ function initFirebaseAdmin() {
 
     firestore = admin.firestore();
     storageBucket = admin.storage().bucket();
+    console.log('[album] initialized Firebase Admin app, bucket:', storageBucketName);
   } catch (e) {
     adminInitError = e;
     throw e;
@@ -63,7 +67,8 @@ async function getSignedUrl(storagePath) {
       expires: Date.now() + 60 * 60 * 1000,
     });
     return url || null;
-  } catch {
+  } catch (e) {
+    console.error('[album] getSignedUrl error:', e.message, { storagePath });
     return null;
   }
 }
@@ -82,7 +87,8 @@ export default async function handler(req, res) {
 
   try {
     await verifyIdToken(idToken);
-  } catch {
+  } catch (e) {
+    console.error('[album] verifyIdToken error:', e.message);
     return res.status(401).json({ success: false, error: 'Invalid token', requestId });
   }
 
@@ -91,6 +97,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ success: false, error: 'pairId is required', requestId });
   }
 
+  console.log('[album] request', { pairId, requestId });
+
   try {
     initFirebaseAdmin();
 
@@ -98,11 +106,14 @@ export default async function handler(req, res) {
       .collection('journal').doc(pairId).collection('months')
       .get();
 
+    console.log('[album] months found:', monthsSnap.docs.length, { pairId });
+
     const daysByDate = {};
 
     await Promise.all(
       monthsSnap.docs.map(async (monthDoc) => {
         const daysSnap = await monthDoc.ref.collection('days').get();
+        console.log('[album] month', monthDoc.id, '- days:', daysSnap.docs.length);
 
         await Promise.all(
           daysSnap.docs.map(async (dayDoc) => {
@@ -161,6 +172,7 @@ export default async function handler(req, res) {
             }
 
             const resolved = (await Promise.all(photoJobs)).filter(Boolean);
+            console.log('[album] day', dateKey, '- photos resolved:', resolved.length, '/ jobs:', photoJobs.length);
             if (resolved.length > 0) {
               daysByDate[dateKey] = resolved;
             }
@@ -173,8 +185,11 @@ export default async function handler(req, res) {
       .sort((a, b) => b.localeCompare(a))
       .map((dateKey) => ({ dateKey, photos: daysByDate[dateKey] }));
 
+    console.log('[album] response', { pairId, daysCount: days.length, totalPhotos: days.reduce((s, d) => s + d.photos.length, 0) });
+
     return res.status(200).json({ success: true, days, requestId });
   } catch (e) {
+    console.error('[album] handler error:', e.message, e.stack);
     return res.status(500).json({ success: false, error: e.message, requestId });
   }
 }
