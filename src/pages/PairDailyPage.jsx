@@ -640,7 +640,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
       background: 'var(--color-bg)',
       color: 'var(--color-text)',
     }}>
-      <header style={{ flexShrink: 0, marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+      <header style={{ flexShrink: 0, marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
         <div>
           <time style={{ fontSize: 14, color: 'var(--color-text-sub)' }}>{today || '...'}</time>
           {streakCount > 0 && (
@@ -648,11 +648,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
               🔥 {streakCount}日連続
             </p>
           )}
-          <p style={{ margin: '8px 0 0', fontSize: 14, color: 'var(--color-text-muted)' }}>
-            {hasAudio === true ? t(lang, 'voiceReceivedToday') : hasAudio === false ? t(lang, 'notYetOkToday') : t(lang, 'checking')}
-          </p>
         </div>
-        <LanguageSwitch lang={lang} variant="pair" />
         <button
           type="button"
           onClick={handleShare}
@@ -660,19 +656,6 @@ export default function PairDailyPage({ lang = 'ja' }) {
         >
           {lang === 'en' ? '👋 Invite' : '👋 招待'}
         </button>
-        <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>pairId: {getPairId()}</span>
-        {lastRequestId && (
-          <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--color-text-sub)' }}>
-            <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>REQ: {lastRequestId}</span>
-            <button
-              type="button"
-              onClick={() => navigator.clipboard?.writeText(lastRequestId).then(() => {}).catch(() => {})}
-              style={{ flex: '0 0 auto', padding: '2px 6px', fontSize: 11, cursor: 'pointer', border: '1px solid var(--color-border)', borderRadius: 4, background: 'var(--color-surface)' }}
-            >
-              Copy
-            </button>
-          </span>
-        )}
       </header>
 
       <main className="page-content page" style={{ flex: 1, maxWidth: 320, margin: '0 auto', width: '100%' }}>

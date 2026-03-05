@@ -148,24 +148,30 @@ export default async function handler(req, res) {
                 );
               }
 
-              // generic_images
+              // generic_images (配列形式 or 旧来の単体形式)
               let genericList = Array.isArray(rd.generic_images) ? rd.generic_images : [];
               if (genericList.length === 0 && rd.generic_image?.storagePath) {
-                genericList = [{ ...rd.generic_image, index: 1 }];
+                const g = rd.generic_image;
+                genericList = [{ storagePath: g.storagePath, updatedAt: g.updatedAt, index: g.index ?? 1, kind: g.kind }];
               }
+
+              console.log('[album] day', dateKey, role, '- generic_images:', genericList.length, '(keys:', Object.keys(rd).join(','), ')');
 
               for (const item of genericList) {
                 if (!item?.storagePath) continue;
                 const itemCopy = item;
                 photoJobs.push(
                   getSignedUrl(itemCopy.storagePath).then((url) => {
-                    if (!url) return null;
+                    if (!url) {
+                      console.error('[album] generic_image signed URL failed:', itemCopy.storagePath);
+                      return null;
+                    }
                     return {
                       url,
                       storagePath: itemCopy.storagePath,
                       role,
                       kind: 'generic_image',
-                      updatedAt: itemCopy.updatedAt?.toMillis?.() ?? itemCopy.updatedAt ?? null,
+                      updatedAt: itemCopy.updatedAt?.toMillis?.() ?? (typeof itemCopy.updatedAt === 'number' ? itemCopy.updatedAt : null),
                       index: typeof itemCopy.index === 'number' ? itemCopy.index : 1,
                     };
                   })
