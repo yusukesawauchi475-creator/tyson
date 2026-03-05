@@ -102,22 +102,24 @@ export default async function handler(req, res) {
   try {
     initFirebaseAdmin();
 
-    const monthsSnap = await firestore
+    // listDocuments() を使う: phantom document (doc自体は存在しないがsubcollectionがある) も含めて列挙
+    const monthDocRefs = await firestore
       .collection('journal').doc(pairId).collection('months')
-      .get();
+      .listDocuments();
 
-    console.log('[album] months found:', monthsSnap.docs.length, { pairId });
+    console.log('[album] months found:', monthDocRefs.length, { pairId });
 
     const daysByDate = {};
 
     await Promise.all(
-      monthsSnap.docs.map(async (monthDoc) => {
-        const daysSnap = await monthDoc.ref.collection('days').get();
-        console.log('[album] month', monthDoc.id, '- days:', daysSnap.docs.length);
+      monthDocRefs.map(async (monthRef) => {
+        const dayDocRefs = await monthRef.collection('days').listDocuments();
+        console.log('[album] month', monthRef.id, '- days:', dayDocRefs.length);
 
         await Promise.all(
-          daysSnap.docs.map(async (dayDoc) => {
-            const dateKey = dayDoc.id;
+          dayDocRefs.map(async (dayRef) => {
+            const dateKey = dayRef.id;
+            const dayDoc = await dayRef.get();
             const data = dayDoc.data();
             const roleDataAll = data?.roleData ?? {};
             const photoJobs = [];

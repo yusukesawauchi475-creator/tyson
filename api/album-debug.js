@@ -73,13 +73,14 @@ export default async function handler(req, res) {
     const pairDocRef = firestore.collection('journal').doc(pairId);
     const pairDoc = await pairDocRef.get();
 
-    // months collection
-    const monthsSnap = await pairDocRef.collection('months').get();
+    // months collection (listDocuments で phantom docs も含む)
+    const monthDocRefs = await pairDocRef.collection('months').listDocuments();
 
     const months = [];
-    for (const monthDoc of monthsSnap.docs) {
-      const daysSnap = await monthDoc.ref.collection('days').get();
-      const days = daysSnap.docs.map((dayDoc) => {
+    for (const monthRef of monthDocRefs) {
+      const dayDocRefs = await monthRef.collection('days').listDocuments();
+      const days = await Promise.all(dayDocRefs.map(async (dayRef) => {
+        const dayDoc = await dayRef.get();
         const data = dayDoc.data();
         const roleData = data?.roleData ?? {};
         const summary = {};
@@ -95,9 +96,9 @@ export default async function handler(req, res) {
               : (rd.generic_image?.storagePath ? [rd.generic_image.storagePath] : []),
           };
         }
-        return { dateKey: dayDoc.id, roles: summary };
-      });
-      months.push({ monthKey: monthDoc.id, daysCount: days.length, days });
+        return { dateKey: dayRef.id, roles: summary };
+      }));
+      months.push({ monthKey: monthRef.id, daysCount: days.length, days });
     }
 
     return res.status(200).json({
