@@ -321,7 +321,11 @@ export async function getListenRoleMeta(listenRole, pairId = getPairId()) {
       `/api/pair-media?pairId=${encodeURIComponent(pairId)}&dateKey=${encodeURIComponent(dateKey)}&listenRole=${encodeURIComponent(listenRole)}&mode=signed&v=${Date.now()}`,
       { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }
     );
-    if (!res.ok) return { hasAudio: false, isUnseen: false };
+    if (!res.ok) {
+      // 404は「音声なし」、それ以外（401/500等）はエラー→nullで誤表示防止
+      const isNotFound = res.status === 404;
+      return { hasAudio: isNotFound ? false : null, isUnseen: false };
+    }
     const d = await res.json().catch(() => ({}));
     const hasAudio = !!d?.url;
     const updatedAt = d?.updatedAt ?? null;
@@ -329,6 +333,6 @@ export async function getListenRoleMeta(listenRole, pairId = getPairId()) {
     const isUnseen = hasAudio && (seenAt == null || (updatedAt != null && updatedAt > seenAt));
     return { hasAudio, isUnseen };
   } catch (_) {
-    return { hasAudio: false, isUnseen: false };
+    return { hasAudio: null, isUnseen: false }; // ネットワークエラー→null（誤表示防止）
   }
 }
