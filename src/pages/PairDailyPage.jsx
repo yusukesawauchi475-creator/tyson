@@ -6,7 +6,8 @@ import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import { t } from '../lib/i18n'
 import DailyPromptCard from '../components/DailyPromptCard'
 import LanguageSwitch from '../components/LanguageSwitch'
-import { getIdTokenForApi } from '../lib/firebase'
+import { getIdTokenForApi, auth, isFirebaseConfigured } from '../lib/firebase'
+import { getAuth } from 'firebase/auth'
 import { formatDeployedAtLocal, getBuildHash } from '../lib/dateFormat'
 import { useAudioLevel } from '../lib/useAudioLevel'
 
@@ -664,6 +665,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
           <h2 className="cardHead">🎧 {t(lang, 'partnerRecordingListen')}</h2>
           <p style={{ fontSize: 11, color: 'red', textAlign: 'center', margin: '0 0 4px', fontFamily: 'monospace', lineHeight: 1.4 }}>
             build:{getBuildHash()?.slice(0,7)} pairId:{getPairId()}<br/>
+            fbConf:{String(isFirebaseConfigured)} uid:{getAuth().currentUser?.uid ?? 'null'}<br/>
             role:{LISTEN_ROLE_PARENT} dateKey:{dateKey}<br/>
             hasAudio:{String(hasAudio)}
           </p>
