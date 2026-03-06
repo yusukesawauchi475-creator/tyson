@@ -112,7 +112,7 @@ export async function getIdTokenForApi() {
   if (!isFirebaseConfigured) return null;
   try {
     const user = auth.currentUser;
-    if (user) return await user.getIdToken(true);
+    if (user) return await user.getIdToken(); // force=falseでキャッシュ利用（iPhoneの低速回線対策）
     const { user: signedIn } = await signInAnonymously(auth);
     return signedIn.getIdToken();
   } catch (e) {

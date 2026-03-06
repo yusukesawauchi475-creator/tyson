@@ -313,7 +313,7 @@ export async function updateStreak(pairId = getPairId()) {
 export async function getListenRoleMeta(listenRole, pairId = getPairId()) {
   const dateKey = getDateKeyNY();
   const idToken = await getIdTokenForApi();
-  if (!idToken) return { hasAudio: false, isUnseen: false };
+  if (!idToken) return { hasAudio: null, isUnseen: false }; // auth失敗→null（「まだです」誤表示を防ぐ）
   if (!listenRole || (listenRole !== 'parent' && listenRole !== 'child')) return { hasAudio: false, isUnseen: false };
   try {
     const res = await fetch(
