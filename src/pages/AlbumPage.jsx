@@ -64,11 +64,6 @@ export default function AlbumPage({ lang = 'ja' }) {
     )
   }
 
-  const roleLabel = (role) => {
-    if (lang === 'en') return role === 'parent' ? 'Parent' : role === 'child' ? 'Child' : ''
-    return role === 'parent' ? '親' : role === 'child' ? '子' : ''
-  }
-
   return (
     <div style={{
       minHeight: '100dvh',
@@ -115,48 +110,57 @@ export default function AlbumPage({ lang = 'ja' }) {
             {lang === 'en' ? 'No photos yet.' : 'まだ写真がありません。'}
           </p>
         )}
-        {!loading && days.map(({ dateKey, photos }) => (
-          <section key={dateKey} id={`date-${dateKey}`} style={{ marginBottom: 28 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: '#7a6a55', margin: '0 0 10px', letterSpacing: '0.03em' }}>
-              {formatDate(dateKey)}
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {photos.map((photo, i) => (
-                <div key={photo.storagePath + String(i)} style={{ position: 'relative' }}>
-                  <button
-                    type="button"
-                    onClick={() => openLightbox(photos, i)}
-                    style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 8, overflow: 'hidden', display: 'block' }}
-                    aria-label={lang === 'en' ? 'Enlarge photo' : '写真を拡大'}
-                  >
-                    <img
-                      src={photo.url}
-                      alt=""
-                      width={88}
-                      height={88}
-                      style={{ width: 88, height: 88, objectFit: 'cover', display: 'block', borderRadius: 8 }}
-                    />
-                  </button>
-                  <span style={{
-                    position: 'absolute',
-                    bottom: 4,
-                    left: 4,
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: '#fff',
-                    background: 'rgba(0,0,0,0.55)',
-                    padding: '1px 5px',
-                    borderRadius: 4,
-                    lineHeight: 1.4,
-                    pointerEvents: 'none',
-                  }}>
-                    {roleLabel(photo.role)}
-                  </span>
+        {!loading && days.map(({ dateKey, photos }) => {
+          const parentPhotos = photos.filter((p) => p.role === 'parent')
+          const childPhotos = photos.filter((p) => p.role === 'child')
+          return (
+            <section key={dateKey} id={`date-${dateKey}`} style={{ marginBottom: 28 }}>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#7a6a55', margin: '0 0 10px', letterSpacing: '0.03em' }}>
+                {formatDate(dateKey)}
+              </p>
+              {parentPhotos.length > 0 && (
+                <div style={{ marginBottom: 10 }}>
+                  <p style={{ fontSize: 12, color: '#999', margin: '0 0 6px' }}>
+                    {lang === 'en' ? 'From Parent' : '親から'}
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {parentPhotos.map((photo, i) => (
+                      <button
+                        key={photo.storagePath + String(i)}
+                        type="button"
+                        onClick={() => openLightbox(photos, photos.indexOf(photo))}
+                        style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 8, overflow: 'hidden', display: 'block' }}
+                        aria-label={lang === 'en' ? 'Enlarge photo' : '写真を拡大'}
+                      >
+                        <img src={photo.url} alt="" width={88} height={88} style={{ width: 88, height: 88, objectFit: 'cover', display: 'block', borderRadius: 8 }} />
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              ))}
-            </div>
-          </section>
-        ))}
+              )}
+              {childPhotos.length > 0 && (
+                <div>
+                  <p style={{ fontSize: 12, color: '#999', margin: '0 0 6px' }}>
+                    {lang === 'en' ? 'From Child' : '子から'}
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {childPhotos.map((photo, i) => (
+                      <button
+                        key={photo.storagePath + String(i)}
+                        type="button"
+                        onClick={() => openLightbox(photos, photos.indexOf(photo))}
+                        style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 8, overflow: 'hidden', display: 'block' }}
+                        aria-label={lang === 'en' ? 'Enlarge photo' : '写真を拡大'}
+                      >
+                        <img src={photo.url} alt="" width={88} height={88} style={{ width: 88, height: 88, objectFit: 'cover', display: 'block', borderRadius: 8 }} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          )
+        })}
       </main>
 
       {lightbox && (

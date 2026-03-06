@@ -822,7 +822,92 @@ export default function PairDailyPage({ lang = 'ja' }) {
           ) : null}
         </section>
 
-        {/* (3) ジャーナル（自分だけ見れる）※1日1枚 */}
+        {/* (3) 日常写真（共有）※最大3枚 */}
+        <section className="card card-photos" style={{ width: '100%' }}>
+          <h2 className="cardHead">📷 {t(lang, 'dailyPhotosShared')}</h2>
+          <p className="title">{t(lang, 'todayPhotosCount', { count: photos.filter((p) => p.role === ROLE_CHILD).length })}</p>
+          <input
+            ref={genericGalleryInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f && typeof f.type === 'string' && f.type.startsWith('image/')) handleJournalFile(f, 'generic_image')
+              e.target.value = ''
+            }}
+          />
+          <input
+            ref={genericCameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) handleJournalFile(f, 'generic_image')
+              e.target.value = ''
+            }}
+          />
+          <div className="btnGrid" style={{ marginBottom: 10 }}>
+            <button
+              type="button"
+              className="btn"
+              disabled={journalUploading}
+              onClick={() => {
+                if (genericGalleryInputRef.current) {
+                  genericGalleryInputRef.current.value = ''
+                  genericGalleryInputRef.current.click()
+                }
+              }}
+              style={{ borderColor: '#4a90d9', color: '#4a90d9', background: '#fff' }}
+            >
+              {lang === 'en' ? 'Upload' : 'アップロード'}
+            </button>
+            <button
+              type="button"
+              className="btn"
+              disabled={journalUploading}
+              onClick={() => {
+                if (genericCameraInputRef.current) {
+                  genericCameraInputRef.current.value = ''
+                  genericCameraInputRef.current.click()
+                }
+              }}
+              style={{ borderColor: '#4a90d9', color: '#4a90d9', background: '#fff' }}
+            >
+              {t(lang, 'camera')}
+            </button>
+          </div>
+          {dailyPhotoLimitMessage && (
+            <p style={{ fontSize: 12, color: '#888', margin: '0 0 8px' }}>{dailyPhotoLimitMessage}</p>
+          )}
+          {photos.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+              {photos.slice(0, 9).map((ph, i) => (
+                <button
+                  key={ph.storagePath + String(i)}
+                  type="button"
+                  onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album', { state: { scrollToDate: dateKey } })}
+                  style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 6, overflow: 'hidden', flexShrink: 0 }}
+                  aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}
+                >
+                  <img src={ph.url || ''} alt="" width={48} height={48} style={{ width: 48, height: 48, objectFit: 'cover', display: 'block', borderRadius: 6 }} />
+                </button>
+              ))}
+            </div>
+          )}
+          <button
+            type="button"
+            className="btn"
+            onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album', { state: { scrollToDate: dateKey } })}
+            style={{ width: '100%', borderColor: '#c17f3e', color: '#c17f3e', background: '#fff' }}
+          >
+            🗂 {lang === 'en' ? 'View Library' : 'ライブラリを見る'}
+          </button>
+        </section>
+
+        {/* (4) ジャーナル（非公開・1日1枚） */}
         <section className="card card-journal" style={{ width: '100%' }}>
           <h2 className="cardHead">📝 {t(lang, 'journalSharedAi')}</h2>
           <p style={{ fontSize: 11, color: '#666', margin: '0 0 12px', lineHeight: 1.4 }}>{t(lang, 'journalNotice')}</p>
@@ -855,14 +940,6 @@ export default function PairDailyPage({ lang = 'ja' }) {
           {myJournalError && (
             <p style={{ fontSize: 12, color: '#666', margin: '0 0 8px', textAlign: 'center' }}>{myJournalError}</p>
           )}
-          <button
-            type="button"
-            onClick={fetchMyJournal}
-            disabled={myJournalLoading}
-            style={{ padding: '4px 12px', fontSize: 12, color: '#4a90d9', background: 'transparent', border: '1px solid #4a90d9', borderRadius: 6, cursor: myJournalLoading ? 'wait' : 'pointer', marginTop: 4, marginBottom: 12 }}
-          >
-            {t(lang, 'refresh')}
-          </button>
           <input
             ref={journalGalleryInputRef}
             type="file"
@@ -936,91 +1013,6 @@ export default function PairDailyPage({ lang = 'ja' }) {
           {journalError && (
             <p style={{ fontSize: 11, color: '#c00', margin: '4px 0 0' }}>{journalError}</p>
           )}
-        </section>
-
-        {/* (4) 日常写真（共有）※最大3枚 */}
-        <section className="card card-photos" style={{ width: '100%' }}>
-          <h2 className="cardHead">📷 {t(lang, 'dailyPhotosShared')}</h2>
-          <p className="title">{t(lang, 'todayPhotosCount', { count: photos.filter((p) => p.role === ROLE_CHILD).length })}</p>
-          <input
-            ref={genericGalleryInputRef}
-            type="file"
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f && typeof f.type === 'string' && f.type.startsWith('image/')) handleJournalFile(f, 'generic_image')
-              e.target.value = ''
-            }}
-          />
-          <input
-            ref={genericCameraInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            style={{ display: 'none' }}
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) handleJournalFile(f, 'generic_image')
-              e.target.value = ''
-            }}
-          />
-          <div className="btnGrid" style={{ marginBottom: 10 }}>
-            <button
-              type="button"
-              className="btn"
-              disabled={journalUploading}
-              onClick={() => {
-                if (genericGalleryInputRef.current) {
-                  genericGalleryInputRef.current.value = ''
-                  genericGalleryInputRef.current.click()
-                }
-              }}
-              style={{ borderColor: '#4a90d9', color: '#4a90d9', background: '#fff' }}
-            >
-              {lang === 'en' ? 'Upload' : 'アップ'}
-            </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={journalUploading}
-              onClick={() => {
-                if (genericCameraInputRef.current) {
-                  genericCameraInputRef.current.value = ''
-                  genericCameraInputRef.current.click()
-                }
-              }}
-              style={{ borderColor: '#4a90d9', color: '#4a90d9', background: '#fff' }}
-            >
-              {t(lang, 'camera')}
-            </button>
-          </div>
-          {dailyPhotoLimitMessage && (
-            <p style={{ fontSize: 12, color: '#888', margin: '0 0 8px' }}>{dailyPhotoLimitMessage}</p>
-          )}
-          {photos.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-              {photos.slice(0, 9).map((ph, i) => (
-                <button
-                  key={ph.storagePath + String(i)}
-                  type="button"
-                  onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album', { state: { scrollToDate: dateKey } })}
-                  style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 6, overflow: 'hidden', flexShrink: 0 }}
-                  aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}
-                >
-                  <img src={ph.url || ''} alt="" width={48} height={48} style={{ width: 48, height: 48, objectFit: 'cover', display: 'block', borderRadius: 6 }} />
-                </button>
-              ))}
-            </div>
-          )}
-          <button
-            type="button"
-            className="btn"
-            onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album', { state: { scrollToDate: dateKey } })}
-            style={{ width: '100%', borderColor: '#c17f3e', color: '#c17f3e', background: '#fff' }}
-          >
-            🗂 {lang === 'en' ? 'View Library' : 'ライブラリを見る'}
-          </button>
         </section>
 
         {errorLine && (
