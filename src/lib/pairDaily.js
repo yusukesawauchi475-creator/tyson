@@ -38,12 +38,8 @@ function generatePairId() {
 }
 
 /**
- * アプリ起動時に1回だけ呼ぶ。pairId を確定して localStorage に保存する。
- *
- * 優先順位:
- *   1. URL に ?pairId=XXXX がある → localStorage に保存（招待リンク経由）
- *   2. localStorage に既に pairId がある → 何もしない（再生成しない ← 前回の失敗原因）
- *   3. localStorage が空 → 新規生成して保存（初回アクセス）
+ * URLに ?pairId=XXXX がある場合のみ localStorage に保存する。
+ * 自動生成はしない（'demo' フォールバックを維持するため）。
  */
 export function initPairId() {
   if (typeof window === 'undefined') return;
@@ -53,10 +49,7 @@ export function initPairId() {
     const fromQuery = new URLSearchParams(qs).get('pairId')?.trim?.();
     if (fromQuery) {
       localStorage.setItem(PAIR_ID_STORAGE_KEY, fromQuery);
-      return;
     }
-    if (localStorage.getItem(PAIR_ID_STORAGE_KEY)?.trim?.()) return; // 既存を維持
-    localStorage.setItem(PAIR_ID_STORAGE_KEY, generatePairId()); // 初回生成
   } catch (_) {}
 }
 
