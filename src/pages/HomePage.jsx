@@ -684,7 +684,7 @@ export default function HomePage({ lang = 'ja' }) {
               onClick={() => { if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }}
               style={{ borderColor: '#4a90d9', color: '#4a90d9', background: 'var(--color-surface)' }}
             >
-              {lang === 'en' ? 'Upload' : 'アップ'}
+              {lang === 'en' ? 'Upload' : 'アップロード'}
             </button>
             <button
               type="button"
