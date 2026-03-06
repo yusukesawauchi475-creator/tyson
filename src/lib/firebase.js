@@ -111,10 +111,22 @@ export const auth = getAuth(app);
 export async function getIdTokenForApi() {
   if (!isFirebaseConfigured) return null;
   try {
-    const user = auth.currentUser;
-    if (user) return await user.getIdToken(); // force=falseでキャッシュ利用（iPhoneの低速回線対策）
+    // auth.currentUser が既にある場合はすぐ返す（キャッシュ利用）
+    if (auth.currentUser) return await auth.currentUser.getIdToken();
+
+    // auth初期化完了を待つ（iPhoneでSPA起動直後にcurrentUserがnullになる問題の対策）
+    const user = await new Promise((resolve) => {
+      const unsubscribe = auth.onAuthStateChanged((u) => {
+        unsubscribe();
+        resolve(u);
+      });
+    });
+
+    if (user) return await user.getIdToken();
+
+    // ユーザーなし → anonymous認証してトークン取得
     const { user: signedIn } = await signInAnonymously(auth);
-    return signedIn.getIdToken();
+    return await signedIn.getIdToken();
   } catch (e) {
     if (import.meta.env.DEV) console.warn('getIdTokenForApi failed:', e?.message);
     return null;
