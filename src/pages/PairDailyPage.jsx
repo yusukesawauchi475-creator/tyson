@@ -15,7 +15,6 @@ export default function PairDailyPage({ lang = 'ja' }) {
   const [streakCount, setStreakCount] = useState(null)
   const [dateKey, setDateKey] = useState(getDateKey())
   const [hasAudio, setHasAudio] = useState(null)
-  const [audioDateKey, setAudioDateKey] = useState(null) // 相手音声が実際にある dateKey（昨日対応）
   const [isChildUnseen, setIsChildUnseen] = useState(false)
   const [audioUrl, setAudioUrl] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -74,10 +73,9 @@ export default function PairDailyPage({ lang = 'ja' }) {
   const refreshStatus = () => {
     setHasAudio(null)
     setIsChildUnseen(false)
-    getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio, isUnseen, dateKey: dk }) => {
+    getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio, isUnseen }) => {
       setHasAudio(hasAudio)
       setIsChildUnseen(!!isUnseen)
-      if (dk) setAudioDateKey(dk)
     })
   }
 
@@ -224,11 +222,10 @@ export default function PairDailyPage({ lang = 'ja' }) {
     const currentDateKey = getDateKey()
     setDateKey(currentDateKey)
     let cancelled = false
-    getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio, isUnseen, dateKey: dk }) => {
+    getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio, isUnseen }) => {
       if (!cancelled) {
         setHasAudio(hasAudio)
         setIsChildUnseen(!!isUnseen)
-        if (dk) setAudioDateKey(dk)
       }
     })
     return () => { cancelled = true }
@@ -264,7 +261,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
     }
     setAudioUrl(null)
     
-    const result = await fetchAudioForPlayback(LISTEN_ROLE_PARENT, getPairId(), audioDateKey || undefined)
+    const result = await fetchAudioForPlayback(LISTEN_ROLE_PARENT)
 
     if (result.error) {
       const reqId = result.requestId || 'REQ-XXXX'
@@ -289,7 +286,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
         el.currentTime = 0
         await el.play()
         setIsPlaying(true)
-        markSeen(LISTEN_ROLE_PARENT, getPairId(), audioDateKey || undefined).then(() => setIsChildUnseen(false))
+        markSeen(LISTEN_ROLE_PARENT).then(() => setIsChildUnseen(false))
       }
     } catch (_) {
       setErrorLine(t(lang, 'playFailed'))

@@ -79,6 +79,26 @@ function getDateKeyNY() {
   return `${y}-${m}-${d}`;
 }
 
+/** NY時間で昨日の YYYY-MM-DD */
+function getYesterdayKeyNY() {
+  const yesterday = new Date(Date.now() - 86400000);
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(yesterday);
+    const get = (t) => parts.find((p) => p.type === t)?.value;
+    const y = get('year'), m = get('month'), d = get('day');
+    if (y && m && d) return `${y}-${m}-${d}`;
+  } catch {}
+  const y = yesterday.getFullYear();
+  const m = String(yesterday.getMonth() + 1).padStart(2, '0');
+  const d = String(yesterday.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 /** OBSERVEログ1行JSON（秘密情報は含めない） */
 function logObserve(obj) {
   console.log('[OBSERVE]', JSON.stringify(obj));
@@ -233,8 +253,8 @@ async function handleGet(req, res) {
   const pairId = req.query?.pairId || req.query?.pair_id;
   const clientDateKey = req.query?.dateKey || req.query?.date_key;
   const serverDateKey = getDateKeyNY();
-  // クライアントが日付を指定した場合はそれを使う（昨日分の取得に対応）
-  const dateKey = clientDateKey || serverDateKey;
+  // サーバー側のNY日付を正規化ソースとして使用（クライアントのtimezone誤差を無視）
+  const dateKey = serverDateKey;
   const listenRole = req.query?.listenRole || req.query?.listen_role; // 'parent' | 'child'
   const mode = req.query?.mode || 'blob'; // 'blob' | 'signed'
 
@@ -282,10 +302,36 @@ async function handleGet(req, res) {
 
     initFirebaseAdmin();
 
-    const metaRef = firestore.collection('pair_media').doc(pairId).collection('days').doc(dateKey);
-    const metaSnap = await metaRef.get();
-    if (!metaSnap.exists) {
-      logObserve({ requestId: reqId, stage: 'get_fetch', status: 'ok', pairId, role: listenRole, clientDateKey, serverDateKey, ...(dateKeyNormalized ? { note: 'dateKey_normalized' } : {}), storagePath: null, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
+    // Firestoreからroleデータを解決するヘルパー（今日 → 昨日フォールバック対応）
+    const resolveMeta = async (dk) => {
+      const ref = firestore.collection('pair_media').doc(pairId).collection('days').doc(dk);
+      const snap = await ref.get();
+      if (!snap.exists) return null;
+      const m = snap.data();
+      let rd = m?.[listenRole];
+      // 旧スキーマフォールバック: parent のみ許す
+      if (!rd?.audioPath) {
+        if (listenRole === 'parent' && m?.audioPath) {
+          rd = { audioPath: m.audioPath, mimeType: m.mimeType, extension: m.extension,
+                  uploadedAt: m.uploadedAt, uploadedBy: m.uploadedBy,
+                  version: m.uploadedAt?.toMillis?.() || Date.now(), isLegacy: true };
+        } else {
+          return null; // 音声なし
+        }
+      }
+      return { meta: m, roleData: rd, isLegacy: !!rd.isLegacy, resolvedDateKey: dk };
+    };
+
+    // 今日のNY dateKeyで試し、音声なければ昨日も試す（JST↔NY時差による日付ズレ対策）
+    let resolved = await resolveMeta(dateKey);
+    if (!resolved) {
+      const yesterdayKey = getYesterdayKeyNY();
+      console.log(`[handleGet] today(${dateKey}) no audio → try yesterday(${yesterdayKey})`);
+      resolved = await resolveMeta(yesterdayKey);
+    }
+
+    if (!resolved) {
+      logObserve({ requestId: reqId, stage: 'get_resolve', status: 'ok', pairId, role: listenRole, clientDateKey, serverDateKey, storagePath: null, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
       return res.status(200).json({
         success: true,
         hasAudio: false,
@@ -297,42 +343,10 @@ async function handleGet(req, res) {
       });
     }
 
-    const meta = metaSnap.data();
-    const availableKeys = Object.keys(meta || {}).filter(k => k !== 'latestUpdatedAt');
-    const selectedKey = listenRole;
-    
-    // 新スキーマ優先: meta[listenRole] を取得
-    let roleData = meta?.[listenRole];
-    let isLegacy = false;
-    let objectPath = listenRole; // Firestore key: parent | child | (legacy) audioPath
+    const { meta, roleData, isLegacy, resolvedDateKey } = resolved;
+    const objectPath = isLegacy ? 'audioPath' : listenRole;
 
-    // 旧スキーマフォールバック: parent のみ許す。child には絶対に旧 audioPath(直下) を返さない
-    if (!roleData || !roleData.audioPath) {
-      if (listenRole === 'parent' && meta?.audioPath) {
-        isLegacy = true;
-        objectPath = 'audioPath';
-        roleData = {
-          audioPath: meta.audioPath,
-          mimeType: meta.mimeType,
-          extension: meta.extension,
-          uploadedAt: meta.uploadedAt,
-          uploadedBy: meta.uploadedBy,
-          version: meta.uploadedAt?.toMillis?.() || Date.now(),
-        };
-        logObserve({ requestId: reqId, stage: 'get_resolve', status: 'ok', pairId, role: listenRole, clientDateKey, serverDateKey, ...(dateKeyNormalized ? { note: 'dateKey_normalized' } : {}), storagePath: roleData.audioPath, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
-      } else {
-        logObserve({ requestId: reqId, stage: 'get_resolve', status: 'ok', pairId, role: listenRole, clientDateKey, serverDateKey, ...(dateKeyNormalized ? { note: 'dateKey_normalized' } : {}), storagePath: null, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
-        return res.status(200).json({
-          success: true,
-          hasAudio: false,
-          url: null,
-          requestId: reqId,
-          pairId,
-          dateKey,
-          role: listenRole,
-        });
-      }
-    }
+    logObserve({ requestId: reqId, stage: 'get_resolve', status: 'ok', pairId, role: listenRole, clientDateKey, serverDateKey, storagePath: roleData.audioPath, firestoreDocPath, httpStatus: 200, errorCode: null, note: resolvedDateKey !== dateKey ? `fallback_to_${resolvedDateKey}` : undefined });
 
     const audioPath = roleData.audioPath;
     const resolvedAudioPath = audioPath;

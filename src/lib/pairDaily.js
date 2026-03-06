@@ -331,68 +331,33 @@ export async function updateStreak(pairId = getPairId()) {
   }
 }
 
-/** 1つのdateKeyでpair-mediaをフェッチしてメタを返す内部ヘルパー */
-async function _fetchMeta(pairId, dateKey, listenRole, idToken) {
-  const url = `/api/pair-media?pairId=${encodeURIComponent(pairId)}&dateKey=${encodeURIComponent(dateKey)}&listenRole=${encodeURIComponent(listenRole)}&mode=signed&v=${Date.now()}`;
-  console.log('[fetchMeta] url:', url);
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' });
-  console.log('[fetchMeta] status:', res.status, 'dateKey:', dateKey);
-  if (!res.ok) {
-    return { ok: false, status: res.status };
-  }
-  const d = await res.json().catch(() => ({}));
-  console.log('[fetchMeta] json:', JSON.stringify(d).slice(0, 200));
-  return { ok: true, data: d };
-}
-
 /** hasAudio + isUnseen（未再生バッジ用）。updatedAt > seenAt または seenAt なしで未再生 */
 export async function getListenRoleMeta(listenRole, pairId = getPairId()) {
   const todayKey = getDateKeyNY();
-  const yesterdayKey = getYesterdayKeyNY();
-  console.log('[getListenRoleMeta] pairId:', pairId, 'listenRole:', listenRole, 'today:', todayKey, 'yesterday:', yesterdayKey);
+  console.log('[getListenRoleMeta] pairId:', pairId, 'listenRole:', listenRole, 'todayKey:', todayKey);
   const idToken = await getIdTokenForApi();
   console.log('[getListenRoleMeta] idToken:', idToken ? `OK(len=${idToken.length})` : 'NULL');
   if (!idToken) return { hasAudio: null, isUnseen: false }; // auth失敗→null（「まだです」誤表示を防ぐ）
   if (!listenRole || (listenRole !== 'parent' && listenRole !== 'child')) return { hasAudio: false, isUnseen: false };
 
+  // サーバー側で今日→昨日フォールバックを実装済み。クライアントは1回のフェッチでよい。
+  const url = `/api/pair-media?pairId=${encodeURIComponent(pairId)}&listenRole=${encodeURIComponent(listenRole)}&mode=signed&v=${Date.now()}`;
+  console.log('[getListenRoleMeta] fetch:', url);
   try {
-    // 今日のNY dateKeyで試す
-    const todayResult = await _fetchMeta(pairId, todayKey, listenRole, idToken);
-    if (todayResult.ok) {
-      const d = todayResult.data;
-      const hasAudio = !!d?.url;
-      const updatedAt = d?.updatedAt ?? null;
-      const seenAt = d?.seenAt ?? null;
-      const isUnseen = hasAudio && (seenAt == null || (updatedAt != null && updatedAt > seenAt));
-      console.log('[getListenRoleMeta] today hit → hasAudio:', hasAudio);
-      return { hasAudio, isUnseen, dateKey: todayKey };
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' });
+    console.log('[getListenRoleMeta] status:', res.status);
+    if (!res.ok) {
+      console.log('[getListenRoleMeta] error status:', res.status);
+      return { hasAudio: null, isUnseen: false }; // API エラー→null（誤表示防止）
     }
-
-    // 今日が404 → 昨日も試す（JST↔NY時差による日付ズレ対策）
-    if (todayResult.status === 404) {
-      console.log('[getListenRoleMeta] today 404 → try yesterday:', yesterdayKey);
-      const yResult = await _fetchMeta(pairId, yesterdayKey, listenRole, idToken);
-      if (yResult.ok) {
-        const d = yResult.data;
-        const hasAudio = !!d?.url;
-        const updatedAt = d?.updatedAt ?? null;
-        const seenAt = d?.seenAt ?? null;
-        const isUnseen = hasAudio && (seenAt == null || (updatedAt != null && updatedAt > seenAt));
-        console.log('[getListenRoleMeta] yesterday hit → hasAudio:', hasAudio);
-        return { hasAudio, isUnseen, dateKey: yesterdayKey };
-      }
-      if (yResult.status === 404) {
-        console.log('[getListenRoleMeta] both today/yesterday 404 → no audio');
-        return { hasAudio: false, isUnseen: false };
-      }
-      // 昨日が401/500等のエラー
-      console.log('[getListenRoleMeta] yesterday error:', yResult.status);
-      return { hasAudio: null, isUnseen: false };
-    }
-
-    // 今日が401/500等のエラー
-    console.log('[getListenRoleMeta] today error:', todayResult.status);
-    return { hasAudio: null, isUnseen: false };
+    const d = await res.json().catch(() => ({}));
+    console.log('[getListenRoleMeta] json:', JSON.stringify(d).slice(0, 200));
+    const hasAudio = !!d?.url;
+    const updatedAt = d?.updatedAt ?? null;
+    const seenAt = d?.seenAt ?? null;
+    const isUnseen = hasAudio && (seenAt == null || (updatedAt != null && updatedAt > seenAt));
+    console.log('[getListenRoleMeta] hasAudio:', hasAudio, 'isUnseen:', isUnseen);
+    return { hasAudio, isUnseen };
   } catch (err) {
     console.log('[getListenRoleMeta] catch:', err?.message);
     return { hasAudio: null, isUnseen: false }; // ネットワークエラー→null（誤表示防止）
