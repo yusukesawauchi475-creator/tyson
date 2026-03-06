@@ -577,96 +577,7 @@ export default function HomePage({ lang = 'ja' }) {
           )}
         </section>
 
-        {/* (3) ジャーナル（自分だけ見れる）※1日1枚 */}
-        <section className="card card-journal" style={{ width: '100%' }}>
-          <h2 className="cardHead">📝 {t(lang, 'journalSharedAi')}</h2>
-          <p style={{ fontSize: 11, color: 'var(--color-text-sub)', margin: '0 0 12px', lineHeight: 1.4 }}>{t(lang, 'journalNotice')}</p>
-          <p className="title">{t(lang, 'myJournal')}</p>
-          {myJournalLoading && (
-            <p className="sub" style={{ margin: '0 0 8px' }}>{t(lang, 'loading')}</p>
-          )}
-          {!myJournalLoading && myJournalUrl && (
-            <>
-              <div className="thumbWrap media-thumb-wrap">
-                <img
-                  src={myJournalUrl}
-                  alt={t(lang, 'myJournal')}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setPreviewOpen(true)}
-                  onKeyDown={(e) => e.key === 'Enter' && setPreviewOpen(true)}
-                  className="media-thumb"
-                  width={96}
-                  height={96}
-                  style={{ cursor: 'pointer' }}
-                />
-              </div>
-              <p style={{ fontSize: 12, color: 'var(--color-text-muted)', margin: '4px 0 0', textAlign: 'center' }}>{t(lang, 'tapToEnlarge')}</p>
-            </>
-          )}
-          {!myJournalLoading && !myJournalUrl && !myJournalError && (
-            <p className="sub" style={{ margin: '0 0 8px' }}>{t(lang, 'notUploadedYet')}</p>
-          )}
-          {myJournalError && (
-            <p style={{ fontSize: 12, color: 'var(--color-text-sub)', margin: '0 0 8px', textAlign: 'center' }}>{myJournalError}</p>
-          )}
-          <button
-            type="button"
-            onClick={fetchMyJournal}
-            disabled={myJournalLoading}
-            style={{ padding: '4px 12px', fontSize: 12, color: '#4a90d9', background: 'transparent', border: '1px solid #4a90d9', borderRadius: 6, cursor: myJournalLoading ? 'wait' : 'pointer', marginTop: 4, marginBottom: 12 }}
-          >
-            {t(lang, 'refresh')}
-          </button>
-          <input ref={journalGalleryInputRef} type="file" accept="image/*" style={{ display: 'none' }}
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'journal_image'); e.target.value = '' }}
-          />
-          <input ref={journalCameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'journal_image'); e.target.value = '' }}
-          />
-          <div className="btnGrid" style={{ marginBottom: 12 }}>
-            <button
-              type="button"
-              className="btn"
-              disabled={journalUploading}
-              onClick={() => { if (journalGalleryInputRef.current) { journalGalleryInputRef.current.value = ''; journalGalleryInputRef.current.click() } }}
-              style={{ borderColor: '#4a90d9', color: '#4a90d9', background: 'var(--color-surface)' }}
-            >
-              {lang === 'en' ? 'Upload' : 'アップロード'}
-            </button>
-            <button
-              type="button"
-              className="btn btnPrimary"
-              disabled={journalUploading}
-              onClick={() => { if (journalCameraInputRef.current) { journalCameraInputRef.current.value = ''; journalCameraInputRef.current.click() } }}
-              style={{ background: journalUploading ? 'var(--color-text-muted)' : '#4a90d9', borderColor: journalUploading ? 'var(--color-text-muted)' : '#4a90d9' }}
-            >
-              {t(lang, 'camera')}
-            </button>
-          </div>
-          {journalUploaded && (
-            <p className="sub" style={{ color: 'var(--color-success)', margin: '0 0 4px' }}>
-              {journalDateKey ? t(lang, 'savedWithDate', { date: journalDateKey }) : t(lang, 'saved')}
-            </p>
-          )}
-          {(journalRequestId || lastRequestId) && (
-            <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--color-text-sub)', marginTop: 4 }}>
-              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>REQ: {journalRequestId || lastRequestId}</span>
-              <button
-                type="button"
-                onClick={() => navigator.clipboard?.writeText(journalRequestId || lastRequestId).then(() => {}).catch(() => {})}
-                style={{ flex: '0 0 auto', padding: '2px 6px', fontSize: 11, cursor: 'pointer', border: '1px solid var(--color-border)', borderRadius: 4, background: 'var(--color-surface)' }}
-              >
-                {t(lang, 'copy')}
-              </button>
-            </span>
-          )}
-          {journalError && (
-            <p style={{ fontSize: 11, color: 'var(--color-danger)', margin: '4px 0 0' }}>{journalError}</p>
-          )}
-        </section>
-
-        {/* (4) 日常写真（共有）※最大3枚 */}
+        {/* (3) 日常写真（共有）※最大3枚 */}
         <section className="card card-photos" style={{ width: '100%' }}>
           <h2 className="cardHead">📷 {t(lang, 'dailyPhotosShared')}</h2>
           <p className="title">{t(lang, 'todayPhotosCount', { count: photos.filter((p) => p.role === ROLE_PARENT).length })}</p>
@@ -722,6 +633,87 @@ export default function HomePage({ lang = 'ja' }) {
           >
             🗂 {lang === 'en' ? 'View Library' : 'ライブラリを見る'}
           </button>
+        </section>
+
+        {/* (4) ジャーナル（非公開・1日1枚） */}
+        <section className="card card-journal" style={{ width: '100%' }}>
+          <h2 className="cardHead">📝 {t(lang, 'journalSharedAi')}</h2>
+          <p style={{ fontSize: 11, color: 'var(--color-text-sub)', margin: '0 0 12px', lineHeight: 1.4 }}>{t(lang, 'journalNotice')}</p>
+          <p className="title">{t(lang, 'myJournal')}</p>
+          {myJournalLoading && (
+            <p className="sub" style={{ margin: '0 0 8px' }}>{t(lang, 'loading')}</p>
+          )}
+          {!myJournalLoading && myJournalUrl && (
+            <>
+              <div className="thumbWrap media-thumb-wrap">
+                <img
+                  src={myJournalUrl}
+                  alt={t(lang, 'myJournal')}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setPreviewOpen(true)}
+                  onKeyDown={(e) => e.key === 'Enter' && setPreviewOpen(true)}
+                  className="media-thumb"
+                  width={96}
+                  height={96}
+                  style={{ cursor: 'pointer' }}
+                />
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--color-text-muted)', margin: '4px 0 0', textAlign: 'center' }}>{t(lang, 'tapToEnlarge')}</p>
+            </>
+          )}
+          {!myJournalLoading && !myJournalUrl && !myJournalError && (
+            <p className="sub" style={{ margin: '0 0 8px' }}>{t(lang, 'notUploadedYet')}</p>
+          )}
+          {myJournalError && (
+            <p style={{ fontSize: 12, color: 'var(--color-text-sub)', margin: '0 0 8px', textAlign: 'center' }}>{myJournalError}</p>
+          )}
+          <input ref={journalGalleryInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'journal_image'); e.target.value = '' }}
+          />
+          <input ref={journalCameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'journal_image'); e.target.value = '' }}
+          />
+          <div className="btnGrid" style={{ marginBottom: 12 }}>
+            <button
+              type="button"
+              className="btn"
+              disabled={journalUploading}
+              onClick={() => { if (journalGalleryInputRef.current) { journalGalleryInputRef.current.value = ''; journalGalleryInputRef.current.click() } }}
+              style={{ borderColor: '#4a90d9', color: '#4a90d9', background: 'var(--color-surface)' }}
+            >
+              {lang === 'en' ? 'Upload' : 'アップロード'}
+            </button>
+            <button
+              type="button"
+              className="btn btnPrimary"
+              disabled={journalUploading}
+              onClick={() => { if (journalCameraInputRef.current) { journalCameraInputRef.current.value = ''; journalCameraInputRef.current.click() } }}
+              style={{ background: journalUploading ? 'var(--color-text-muted)' : '#4a90d9', borderColor: journalUploading ? 'var(--color-text-muted)' : '#4a90d9' }}
+            >
+              {t(lang, 'camera')}
+            </button>
+          </div>
+          {journalUploaded && (
+            <p className="sub" style={{ color: 'var(--color-success)', margin: '0 0 4px' }}>
+              {journalDateKey ? t(lang, 'savedWithDate', { date: journalDateKey }) : t(lang, 'saved')}
+            </p>
+          )}
+          {(journalRequestId || lastRequestId) && (
+            <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--color-text-sub)', marginTop: 4 }}>
+              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>REQ: {journalRequestId || lastRequestId}</span>
+              <button
+                type="button"
+                onClick={() => navigator.clipboard?.writeText(journalRequestId || lastRequestId).then(() => {}).catch(() => {})}
+                style={{ flex: '0 0 auto', padding: '2px 6px', fontSize: 11, cursor: 'pointer', border: '1px solid var(--color-border)', borderRadius: 4, background: 'var(--color-surface)' }}
+              >
+                {t(lang, 'copy')}
+              </button>
+            </span>
+          )}
+          {journalError && (
+            <p style={{ fontSize: 11, color: 'var(--color-danger)', margin: '4px 0 0' }}>{journalError}</p>
+          )}
         </section>
 
         {errorLine && (
