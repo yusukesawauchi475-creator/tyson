@@ -21,6 +21,26 @@ export function getDateKeyNY() {
   return `${y}-${m}-${d}`;
 }
 
+/** NY時間で「昨日」のYYYY-MM-DDを返す（日付ズレ対策用） */
+export function getYesterdayKeyNY() {
+  const yesterday = new Date(Date.now() - 86400000);
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(yesterday);
+    const get = (t) => parts.find((p) => p.type === t)?.value;
+    const y = get('year'), m = get('month'), d = get('day');
+    if (y && m && d) return `${y}-${m}-${d}`;
+  } catch {}
+  const y = yesterday.getFullYear();
+  const m = String(yesterday.getMonth() + 1).padStart(2, '0');
+  const d = String(yesterday.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 /** getDateKeyNY のエイリアス（後方互換） */
 export const getDateKey = getDateKeyNY;
 
@@ -152,7 +172,8 @@ export async function uploadAudio(blob, role, pairId = getPairId(), _dateKey, re
  * @param {string} dateKey
  */
 export async function fetchAudioForPlayback(listenRole, pairId = getPairId(), _dateKey, requestId = genRequestId()) {
-  const dateKey = getDateKeyNY();
+  // 呼び出し側が dateKey を指定した場合はそれを使う（昨日分再生対応）
+  const dateKey = _dateKey || getDateKeyNY();
   const idToken = await getIdTokenForApi();
   if (!idToken) {
     return { error: '認証できません', requestId: requestId || 'NO-TOKEN', errorCode: 'auth', hasAudio: false };
@@ -227,7 +248,8 @@ export async function fetchAudioForPlayback(listenRole, pairId = getPairId(), _d
 
 /** action=markSeen で seenAt を更新。再生開始時に呼ぶ */
 export async function markSeen(listenRole, pairId = getPairId(), _dateKey, requestId = genRequestId()) {
-  const dateKey = getDateKeyNY();
+  // 呼び出し側が dateKey を指定した場合はそれを使う（昨日分対応）
+  const dateKey = _dateKey || getDateKeyNY();
   const idToken = await getIdTokenForApi();
   if (!idToken) return { success: false, requestId };
   if (!listenRole || (listenRole !== 'parent' && listenRole !== 'child')) return { success: false, requestId };
@@ -309,33 +331,68 @@ export async function updateStreak(pairId = getPairId()) {
   }
 }
 
+/** 1つのdateKeyでpair-mediaをフェッチしてメタを返す内部ヘルパー */
+async function _fetchMeta(pairId, dateKey, listenRole, idToken) {
+  const url = `/api/pair-media?pairId=${encodeURIComponent(pairId)}&dateKey=${encodeURIComponent(dateKey)}&listenRole=${encodeURIComponent(listenRole)}&mode=signed&v=${Date.now()}`;
+  console.log('[fetchMeta] url:', url);
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' });
+  console.log('[fetchMeta] status:', res.status, 'dateKey:', dateKey);
+  if (!res.ok) {
+    return { ok: false, status: res.status };
+  }
+  const d = await res.json().catch(() => ({}));
+  console.log('[fetchMeta] json:', JSON.stringify(d).slice(0, 200));
+  return { ok: true, data: d };
+}
+
 /** hasAudio + isUnseen（未再生バッジ用）。updatedAt > seenAt または seenAt なしで未再生 */
 export async function getListenRoleMeta(listenRole, pairId = getPairId()) {
-  const dateKey = getDateKeyNY();
-  console.log('[getListenRoleMeta] pairId:', pairId, 'listenRole:', listenRole, 'dateKey:', dateKey);
+  const todayKey = getDateKeyNY();
+  const yesterdayKey = getYesterdayKeyNY();
+  console.log('[getListenRoleMeta] pairId:', pairId, 'listenRole:', listenRole, 'today:', todayKey, 'yesterday:', yesterdayKey);
   const idToken = await getIdTokenForApi();
   console.log('[getListenRoleMeta] idToken:', idToken ? `OK(len=${idToken.length})` : 'NULL');
   if (!idToken) return { hasAudio: null, isUnseen: false }; // auth失敗→null（「まだです」誤表示を防ぐ）
   if (!listenRole || (listenRole !== 'parent' && listenRole !== 'child')) return { hasAudio: false, isUnseen: false };
-  const url = `/api/pair-media?pairId=${encodeURIComponent(pairId)}&dateKey=${encodeURIComponent(dateKey)}&listenRole=${encodeURIComponent(listenRole)}&mode=signed&v=${Date.now()}`;
-  console.log('[getListenRoleMeta] fetch URL:', url);
+
   try {
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' });
-    console.log('[getListenRoleMeta] res.status:', res.status);
-    if (!res.ok) {
-      // 404は「音声なし」、それ以外（401/500等）はエラー→nullで誤表示防止
-      const isNotFound = res.status === 404;
-      console.log('[getListenRoleMeta] !ok → hasAudio:', isNotFound ? false : null);
-      return { hasAudio: isNotFound ? false : null, isUnseen: false };
+    // 今日のNY dateKeyで試す
+    const todayResult = await _fetchMeta(pairId, todayKey, listenRole, idToken);
+    if (todayResult.ok) {
+      const d = todayResult.data;
+      const hasAudio = !!d?.url;
+      const updatedAt = d?.updatedAt ?? null;
+      const seenAt = d?.seenAt ?? null;
+      const isUnseen = hasAudio && (seenAt == null || (updatedAt != null && updatedAt > seenAt));
+      console.log('[getListenRoleMeta] today hit → hasAudio:', hasAudio);
+      return { hasAudio, isUnseen, dateKey: todayKey };
     }
-    const d = await res.json().catch(() => ({}));
-    console.log('[getListenRoleMeta] json:', JSON.stringify(d).slice(0, 200));
-    const hasAudio = !!d?.url;
-    const updatedAt = d?.updatedAt ?? null;
-    const seenAt = d?.seenAt ?? null;
-    const isUnseen = hasAudio && (seenAt == null || (updatedAt != null && updatedAt > seenAt));
-    console.log('[getListenRoleMeta] result → hasAudio:', hasAudio, 'isUnseen:', isUnseen);
-    return { hasAudio, isUnseen };
+
+    // 今日が404 → 昨日も試す（JST↔NY時差による日付ズレ対策）
+    if (todayResult.status === 404) {
+      console.log('[getListenRoleMeta] today 404 → try yesterday:', yesterdayKey);
+      const yResult = await _fetchMeta(pairId, yesterdayKey, listenRole, idToken);
+      if (yResult.ok) {
+        const d = yResult.data;
+        const hasAudio = !!d?.url;
+        const updatedAt = d?.updatedAt ?? null;
+        const seenAt = d?.seenAt ?? null;
+        const isUnseen = hasAudio && (seenAt == null || (updatedAt != null && updatedAt > seenAt));
+        console.log('[getListenRoleMeta] yesterday hit → hasAudio:', hasAudio);
+        return { hasAudio, isUnseen, dateKey: yesterdayKey };
+      }
+      if (yResult.status === 404) {
+        console.log('[getListenRoleMeta] both today/yesterday 404 → no audio');
+        return { hasAudio: false, isUnseen: false };
+      }
+      // 昨日が401/500等のエラー
+      console.log('[getListenRoleMeta] yesterday error:', yResult.status);
+      return { hasAudio: null, isUnseen: false };
+    }
+
+    // 今日が401/500等のエラー
+    console.log('[getListenRoleMeta] today error:', todayResult.status);
+    return { hasAudio: null, isUnseen: false };
   } catch (err) {
     console.log('[getListenRoleMeta] catch:', err?.message);
     return { hasAudio: null, isUnseen: false }; // ネットワークエラー→null（誤表示防止）

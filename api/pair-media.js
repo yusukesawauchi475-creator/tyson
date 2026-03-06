@@ -233,7 +233,8 @@ async function handleGet(req, res) {
   const pairId = req.query?.pairId || req.query?.pair_id;
   const clientDateKey = req.query?.dateKey || req.query?.date_key;
   const serverDateKey = getDateKeyNY();
-  const dateKey = serverDateKey;
+  // クライアントが日付を指定した場合はそれを使う（昨日分の取得に対応）
+  const dateKey = clientDateKey || serverDateKey;
   const listenRole = req.query?.listenRole || req.query?.listen_role; // 'parent' | 'child'
   const mode = req.query?.mode || 'blob'; // 'blob' | 'signed'
 
