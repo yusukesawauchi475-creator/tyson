@@ -662,6 +662,9 @@ export default function PairDailyPage({ lang = 'ja' }) {
         {/* (1) 相手の録音（聞く） */}
         <section className="card" style={{ width: '100%' }}>
           <h2 className="cardHead">🎧 {t(lang, 'partnerRecordingListen')}</h2>
+          <p style={{ fontSize: 11, color: '#999', textAlign: 'center', margin: '0 0 4px', fontFamily: 'monospace' }}>
+            DEBUG: hasAudio={String(hasAudio)} pairId={getPairId()}
+          </p>
           {hasAudio === true ? (
             <>
               <p style={{ fontSize: 14, color: '#2e7d32', textAlign: 'center', margin: '0 0 8px', fontWeight: 500 }}>

@@ -314,25 +314,30 @@ export async function getListenRoleMeta(listenRole, pairId = getPairId()) {
   const dateKey = getDateKeyNY();
   console.log('[getListenRoleMeta] pairId:', pairId, 'listenRole:', listenRole, 'dateKey:', dateKey);
   const idToken = await getIdTokenForApi();
+  console.log('[getListenRoleMeta] idToken:', idToken ? `OK(len=${idToken.length})` : 'NULL');
   if (!idToken) return { hasAudio: null, isUnseen: false }; // auth失敗→null（「まだです」誤表示を防ぐ）
   if (!listenRole || (listenRole !== 'parent' && listenRole !== 'child')) return { hasAudio: false, isUnseen: false };
+  const url = `/api/pair-media?pairId=${encodeURIComponent(pairId)}&dateKey=${encodeURIComponent(dateKey)}&listenRole=${encodeURIComponent(listenRole)}&mode=signed&v=${Date.now()}`;
+  console.log('[getListenRoleMeta] fetch URL:', url);
   try {
-    const res = await fetch(
-      `/api/pair-media?pairId=${encodeURIComponent(pairId)}&dateKey=${encodeURIComponent(dateKey)}&listenRole=${encodeURIComponent(listenRole)}&mode=signed&v=${Date.now()}`,
-      { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }
-    );
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' });
+    console.log('[getListenRoleMeta] res.status:', res.status);
     if (!res.ok) {
       // 404は「音声なし」、それ以外（401/500等）はエラー→nullで誤表示防止
       const isNotFound = res.status === 404;
+      console.log('[getListenRoleMeta] !ok → hasAudio:', isNotFound ? false : null);
       return { hasAudio: isNotFound ? false : null, isUnseen: false };
     }
     const d = await res.json().catch(() => ({}));
+    console.log('[getListenRoleMeta] json:', JSON.stringify(d).slice(0, 200));
     const hasAudio = !!d?.url;
     const updatedAt = d?.updatedAt ?? null;
     const seenAt = d?.seenAt ?? null;
     const isUnseen = hasAudio && (seenAt == null || (updatedAt != null && updatedAt > seenAt));
+    console.log('[getListenRoleMeta] result → hasAudio:', hasAudio, 'isUnseen:', isUnseen);
     return { hasAudio, isUnseen };
-  } catch (_) {
+  } catch (err) {
+    console.log('[getListenRoleMeta] catch:', err?.message);
     return { hasAudio: null, isUnseen: false }; // ネットワークエラー→null（誤表示防止）
   }
 }
