@@ -312,6 +312,7 @@ export async function updateStreak(pairId = getPairId()) {
 /** hasAudio + isUnseen（未再生バッジ用）。updatedAt > seenAt または seenAt なしで未再生 */
 export async function getListenRoleMeta(listenRole, pairId = getPairId()) {
   const dateKey = getDateKeyNY();
+  console.log('[getListenRoleMeta] pairId:', pairId, 'listenRole:', listenRole, 'dateKey:', dateKey);
   const idToken = await getIdTokenForApi();
   if (!idToken) return { hasAudio: null, isUnseen: false }; // auth失敗→null（「まだです」誤表示を防ぐ）
   if (!listenRole || (listenRole !== 'parent' && listenRole !== 'child')) return { hasAudio: false, isUnseen: false };

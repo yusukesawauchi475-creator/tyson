@@ -43,11 +43,12 @@ try {
   } catch (_) {}
 }
 
-// PAIR-* 形式の pairId が残っていたら削除 → getPairId() が 'demo' にフォールバック
+// 'demo' 以外の pairId（PAIR-*, TYSON-* 等）を全て削除 → getPairId() が 'demo' にフォールバック
 try {
   if (typeof localStorage !== 'undefined') {
     const stored = localStorage.getItem(PAIR_ID_STORAGE_KEY) || ''
-    if (stored.startsWith('PAIR-')) {
+    if (stored && stored !== 'demo') {
+      console.log('[main] pairId reset to demo (was:', stored, ')')
       localStorage.removeItem(PAIR_ID_STORAGE_KEY)
     }
   }
