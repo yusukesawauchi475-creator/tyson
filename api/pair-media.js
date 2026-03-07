@@ -31,6 +31,7 @@ function initFirebaseAdmin() {
     const projectId = parsed.project_id ?? process.env.VITE_FIREBASE_PROJECT_ID;
     const envBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET || '';
     const storageBucketName = envBucket || `${projectId}.firebasestorage.app`;
+    if (!storageBucketName) throw new Error('FATAL: storageBucketName is empty');
 
     // 既存appがある場合も明示的なbucket名を指定（streak.js等がstorageBucket未設定で初期化した場合のfallbackバグを回避）
     if (admin.apps && admin.apps.length > 0) {
