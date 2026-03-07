@@ -16,6 +16,7 @@ export default function PairDailyPage({ lang = 'ja' }) {
   const [streakCount, setStreakCount] = useState(null)
   const [dateKey, setDateKey] = useState(getDateKey())
   const [hasAudio, setHasAudio] = useState(null)
+  const [debugAuthInfo, setDebugAuthInfo] = useState('...')
   const [isChildUnseen, setIsChildUnseen] = useState(false)
   const [audioUrl, setAudioUrl] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -234,6 +235,13 @@ export default function PairDailyPage({ lang = 'ja' }) {
 
   useEffect(() => {
     getStreak(getPairId()).then(({ count }) => setStreakCount(count))
+  }, [])
+
+  // デバッグ用: getIdTokenForApi の結果を UI に表示
+  useEffect(() => {
+    getIdTokenForApi().then(token => {
+      setDebugAuthInfo(token ? `OK(${token.slice(-6)})` : 'NULL')
+    }).catch(e => setDebugAuthInfo('ERR:' + e?.message?.slice(0, 20)))
   }, [])
 
   useEffect(() => {
@@ -665,7 +673,8 @@ export default function PairDailyPage({ lang = 'ja' }) {
           <h2 className="cardHead">🎧 {t(lang, 'partnerRecordingListen')}</h2>
           <p style={{ fontSize: 11, color: 'red', textAlign: 'center', margin: '0 0 4px', fontFamily: 'monospace', lineHeight: 1.4 }}>
             build:{getBuildHash()?.slice(0,7)} pairId:{getPairId()}<br/>
-            fbConf:{String(isFirebaseConfigured)} uid:{getAuth().currentUser?.uid ?? 'null'}<br/>
+            fbConf:{String(isFirebaseConfigured)} uid:{getAuth().currentUser?.uid?.slice(-6) ?? 'null'}<br/>
+            token:{debugAuthInfo}<br/>
             role:{LISTEN_ROLE_PARENT} dateKey:{dateKey}<br/>
             hasAudio:{String(hasAudio)}
           </p>
