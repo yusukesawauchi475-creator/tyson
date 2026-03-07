@@ -3,6 +3,7 @@ import { parseFirebaseServiceAccount } from './lib/parseFirebaseServiceAccount.j
 
 let adminApp;
 let firestore;
+let _storageBucketName = null;
 
 function initAdmin() {
   if (adminApp) return;
@@ -12,16 +13,14 @@ function initAdmin() {
   const parsed = result.data;
   const projectId = parsed.project_id ?? process.env.VITE_FIREBASE_PROJECT_ID;
   const envBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET || '';
-  const storageBucketName = envBucket || `${projectId}.firebasestorage.app`;
+  _storageBucketName = envBucket || `${projectId}.firebasestorage.app`;
+  if (!_storageBucketName) throw new Error('storageBucketName is empty');
   if (admin.apps && admin.apps.length > 0) {
     adminApp = admin.app();
     firestore = admin.firestore();
     return;
   }
-  adminApp = admin.initializeApp({
-    credential: admin.credential.cert(parsed),
-    storageBucket: storageBucketName,
-  });
+  adminApp = admin.initializeApp({ credential: admin.credential.cert(parsed), storageBucket: _storageBucketName });
   firestore = admin.firestore();
 }
 
@@ -60,13 +59,25 @@ export default async function handler(req, res) {
   const yesterdayKey = getYesterdayKeyNY();
   const serverNow = new Date().toISOString();
 
+  const result = {
+    serverNow,
+    todayKey,
+    yesterdayKey,
+    pairId,
+    adminInit: { ok: false, error: null },
+    storageBucket: { ok: false, name: null },
+    days: {},
+  };
+
   try {
     initAdmin();
+    result.adminInit.ok = true;
+    result.storageBucket.ok = !!_storageBucketName;
+    result.storageBucket.name = _storageBucketName;
   } catch (e) {
-    return res.status(500).json({ error: 'admin init failed: ' + e.message, serverNow, todayKey, yesterdayKey });
+    result.adminInit.error = e.message;
+    return res.status(200).json(result);
   }
-
-  const result = { serverNow, todayKey, yesterdayKey, pairId, days: {} };
 
   for (const dk of [todayKey, yesterdayKey]) {
     try {
@@ -78,8 +89,8 @@ export default async function handler(req, res) {
         result.days[dk] = {
           exists: true,
           topLevelKeys: Object.keys(d),
-          parent: d.parent ? { audioPath: d.parent.audioPath || null } : null,
-          child: d.child ? { audioPath: d.child.audioPath || null } : null,
+          parent: d.parent ? { audioPath: d.parent.audioPath || null, uploadedAt: d.parent.uploadedAt || null } : null,
+          child: d.child ? { audioPath: d.child.audioPath || null, uploadedAt: d.child.uploadedAt || null } : null,
         };
       }
     } catch (e) {
