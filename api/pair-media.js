@@ -46,7 +46,7 @@ function initFirebaseAdmin() {
     });
 
     firestore = admin.firestore();
-    storageBucket = admin.storage().bucket();
+    storageBucket = admin.storage().bucket(storageBucketName);
   } catch (e) {
     adminInitError = e;
     throw e;
