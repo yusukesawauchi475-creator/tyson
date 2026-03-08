@@ -11,7 +11,7 @@ import { getAuth } from 'firebase/auth'
 import { formatDeployedAtLocal, getBuildHash } from '../lib/dateFormat'
 import { useAudioLevel } from '../lib/useAudioLevel'
 
-export default function PairDailyPage({ lang = 'ja' }) {
+export default function PairDailyPage({ lang = 'ja', onChangeRole }) {
   const [today, setToday] = useState('')
   const [streakCount, setStreakCount] = useState(null)
   const [dateKey, setDateKey] = useState(getDateKey())
@@ -656,6 +656,11 @@ export default function PairDailyPage({ lang = 'ja' }) {
             <p style={{ margin: '4px 0 0', fontSize: 13, color: '#e65c00', fontWeight: 600 }}>
               🔥 {streakCount}日連続
             </p>
+          )}
+          {onChangeRole && (
+            <button type="button" onClick={onChangeRole} style={{ marginTop: 6, padding: '2px 8px', fontSize: 11, color: 'var(--color-text-sub)', border: '1px solid var(--color-border, #ddd)', borderRadius: 4, background: 'transparent', cursor: 'pointer' }}>
+              🧒 {lang === 'en' ? 'Switch role' : '役割変更'}
+            </button>
           )}
         </div>
         <button

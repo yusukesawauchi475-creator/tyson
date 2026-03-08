@@ -49,6 +49,18 @@ export const PAIR_ID_DEMO = 'demo';
 
 export const PAIR_ID_STORAGE_KEY = 'tyson_pairId';
 
+/** ユーザーの役割（parent / child）を localStorage で管理 */
+export const USER_ROLE_STORAGE_KEY = 'tyson_userRole';
+export function getUserRole() {
+  try { const v = localStorage.getItem(USER_ROLE_STORAGE_KEY); return (v === 'parent' || v === 'child') ? v : null; } catch { return null; }
+}
+export function setUserRole(role) {
+  try { localStorage.setItem(USER_ROLE_STORAGE_KEY, role); } catch {}
+}
+export function clearUserRole() {
+  try { localStorage.removeItem(USER_ROLE_STORAGE_KEY); } catch {}
+}
+
 /** ランダムなユニーク pairId を生成: "PAIR-" + 6文字（誤読しにくい文字のみ）*/
 function generatePairId() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // I, O, 0, 1 を除外

@@ -1,0 +1,76 @@
+import { setUserRole } from '../lib/pairDaily'
+
+export default function RoleSelectPage({ onSelect, lang = 'ja' }) {
+  const handle = (role) => {
+    setUserRole(role)
+    onSelect(role)
+  }
+
+  return (
+    <div style={{
+      minHeight: '100dvh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '32px 24px',
+      background: 'var(--color-bg)',
+      color: 'var(--color-text)',
+      fontFamily: 'var(--font-sans)',
+    }}>
+      <div style={{ maxWidth: 320, width: '100%', textAlign: 'center' }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>🦁</div>
+        <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 8px' }}>
+          {lang === 'en' ? 'Who are you?' : 'あなたは？'}
+        </h1>
+        <p style={{ fontSize: 14, color: 'var(--color-text-sub)', margin: '0 0 40px', lineHeight: 1.6 }}>
+          {lang === 'en'
+            ? 'Choose your role. You can change it later in settings.'
+            : '役割を選んでください。後から設定で変更できます。'}
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <button
+            type="button"
+            onClick={() => handle('parent')}
+            style={{
+              width: '100%',
+              padding: '24px 16px',
+              fontSize: 18,
+              fontWeight: 600,
+              color: '#fff',
+              background: 'linear-gradient(135deg, #4a90d9 0%, #357abd 100%)',
+              border: 'none',
+              borderRadius: 16,
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(74,144,217,0.3)',
+            }}
+          >
+            <div style={{ fontSize: 36, marginBottom: 8 }}>👨‍👩‍👧</div>
+            <div>{lang === 'en' ? 'Parent' : '親（おとうさん・おかあさん）'}</div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handle('child')}
+            style={{
+              width: '100%',
+              padding: '24px 16px',
+              fontSize: 18,
+              fontWeight: 600,
+              color: '#fff',
+              background: 'linear-gradient(135deg, #e67e22 0%, #c0672c 100%)',
+              border: 'none',
+              borderRadius: 16,
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(230,126,34,0.3)',
+            }}
+          >
+            <div style={{ fontSize: 36, marginBottom: 8 }}>🧒</div>
+            <div>{lang === 'en' ? 'Child' : '子供（こども）'}</div>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
