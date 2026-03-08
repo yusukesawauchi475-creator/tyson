@@ -676,13 +676,6 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole }) {
         {/* (1) 相手の録音（聞く） */}
         <section className="card" style={{ width: '100%' }}>
           <h2 className="cardHead">🎧 {t(lang, 'partnerRecordingListen')}</h2>
-          <p style={{ fontSize: 11, color: 'red', textAlign: 'center', margin: '0 0 4px', fontFamily: 'monospace', lineHeight: 1.4 }}>
-            build:{getBuildHash()?.slice(0,7)} pairId:{getPairId()}<br/>
-            fbConf:{String(isFirebaseConfigured)} uid:{getAuth().currentUser?.uid?.slice(-6) ?? 'null'}<br/>
-            token:{debugAuthInfo}<br/>
-            role:{LISTEN_ROLE_PARENT} dateKey:{dateKey}<br/>
-            hasAudio:{String(hasAudio)}
-          </p>
           {hasAudio === true ? (
             <>
               <p style={{ fontSize: 14, color: '#2e7d32', textAlign: 'center', margin: '0 0 8px', fontWeight: 500 }}>

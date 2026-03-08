@@ -524,13 +524,6 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
               )}
             </>
           )}
-          <p style={{ fontSize: 11, color: 'red', textAlign: 'center', margin: '0 0 4px', fontFamily: 'monospace', lineHeight: 1.4 }}>
-            build:{getBuildHash()?.slice(0,7)} pairId:{getPairId()}<br/>
-            fbConf:{String(isFirebaseConfigured)} uid:{getAuth().currentUser?.uid?.slice(-6) ?? 'null'}<br/>
-            token:{debugAuthInfo}<br/>
-            role:{LISTEN_ROLE_CHILD} dateKey:{dateKey}<br/>
-            hasAudio:{String(hasParentAudio)}
-          </p>
           {hasParentAudio !== null && (
             <button
               type="button"
