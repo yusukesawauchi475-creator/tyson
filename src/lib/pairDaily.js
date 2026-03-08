@@ -62,7 +62,7 @@ export function clearUserRole() {
 }
 
 /** ランダムなユニーク pairId を生成: "PAIR-" + 6文字（誤読しにくい文字のみ）*/
-function generatePairId() {
+export function generatePairId() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // I, O, 0, 1 を除外
   let id = 'PAIR-';
   for (let i = 0; i < 6; i++) id += chars[Math.floor(Math.random() * chars.length)];

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getDateKey, fetchAudioForPlayback, hasTodayAudio, getListenRoleMeta, markSeen, uploadAudio, getPairId, genRequestId, getStreak, updateStreak } from '../lib/pairDaily'
+import { getDateKey, fetchAudioForPlayback, hasTodayAudio, getListenRoleMeta, markSeen, uploadAudio, getPairId, genRequestId, getStreak, updateStreak, generatePairId } from '../lib/pairDaily'
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import { t } from '../lib/i18n'
@@ -663,13 +663,38 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole }) {
             </button>
           )}
         </div>
-        <button
-          type="button"
-          onClick={handleShare}
-          style={{ padding: '4px 10px', fontSize: 13, color: 'var(--color-primary)', border: '1px solid var(--color-primary)', borderRadius: 6, background: 'var(--color-surface)', cursor: 'pointer', whiteSpace: 'nowrap' }}
-        >
-          {lang === 'en' ? '👋 Invite' : '👋 招待'}
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+          <button
+            type="button"
+            onClick={handleShare}
+            style={{ padding: '4px 10px', fontSize: 13, color: 'var(--color-primary)', border: '1px solid var(--color-primary)', borderRadius: 6, background: 'var(--color-surface)', cursor: 'pointer', whiteSpace: 'nowrap' }}
+          >
+            {lang === 'en' ? '👋 Invite' : '👋 招待'}
+          </button>
+          {getPairId() === 'demo' && (
+            <button
+              type="button"
+              onClick={async () => {
+                const newId = generatePairId()
+                const url = `https://tyson-two.vercel.app/#/?pairId=${encodeURIComponent(newId)}`
+                const text = lang === 'en'
+                  ? `Join me on Tyson with this link! Your pair ID: ${newId}`
+                  : `Tysonで一緒に使おう！あなた専用リンク（ID: ${newId}）`
+                try {
+                  if (navigator.share) {
+                    await navigator.share({ title: 'Tyson', text, url })
+                  } else {
+                    await navigator.clipboard.writeText(`${text}\n${url}`)
+                    alert(lang === 'en' ? 'Link copied!' : 'リンクをコピーしました')
+                  }
+                } catch (_) {}
+              }}
+              style={{ padding: '4px 10px', fontSize: 13, color: '#e67e22', border: '1px solid #e67e22', borderRadius: 6, background: 'var(--color-surface)', cursor: 'pointer', whiteSpace: 'nowrap' }}
+            >
+              🔗 {lang === 'en' ? 'New link' : '新規リンク'}
+            </button>
+          )}
+        </div>
       </header>
 
       <main className="page-content page" style={{ flex: 1, maxWidth: 320, margin: '0 auto', width: '100%' }}>
