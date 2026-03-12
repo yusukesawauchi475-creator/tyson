@@ -15,7 +15,7 @@ function RootRoute({ lang = 'ja' }) {
 
   if (!role) return <RoleSelectPage onSelect={handleSelect} lang={lang} />
   if (role === 'parent') return <HomePage lang={lang} onChangeRole={handleChangeRole} />
-  return <PairDailyPage lang={lang} onChangeRole={handleChangeRole} />
+  return <PairDailyPage lang={lang} onChangeRole={handleChangeRole} role={role} />
 }
 
 function App() {

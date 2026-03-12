@@ -11,7 +11,7 @@ import { getAuth } from 'firebase/auth'
 import { formatDeployedAtLocal, getBuildHash } from '../lib/dateFormat'
 import { useAudioLevel } from '../lib/useAudioLevel'
 
-export default function PairDailyPage({ lang = 'ja', onChangeRole }) {
+export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child' }) {
   const [today, setToday] = useState('')
   const [streakCount, setStreakCount] = useState(null)
   const [dateKey, setDateKey] = useState(getDateKey())
@@ -64,7 +64,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole }) {
   const { level, isSpeaking, start: startAudioLevel, stop: stopAudioLevel } = useAudioLevel()
 
   const navigate = useNavigate()
-  const ROLE_CHILD = 'child'
+  const ROLE_CHILD = role
   const LISTEN_ROLE_PARENT = 'parent'
 
   const handleTopicChange = useCallback((topic) => {
