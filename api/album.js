@@ -42,7 +42,7 @@ function initFirebaseAdmin() {
     });
 
     firestore = admin.firestore();
-    storageBucket = admin.storage().bucket();
+    storageBucket = admin.storage().bucket(storageBucketName);
     console.log('[album] initialized Firebase Admin app, bucket:', storageBucketName);
   } catch (e) {
     adminInitError = e;
