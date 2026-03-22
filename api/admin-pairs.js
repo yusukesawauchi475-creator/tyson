@@ -119,6 +119,36 @@ export default async function handler(req, res) {
         }
       }
 
+      // Aggregate totals from all activity data
+      const allDates = Object.keys(activity).sort();
+      let parentVoiceTotal = 0, parentPhotoTotal = 0, childVoiceTotal = 0, childPhotoTotal = 0;
+      const bothVoiceDays = []; // days where both parent+child have voice
+      for (const dateKey of allDates) {
+        const a = activity[dateKey];
+        if (a.parent.voice) parentVoiceTotal++;
+        if (a.parent.photo) parentPhotoTotal++;
+        if (a.child.voice) childVoiceTotal++;
+        if (a.child.photo) childPhotoTotal++;
+        if (a.parent.voice && a.child.voice) bothVoiceDays.push(dateKey);
+      }
+
+      // Calculate streak from bothVoiceDays (consecutive days ending at today or yesterday)
+      let streak = 0;
+      if (bothVoiceDays.length > 0) {
+        const today = dates[dates.length - 1];
+        const yesterday = dates[dates.length - 2];
+        let checkDate = bothVoiceDays.includes(today) ? today : bothVoiceDays.includes(yesterday) ? yesterday : null;
+        if (checkDate) {
+          while (bothVoiceDays.includes(checkDate)) {
+            streak++;
+            // prev day
+            const [y, m, d] = checkDate.split('-').map(Number);
+            const prev = new Date(Date.UTC(y, m - 1, d - 1));
+            checkDate = `${prev.getUTCFullYear()}-${String(prev.getUTCMonth() + 1).padStart(2, '0')}-${String(prev.getUTCDate()).padStart(2, '0')}`;
+          }
+        }
+      }
+
       // Build 30-day calendar
       const calendar = dates.map(dateKey => {
         const a = activity[dateKey];
@@ -140,6 +170,13 @@ export default async function handler(req, res) {
         pairId,
         lastActivity: lastActivity ? new Date(lastActivity * 1000).toISOString() : null,
         calendar,
+        totals: {
+          parentVoice: parentVoiceTotal,
+          parentPhoto: parentPhotoTotal,
+          childVoice: childVoiceTotal,
+          childPhoto: childPhotoTotal,
+        },
+        streak,
       });
     }
 
