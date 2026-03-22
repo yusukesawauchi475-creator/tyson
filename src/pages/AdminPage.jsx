@@ -106,8 +106,16 @@ export default function AdminPage({ lang = 'ja' }) {
       if (res.ok) {
         setUnlocked(true)
         try { localStorage.setItem(STORAGE_KEY, secret.trim()) } catch (_) {}
+      } else if (res.status === 401) {
+        alert('パスワードが違います')
+      } else {
+        console.error('[AdminPage] unlock failed:', res.status)
+        alert('エラー: HTTP ' + res.status)
       }
-    } catch (_) {}
+    } catch (e) {
+      console.error('[AdminPage] unlock error:', e)
+      alert('接続エラー')
+    }
   }
 
   const fetchDashboard = useCallback(async () => {
