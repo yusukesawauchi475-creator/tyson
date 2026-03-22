@@ -45,9 +45,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
-  const adminPassword = process.env.ADMIN_PASSWORD || '';
   const provided = (req.headers['x-admin-password'] || req.query.password || '').trim();
-  if (!adminPassword || provided !== adminPassword) {
+  const validPasswords = [process.env.ADMIN_PASSWORD, process.env.VITE_RESET_SECRET].filter(Boolean);
+  if (!provided || !validPasswords.includes(provided)) {
     return res.status(401).json({ success: false, error: 'Unauthorized' });
   }
 
