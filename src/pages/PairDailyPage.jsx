@@ -10,6 +10,7 @@ import { getIdTokenForApi, auth, isFirebaseConfigured } from '../lib/firebase'
 import { getAuth } from 'firebase/auth'
 import { formatDeployedAtLocal, getBuildHash } from '../lib/dateFormat'
 import { useAudioLevel } from '../lib/useAudioLevel'
+import UploadErrorModal from '../components/UploadErrorModal'
 
 export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child' }) {
   const [today, setToday] = useState('')
@@ -62,6 +63,8 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   const analysisFetchTimerRef = useRef(null)
   const analysisReqSeqRef = useRef(0)
   const { level, isSpeaking, start: startAudioLevel, stop: stopAudioLevel } = useAudioLevel()
+  const [uploadErrorModal, setUploadErrorModal] = useState({ visible: false, message: '', onRetry: null })
+  const lastFailedPhotoRef = useRef(null)
 
   const navigate = useNavigate()
   const ROLE_CHILD = role
@@ -177,11 +180,25 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
                 ? t(lang, 'uploadErrorNetwork')
                 : (result.error || t(lang, 'uploadError'))
           setJournalError(errMsg)
+          lastFailedPhotoRef.current = { file, kind }
+          setUploadErrorModal({
+            visible: true,
+            message: errMsg,
+            onRetry: () => {
+              setUploadErrorModal({ visible: false, message: '', onRetry: null })
+              if (lastFailedPhotoRef.current) handleJournalFile(lastFailedPhotoRef.current.file, lastFailedPhotoRef.current.kind)
+            },
+          })
         }
       }
     } catch (e) {
       setJournalUploading(false)
       setJournalError(e?.message || String(e))
+      setUploadErrorModal({
+        visible: true,
+        message: e?.message || String(e),
+        onRetry: null,
+      })
     }
   }
 
@@ -583,6 +600,14 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
           const reqId = result.requestId || 'REQ-XXXX'
           setErrorLine(t(lang, 'uploadFailed', { id: reqId }))
           if (import.meta.env.DEV) console.error('[PairDaily]', result.requestId, result.errorCode, result.error)
+          setUploadErrorModal({
+            visible: true,
+            message: result.error || result.errorCode || '',
+            onRetry: () => {
+              setUploadErrorModal({ visible: false, message: '', onRetry: null })
+              startRecording()
+            },
+          })
         }
         setIsUploading(false)
 
@@ -1113,6 +1138,14 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
           {toastMsg}
         </div>
       )}
+
+      <UploadErrorModal
+        visible={uploadErrorModal.visible}
+        message={uploadErrorModal.message}
+        onRetry={uploadErrorModal.onRetry}
+        onClose={() => setUploadErrorModal({ visible: false, message: '', onRetry: null })}
+        lang={lang}
+      />
     </div>
   )
 }

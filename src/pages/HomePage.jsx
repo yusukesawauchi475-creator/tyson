@@ -10,6 +10,7 @@ import { getIdTokenForApi, auth, isFirebaseConfigured } from '../lib/firebase'
 import { getAuth } from 'firebase/auth'
 import { formatDeployedAtLocal, getBuildHash } from '../lib/dateFormat'
 import { useAudioLevel } from '../lib/useAudioLevel'
+import UploadErrorModal from '../components/UploadErrorModal'
 
 export default function HomePage({ lang = 'ja', onChangeRole }) {
   const navigate = useNavigate()
@@ -64,6 +65,9 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   const genericGalleryInputRef = useRef(null)
   const genericCameraInputRef = useRef(null)
   const { level, isSpeaking, start: startAudioLevel, stop: stopAudioLevel } = useAudioLevel()
+  const [uploadErrorModal, setUploadErrorModal] = useState({ visible: false, message: '', onRetry: null })
+  const lastFailedAudioRef = useRef(null)
+  const lastFailedPhotoRef = useRef(null)
 
   useEffect(() => {
     uploadingRef.current = isUploading
@@ -211,6 +215,15 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           const reqId = result.requestId || 'REQ-XXXX'
           setErrorLine(t(lang, 'uploadFailed', { id: reqId }))
           if (import.meta.env.DEV) console.error('[HomePage]', result.requestId, result.errorCode, result.error)
+          lastFailedAudioRef.current = { blob, reqId }
+          setUploadErrorModal({
+            visible: true,
+            message: result.error || result.errorCode || '',
+            onRetry: () => {
+              setUploadErrorModal({ visible: false, message: '', onRetry: null })
+              startRecording()
+            },
+          })
         }
         setIsUploading(false)
         streamRef.current?.getTracks().forEach((t) => t.stop())
@@ -281,11 +294,25 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
                 ? t(lang, 'uploadErrorNetwork')
                 : (result.error || t(lang, 'uploadError'))
           setJournalError(errMsg)
+          lastFailedPhotoRef.current = { file, kind }
+          setUploadErrorModal({
+            visible: true,
+            message: errMsg,
+            onRetry: () => {
+              setUploadErrorModal({ visible: false, message: '', onRetry: null })
+              if (lastFailedPhotoRef.current) handleJournalFile(lastFailedPhotoRef.current.file, lastFailedPhotoRef.current.kind)
+            },
+          })
         }
       }
     } catch (e) {
       setJournalUploading(false)
       setJournalError(e?.message || String(e))
+      setUploadErrorModal({
+        visible: true,
+        message: e?.message || String(e),
+        onRetry: null,
+      })
     }
   }
 
@@ -756,6 +783,14 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           {toastMsg}
         </div>
       )}
+
+      <UploadErrorModal
+        visible={uploadErrorModal.visible}
+        message={uploadErrorModal.message}
+        onRetry={uploadErrorModal.onRetry}
+        onClose={() => setUploadErrorModal({ visible: false, message: '', onRetry: null })}
+        lang={lang}
+      />
     </div>
   )
 }
