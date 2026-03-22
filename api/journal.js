@@ -461,6 +461,12 @@ async function handlePost(req, res) {
       if (list.length === 0 && updatedRole.generic_image && typeof updatedRole.generic_image.storagePath === 'string') {
         list = [{ ...updatedRole.generic_image, index: 1 }];
       }
+      // 冪等性: 同じuploadIdが既に存在する場合は200を返す（重複防止）
+      if (requestIdFromBody && list.some(img => img.uploadId === requestIdFromBody)) {
+        const existingImg = list.find(img => img.uploadId === requestIdFromBody);
+        logObserve({ requestId: requestIdFromBody, stage: 'journal_post_validate', status: 'idempotent', pairId, role, clientDateKey, serverDateKey, storagePath: existingImg?.storagePath, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: 'duplicate uploadId, returning existing' });
+        return res.status(200).json({ success: true, requestId: requestIdFromBody, dateKey, storagePath: existingImg?.storagePath });
+      }
       if (list.length >= 3) {
         logObserve({ requestId: requestIdFromBody, stage: 'journal_post_validate', status: 'error', pairId, role, clientDateKey, serverDateKey, storagePath: null, firestoreDocPath, httpStatus: 400, errorCode: 'daily_photos_limit', errorMessage: 'Daily photos limit reached (3).' });
         return res.status(400).json({ success: false, error: 'Daily photos limit reached (3).', requestId: requestIdFromBody, errorCode: 'daily_photos_limit' });
@@ -534,6 +540,7 @@ async function handlePost(req, res) {
     } catch (firestoreErr) {
       const code = firestoreErr?.code || 'unknown';
       const msg = (firestoreErr?.message || String(firestoreErr)).substring(0, 120);
+      console.error(`[ORPHAN FILE ALERT] pairId:${pairId} path:${storagePath} timestamp:${new Date().toISOString()}`);
       logObserve({ requestId: requestIdFromBody, stage: 'journal_post_firestore', status: 'error', pairId, role, clientDateKey, serverDateKey, storagePath, firestoreDocPath, httpStatus: 500, errorCode: code, errorMessage: msg });
       return res.status(500).json({ success: false, error: msg || 'Firestore update failed', requestId: requestIdFromBody, errorCode: code, errorMessage: msg });
     }

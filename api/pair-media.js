@@ -517,6 +517,7 @@ async function handlePost(req, res) {
     } catch (firestoreErr) {
       const code = firestoreErr?.code || 'unknown';
       const msg = (firestoreErr?.message || String(firestoreErr)).substring(0, 100);
+      console.error(`[ORPHAN FILE ALERT] pairId:${pairId} path:${objectPath} timestamp:${new Date().toISOString()}`);
       logObserve({ requestId: reqId, stage: 'post_firestore', status: 'error', pairId, role, clientDateKey, serverDateKey, storagePath: objectPath, firestoreDocPath: docPath, httpStatus: 500, errorCode: code, errorMessage: msg });
       throw firestoreErr;
     }

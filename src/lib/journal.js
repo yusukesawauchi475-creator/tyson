@@ -1,5 +1,5 @@
 import { getIdTokenForApi } from './firebase.js';
-import { getDateKeyNY, getPairId, genRequestId } from './pairDaily.js';
+import { getDateKeyNY, getPairId, genRequestId, hasPairId } from './pairDaily.js';
 
 /** File を data URL (base64) に変換 */
 function fileToDataUrl(file) {
@@ -64,6 +64,9 @@ export function resizeImageIfNeeded(file) {
  */
 export async function uploadJournalImage(file, requestId = genRequestId(), pairId, role = 'parent', kind = 'journal_image') {
   const pid = pairId ?? getPairId();
+  if (pid === 'demo' && !hasPairId()) {
+    return { success: false, error: 'ペアIDが見つかりません。招待リンクから再アクセスしてください。', requestId, errorCode: 'no_pair_id' };
+  }
   const idToken = await getIdTokenForApi();
   if (!idToken) {
     return { success: false, error: '認証できません', requestId, errorCode: 'auth' };

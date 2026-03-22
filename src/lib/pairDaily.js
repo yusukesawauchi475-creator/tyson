@@ -112,6 +112,21 @@ export function getPairId() {
   return PAIR_ID_DEMO;
 }
 
+/** pairIdが明示的に設定されているか（'demo'フォールバックでないか） */
+export function hasPairId() {
+  if (typeof window === 'undefined') return false;
+  try {
+    const fromStorage = localStorage.getItem(PAIR_ID_STORAGE_KEY)?.trim?.();
+    if (fromStorage) return true;
+    const hash = window.location.hash || '';
+    const qIndex = hash.indexOf('?');
+    const queryString = qIndex >= 0 ? hash.slice(qIndex + 1) : '';
+    const fromQuery = new URLSearchParams(queryString).get('pairId')?.trim?.();
+    if (fromQuery) return true;
+  } catch (_) {}
+  return false;
+}
+
 /** requestId生成: REQ- + base36 timestamp + 乱数 */
 export function genRequestId() {
   const ts = Date.now().toString(36).toUpperCase();
@@ -128,6 +143,9 @@ export function genRequestId() {
  * @param {string} [requestId] - 呼び出し側で生成したrequestId（省略時は内部生成）
  */
 export async function uploadAudio(blob, role, pairId = getPairId(), _dateKey, requestId = genRequestId()) {
+  if (pairId === 'demo' && !hasPairId()) {
+    return { success: false, error: 'ペアIDが見つかりません。招待リンクから再アクセスしてください。', requestId: requestId || 'NO-PAIR', errorCode: 'no_pair_id' };
+  }
   const dateKey = getDateKeyNY();
   const idToken = await getIdTokenForApi();
   if (!idToken) {
