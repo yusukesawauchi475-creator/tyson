@@ -1,7 +1,3 @@
-/**
- * Admin page: Reset/Restore + Activity Dashboard.
- * Unlock via secret input (saved to localStorage).
- */
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { getIdTokenForApi } from '../lib/firebase.js'
@@ -9,365 +5,296 @@ import { getPairId, getDateKey, genRequestId } from '../lib/pairDaily.js'
 
 const STORAGE_KEY = 'tyson_admin_secret'
 
-function ActivityDashboard({ secret }) {
-  const [data, setData] = useState(null)
-  const [error, setError] = useState(null)
-  const [loading, setLoading] = useState(false)
-
-  const fetchData = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/admin-pairs?password=${encodeURIComponent(secret)}`)
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok || !json.success) {
-        setError(json.error || `HTTP ${res.status}`)
-        return
-      }
-      setData(json)
-    } catch (e) {
-      setError(e?.message || String(e))
-    } finally {
-      setLoading(false)
-    }
-  }, [secret])
-
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
-
-  if (loading) return <p style={{ fontSize: 13, color: '#666' }}>Loading dashboard...</p>
-  if (error) return <p style={{ fontSize: 13, color: '#d32f2f' }}>Error: {error}</p>
-  if (!data) return null
-
-  const cellStyle = (hasParent, hasChild) => {
-    if (hasParent && hasChild) return { background: '#4caf50', color: '#fff' }
-    if (hasParent) return { background: '#81c784', color: '#fff' }
-    if (hasChild) return { background: '#a5d6a7', color: '#333' }
-    return { background: '#eee', color: '#bbb' }
-  }
-
-  const cellLabel = (day) => {
-    if (!day.parent && !day.child) return '-'
-    const p = day.parent ? (day.parent.voice && day.parent.photo ? 'VP' : day.parent.voice ? 'V' : 'P') : ''
-    const c = day.child ? (day.child.voice && day.child.photo ? 'VP' : day.child.voice ? 'V' : 'P') : ''
-    if (p && c) return `${p}/${c}`
-    return p || c
-  }
+function PairCard({ pair }) {
+  const today = pair.calendar[pair.calendar.length - 1]
+  const todayParent = today?.parent
+  const todayChild = today?.child
 
   return (
-    <div style={{ marginTop: 24 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-        <h2 style={{ margin: 0, fontSize: 16 }}>Activity Dashboard</h2>
-        <button
-          type="button"
-          onClick={fetchData}
-          style={{ padding: '4px 10px', fontSize: 12, background: '#4a90d9', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}
-        >
-          Refresh
-        </button>
+    <div className="card" style={{ padding: '14px 16px' }}>
+      {/* Header: pairId + streak */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <div>
+          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)' }}>{pair.pairId}</span>
+          <span style={{ fontSize: 12, color: 'var(--color-text-muted)', marginLeft: 8 }}>
+            {pair.lastActivity ? pair.lastActivity.slice(5, 10) : '-'}
+          </span>
+        </div>
+        {pair.streak > 0 && (
+          <span style={{ fontSize: 14, fontWeight: 600 }}>
+            🔥 {pair.streak}
+          </span>
+        )}
       </div>
 
-      <div style={{ fontSize: 11, color: '#666', marginBottom: 8 }}>
-        V=Voice P=Photo | Parent/Child | Green=both, Light=one side
+      {/* Today's status */}
+      <div style={{ display: 'flex', gap: 16, marginBottom: 12, fontSize: 13 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span>👴</span>
+          <span style={{ color: todayParent?.voice ? 'var(--color-success)' : 'var(--color-text-muted)' }}>
+            V{todayParent?.voice ? '○' : '×'}
+          </span>
+          <span style={{ color: todayParent?.photo ? 'var(--color-success)' : 'var(--color-text-muted)' }}>
+            P{todayParent?.photo ? '○' : '×'}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span>👶</span>
+          <span style={{ color: todayChild?.voice ? 'var(--color-success)' : 'var(--color-text-muted)' }}>
+            V{todayChild?.voice ? '○' : '×'}
+          </span>
+          <span style={{ color: todayChild?.photo ? 'var(--color-success)' : 'var(--color-text-muted)' }}>
+            P{todayChild?.photo ? '○' : '×'}
+          </span>
+        </div>
       </div>
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', fontSize: 10, whiteSpace: 'nowrap' }}>
-          <thead>
-            <tr>
-              <th style={{ padding: '4px 6px', textAlign: 'left', borderBottom: '2px solid #999', position: 'sticky', left: 0, background: '#f5f5f5', zIndex: 1 }}>
-                pairId
-              </th>
-              <th style={{ padding: '4px 6px', textAlign: 'left', borderBottom: '2px solid #999' }}>Last</th>
-              {data.dates.map(d => (
-                <th key={d} style={{ padding: '2px 1px', textAlign: 'center', borderBottom: '2px solid #999', minWidth: 22 }}>
-                  {d.slice(8)}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.pairs.map(pair => (
-              <tr key={pair.pairId}>
-                <td style={{
-                  padding: '3px 6px',
-                  fontWeight: 600,
-                  borderBottom: '1px solid #ddd',
-                  position: 'sticky',
-                  left: 0,
-                  background: '#f5f5f5',
-                  zIndex: 1,
-                  maxWidth: 100,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}>
-                  {pair.pairId}
-                </td>
-                <td style={{ padding: '3px 6px', borderBottom: '1px solid #ddd', color: '#666' }}>
-                  {pair.lastActivity ? pair.lastActivity.slice(5, 10) : '-'}
-                </td>
-                {pair.calendar.map(day => {
-                  const style = cellStyle(day.parent, day.child)
-                  return (
-                    <td
-                      key={day.date}
-                      title={`${day.date}\nP: ${day.parent ? `V:${day.parent.voice} P:${day.parent.photo}` : 'none'}\nC: ${day.child ? `V:${day.child.voice} P:${day.child.photo}` : 'none'}`}
-                      style={{
-                        padding: '2px 1px',
-                        textAlign: 'center',
-                        borderBottom: '1px solid #ddd',
-                        borderRadius: 2,
-                        fontSize: 9,
-                        fontWeight: 500,
-                        ...style,
-                      }}
-                    >
-                      {cellLabel(day)}
-                    </td>
-                  )
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* 14-day dots */}
+      <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+        {pair.calendar.map(day => {
+          const hasP = !!day.parent
+          const hasC = !!day.child
+          const color = (hasP && hasC)
+            ? 'var(--color-success)'
+            : (hasP || hasC)
+              ? 'var(--color-primary)'
+              : 'var(--color-border)'
+          return (
+            <span
+              key={day.date}
+              title={day.date}
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: color,
+                flexShrink: 0,
+              }}
+            />
+          )
+        })}
       </div>
     </div>
   )
 }
 
 export default function AdminPage({ lang = 'ja' }) {
-  const [secretInput, setSecretInput] = useState('')
-  const [isUnlocked, setIsUnlocked] = useState(false)
-  const [resetResult, setResetResult] = useState(null)
-  const [restoreResult, setRestoreResult] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [secret, setSecret] = useState('')
+  const [unlocked, setUnlocked] = useState(false)
+  const [pairs, setPairs] = useState(null)
+  const [dashError, setDashError] = useState(null)
+  const [dashLoading, setDashLoading] = useState(false)
+  const [actionResult, setActionResult] = useState(null)
+  const [actionLoading, setActionLoading] = useState(false)
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved && typeof saved === 'string') {
-        setSecretInput(saved)
-        const secret = import.meta.env.VITE_RESET_SECRET || ''
-        if (saved.trim() === secret) setIsUnlocked(true)
+      if (saved) {
+        setSecret(saved)
+        if (saved.trim() === (import.meta.env.VITE_RESET_SECRET || '')) setUnlocked(true)
       }
     } catch (_) {}
   }, [])
 
   const handleUnlock = () => {
-    const secret = import.meta.env.VITE_RESET_SECRET || ''
-    if (secretInput.trim() === secret) {
-      setIsUnlocked(true)
-      try {
-        localStorage.setItem(STORAGE_KEY, secretInput.trim())
-      } catch (_) {}
+    if (secret.trim() === (import.meta.env.VITE_RESET_SECRET || '')) {
+      setUnlocked(true)
+      try { localStorage.setItem(STORAGE_KEY, secret.trim()) } catch (_) {}
     }
   }
 
-  const pairId = getPairId()
-  const dateKey = getDateKey()
+  const fetchDashboard = useCallback(async () => {
+    setDashLoading(true)
+    setDashError(null)
+    try {
+      const res = await fetch(`/api/admin-pairs?password=${encodeURIComponent(secret.trim())}`)
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.success) { setDashError(json.error || `HTTP ${res.status}`); return }
 
-  const handleReset = async () => {
-    setLoading(true)
-    setResetResult(null)
-    setRestoreResult(null)
+      // Transform: take last 14 days, calculate streak per pair
+      const dates14 = json.dates.slice(-14)
+      const transformed = json.pairs.map(pair => {
+        const cal14 = pair.calendar.filter(d => dates14.includes(d.date))
+
+        // Calculate streak from calendar (consecutive days with both parent+child)
+        let streak = 0
+        for (let i = cal14.length - 1; i >= 0; i--) {
+          if (cal14[i].parent && cal14[i].child) streak++
+          else break
+        }
+        // If today has no both, check from yesterday
+        if (streak === 0 && cal14.length >= 2) {
+          for (let i = cal14.length - 2; i >= 0; i--) {
+            if (cal14[i].parent && cal14[i].child) streak++
+            else break
+          }
+        }
+
+        return { ...pair, calendar: cal14, streak }
+      })
+      setPairs(transformed)
+    } catch (e) {
+      setDashError(e?.message || String(e))
+    } finally {
+      setDashLoading(false)
+    }
+  }, [secret])
+
+  useEffect(() => {
+    if (unlocked) fetchDashboard()
+  }, [unlocked, fetchDashboard])
+
+  const handleAction = async (action) => {
+    setActionLoading(true)
+    setActionResult(null)
     const reqId = genRequestId()
     try {
       const idToken = await getIdTokenForApi()
-      if (!idToken) {
-        setResetResult({ success: false, error: 'Not authenticated', requestId: reqId })
-        return
-      }
-      const res = await fetch('/api/admin-reset', {
+      if (!idToken) { setActionResult({ ok: false, msg: '認証エラー' }); return }
+      const res = await fetch(`/api/admin-${action}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${idToken}`,
-          'X-Request-Id': reqId,
-        },
-        body: JSON.stringify({ pairId, dateKey }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}`, 'X-Request-Id': reqId },
+        body: JSON.stringify({ pairId: getPairId(), dateKey: getDateKey() }),
       })
       const data = await res.json().catch(() => ({}))
-      setResetResult({
-        success: data.success === true,
-        message: data.message || data.error || 'Unknown',
-        requestId: data.requestId || reqId,
-        snapshotId: data.snapshotId,
-      })
+      setActionResult({ ok: data.success, msg: data.message || data.error || (data.success ? 'OK' : 'Failed') })
     } catch (e) {
-      setResetResult({
-        success: false,
-        error: e?.message || String(e),
-        requestId: reqId,
-      })
+      setActionResult({ ok: false, msg: e?.message || String(e) })
     } finally {
-      setLoading(false)
+      setActionLoading(false)
     }
   }
 
-  const handleRestore = async () => {
-    setLoading(true)
-    setResetResult(null)
-    setRestoreResult(null)
-    const reqId = genRequestId()
-    try {
-      const idToken = await getIdTokenForApi()
-      if (!idToken) {
-        setRestoreResult({ success: false, error: 'Not authenticated', requestId: reqId })
-        return
-      }
-      const res = await fetch('/api/admin-restore', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${idToken}`,
-          'X-Request-Id': reqId,
-        },
-        body: JSON.stringify({ pairId, dateKey }),
-      })
-      const data = await res.json().catch(() => ({}))
-      setRestoreResult({
-        success: data.success === true,
-        message: data.message || data.error || 'Unknown',
-        requestId: data.requestId || reqId,
-        snapshotId: data.snapshotId,
-      })
-    } catch (e) {
-      setRestoreResult({
-        success: false,
-        error: e?.message || String(e),
-        requestId: reqId,
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div style={{
-      minHeight: '100dvh',
-      padding: 24,
-      fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
-      background: '#f5f5f5',
-      color: '#333',
-    }}>
-      <h1 style={{ margin: '0 0 8px', fontSize: 20 }}>Admin</h1>
-      <p style={{ margin: '0 0 16px', fontSize: 14, color: '#666' }}>
-        pairId: {pairId} · dateKey: {dateKey}
-      </p>
-      <Link to="/" style={{ fontSize: 14, color: '#4a90d9', textDecoration: 'none' }}>← Home</Link>
-
-      {!isUnlocked ? (
-        <div style={{ marginTop: 24 }}>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+  if (!unlocked) {
+    return (
+      <div className="page" style={{ paddingTop: 60, alignItems: 'center' }}>
+        <div className="card" style={{ width: '100%', textAlign: 'center' }}>
+          <p style={{ fontSize: 14, color: 'var(--color-text-sub)', margin: '0 0 12px' }}>管理画面</p>
+          <div style={{ display: 'flex', gap: 8 }}>
             <input
               type="password"
-              value={secretInput}
-              onChange={(e) => setSecretInput(e.target.value)}
+              value={secret}
+              onChange={(e) => setSecret(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
-              placeholder="Secret"
+              placeholder="パスワード"
               style={{
-                padding: '8px 12px',
+                flex: 1,
+                padding: '10px 12px',
                 fontSize: 14,
-                border: '1px solid #ccc',
-                borderRadius: 6,
-                minWidth: 120,
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-sm)',
+                outline: 'none',
+                fontFamily: 'var(--font-sans)',
               }}
             />
             <button
               type="button"
               onClick={handleUnlock}
               style={{
-                padding: '8px 16px',
+                padding: '10px 18px',
                 fontSize: 14,
-                fontWeight: 500,
-                background: '#4a90d9',
+                fontWeight: 600,
+                background: 'var(--color-primary)',
                 color: '#fff',
                 border: 'none',
-                borderRadius: 6,
-                cursor: 'pointer',
+                borderRadius: 'var(--radius-sm)',
               }}
             >
-              Unlock
+              開く
             </button>
           </div>
-          <p style={{ marginTop: 12, fontSize: 14, color: '#999' }}>
-            Enter secret to unlock
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="page" style={{ paddingBottom: 40 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--color-text)' }}>管理画面</h1>
+        <Link to="/" style={{ fontSize: 13, color: 'var(--color-primary)', textDecoration: 'none' }}>← ホーム</Link>
+      </div>
+
+      {/* Actions card */}
+      <div className="card" style={{ padding: '12px 16px' }}>
+        <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 8 }}>
+          {getPairId()} · {getDateKey()}
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            onClick={() => handleAction('reset')}
+            disabled={actionLoading}
+            style={{
+              flex: 1,
+              padding: '8px 0',
+              fontSize: 13,
+              fontWeight: 600,
+              background: actionLoading ? 'var(--color-border)' : 'var(--color-danger)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            リセット
+          </button>
+          <button
+            type="button"
+            onClick={() => handleAction('restore')}
+            disabled={actionLoading}
+            style={{
+              flex: 1,
+              padding: '8px 0',
+              fontSize: 13,
+              fontWeight: 600,
+              background: actionLoading ? 'var(--color-border)' : 'var(--color-success)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            復元
+          </button>
+        </div>
+        {actionResult && (
+          <p style={{ margin: '8px 0 0', fontSize: 12, color: actionResult.ok ? 'var(--color-success)' : 'var(--color-danger)' }}>
+            {actionResult.msg}
           </p>
-        </div>
-      ) : (
-        <div style={{ marginTop: 24 }}>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={handleReset}
-              disabled={loading}
-              style={{
-                padding: '10px 16px',
-                fontSize: 14,
-                fontWeight: 500,
-                background: loading ? '#ccc' : '#e65100',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 8,
-                cursor: loading ? 'not-allowed' : 'pointer',
-              }}
-            >
-              Reset (snapshot)
-            </button>
-            <button
-              type="button"
-              onClick={handleRestore}
-              disabled={loading}
-              style={{
-                padding: '10px 16px',
-                fontSize: 14,
-                fontWeight: 500,
-                background: loading ? '#ccc' : '#2e7d32',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 8,
-                cursor: loading ? 'not-allowed' : 'pointer',
-              }}
-            >
-              Restore (latest)
-            </button>
-          </div>
+        )}
+      </div>
 
-          {resetResult && (
-            <div style={{
-              marginTop: 16,
-              padding: 12,
-              background: resetResult.success ? '#e8f5e9' : '#ffebee',
-              borderRadius: 8,
-              fontSize: 13,
-            }}>
-              <strong>{resetResult.success ? 'Reset OK' : 'Reset Failed'}:</strong>{' '}
-              {resetResult.message || resetResult.error}
-              {resetResult.snapshotId && ` · snapshot: ${resetResult.snapshotId}`}
-              <br />
-              <span style={{ color: '#666' }}>REQ: {resetResult.requestId}</span>
-            </div>
-          )}
+      {/* Dashboard */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--color-text)' }}>活動状況</h2>
+        <button
+          type="button"
+          onClick={fetchDashboard}
+          disabled={dashLoading}
+          style={{
+            padding: '4px 12px',
+            fontSize: 12,
+            color: 'var(--color-primary)',
+            background: 'transparent',
+            border: '1px solid var(--color-primary)',
+            borderRadius: 'var(--radius-sm)',
+            cursor: dashLoading ? 'wait' : 'pointer',
+          }}
+        >
+          更新
+        </button>
+      </div>
 
-          {restoreResult && (
-            <div style={{
-              marginTop: 16,
-              padding: 12,
-              background: restoreResult.success ? '#e8f5e9' : '#ffebee',
-              borderRadius: 8,
-              fontSize: 13,
-            }}>
-              <strong>{restoreResult.success ? 'Restore OK' : 'Restore Failed'}:</strong>{' '}
-              {restoreResult.message || restoreResult.error}
-              {restoreResult.snapshotId && ` · snapshot: ${restoreResult.snapshotId}`}
-              <br />
-              <span style={{ color: '#666' }}>REQ: {restoreResult.requestId}</span>
-            </div>
-          )}
+      {dashLoading && <p style={{ fontSize: 13, color: 'var(--color-text-muted)', textAlign: 'center' }}>読み込み中...</p>}
+      {dashError && <p style={{ fontSize: 13, color: 'var(--color-danger)', textAlign: 'center' }}>{dashError}</p>}
 
-          <ActivityDashboard secret={secretInput} />
-        </div>
+      {pairs && pairs.map(pair => (
+        <PairCard key={pair.pairId} pair={pair} />
+      ))}
+
+      {pairs && pairs.length === 0 && (
+        <p style={{ fontSize: 13, color: 'var(--color-text-muted)', textAlign: 'center' }}>データなし</p>
       )}
     </div>
   )
