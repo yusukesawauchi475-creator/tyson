@@ -92,16 +92,22 @@ export default function AdminPage({ lang = 'ja' }) {
       const saved = localStorage.getItem(STORAGE_KEY)
       if (saved) {
         setSecret(saved)
-        if (saved.trim() === (import.meta.env.VITE_RESET_SECRET || '')) setUnlocked(true)
+        // 保存済みパスワードでAPIに問い合わせてアンロック判定
+        fetch(`/api/admin-pairs?password=${encodeURIComponent(saved.trim())}`)
+          .then(r => { if (r.ok) setUnlocked(true) })
+          .catch(() => {})
       }
     } catch (_) {}
   }, [])
 
-  const handleUnlock = () => {
-    if (secret.trim() === (import.meta.env.VITE_RESET_SECRET || '')) {
-      setUnlocked(true)
-      try { localStorage.setItem(STORAGE_KEY, secret.trim()) } catch (_) {}
-    }
+  const handleUnlock = async () => {
+    try {
+      const res = await fetch(`/api/admin-pairs?password=${encodeURIComponent(secret.trim())}`)
+      if (res.ok) {
+        setUnlocked(true)
+        try { localStorage.setItem(STORAGE_KEY, secret.trim()) } catch (_) {}
+      }
+    } catch (_) {}
   }
 
   const fetchDashboard = useCallback(async () => {
