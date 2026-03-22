@@ -86,12 +86,19 @@ export function initPairId() {
 }
 
 /**
- * pairId を取得（同期）。優先順位: URLクエリ > localStorage > 'demo'。
- * URLクエリに pairId がある場合は localStorage に保存する。
+ * pairId を取得（同期）。
+ * 優先順位: localStorage > URLクエリ(初回のみ) > 'demo'。
+ * localStorageに既存のpairIdがある場合、URLパラメータでは上書きしない。
+ * 初回アクセス（localStorage未設定）の場合のみURLのpairIdを保存して使う。
  */
 export function getPairId() {
   if (typeof window === 'undefined') return PAIR_ID_DEMO;
   try {
+    // まずlocalStorageを優先チェック（既存pairIdがあればそれを使う）
+    const fromStorage = localStorage.getItem(PAIR_ID_STORAGE_KEY)?.trim?.();
+    if (fromStorage) return fromStorage;
+
+    // localStorageが空の場合のみ、URLクエリからpairIdを取得して保存
     const hash = window.location.hash || '';
     const qIndex = hash.indexOf('?');
     const queryString = qIndex >= 0 ? hash.slice(qIndex + 1) : '';
@@ -101,8 +108,6 @@ export function getPairId() {
       try { localStorage.setItem(PAIR_ID_STORAGE_KEY, fromQuery); } catch (_) {}
       return fromQuery;
     }
-    const fromStorage = localStorage.getItem(PAIR_ID_STORAGE_KEY)?.trim?.();
-    if (fromStorage) return fromStorage;
   } catch (_) {}
   return PAIR_ID_DEMO;
 }

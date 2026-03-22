@@ -1,13 +1,140 @@
 /**
- * Demo Reset / Restore admin page.
+ * Admin page: Reset/Restore + Activity Dashboard.
  * Unlock via secret input (saved to localStorage).
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { getIdTokenForApi } from '../lib/firebase.js'
 import { getPairId, getDateKey, genRequestId } from '../lib/pairDaily.js'
 
 const STORAGE_KEY = 'tyson_admin_secret'
+
+function ActivityDashboard({ secret }) {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/admin-pairs?password=${encodeURIComponent(secret)}`)
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || !json.success) {
+        setError(json.error || `HTTP ${res.status}`)
+        return
+      }
+      setData(json)
+    } catch (e) {
+      setError(e?.message || String(e))
+    } finally {
+      setLoading(false)
+    }
+  }, [secret])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  if (loading) return <p style={{ fontSize: 13, color: '#666' }}>Loading dashboard...</p>
+  if (error) return <p style={{ fontSize: 13, color: '#d32f2f' }}>Error: {error}</p>
+  if (!data) return null
+
+  const cellStyle = (hasParent, hasChild) => {
+    if (hasParent && hasChild) return { background: '#4caf50', color: '#fff' }
+    if (hasParent) return { background: '#81c784', color: '#fff' }
+    if (hasChild) return { background: '#a5d6a7', color: '#333' }
+    return { background: '#eee', color: '#bbb' }
+  }
+
+  const cellLabel = (day) => {
+    if (!day.parent && !day.child) return '-'
+    const p = day.parent ? (day.parent.voice && day.parent.photo ? 'VP' : day.parent.voice ? 'V' : 'P') : ''
+    const c = day.child ? (day.child.voice && day.child.photo ? 'VP' : day.child.voice ? 'V' : 'P') : ''
+    if (p && c) return `${p}/${c}`
+    return p || c
+  }
+
+  return (
+    <div style={{ marginTop: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+        <h2 style={{ margin: 0, fontSize: 16 }}>Activity Dashboard</h2>
+        <button
+          type="button"
+          onClick={fetchData}
+          style={{ padding: '4px 10px', fontSize: 12, background: '#4a90d9', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+        >
+          Refresh
+        </button>
+      </div>
+
+      <div style={{ fontSize: 11, color: '#666', marginBottom: 8 }}>
+        V=Voice P=Photo | Parent/Child | Green=both, Light=one side
+      </div>
+
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ borderCollapse: 'collapse', fontSize: 10, whiteSpace: 'nowrap' }}>
+          <thead>
+            <tr>
+              <th style={{ padding: '4px 6px', textAlign: 'left', borderBottom: '2px solid #999', position: 'sticky', left: 0, background: '#f5f5f5', zIndex: 1 }}>
+                pairId
+              </th>
+              <th style={{ padding: '4px 6px', textAlign: 'left', borderBottom: '2px solid #999' }}>Last</th>
+              {data.dates.map(d => (
+                <th key={d} style={{ padding: '2px 1px', textAlign: 'center', borderBottom: '2px solid #999', minWidth: 22 }}>
+                  {d.slice(8)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.pairs.map(pair => (
+              <tr key={pair.pairId}>
+                <td style={{
+                  padding: '3px 6px',
+                  fontWeight: 600,
+                  borderBottom: '1px solid #ddd',
+                  position: 'sticky',
+                  left: 0,
+                  background: '#f5f5f5',
+                  zIndex: 1,
+                  maxWidth: 100,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}>
+                  {pair.pairId}
+                </td>
+                <td style={{ padding: '3px 6px', borderBottom: '1px solid #ddd', color: '#666' }}>
+                  {pair.lastActivity ? pair.lastActivity.slice(5, 10) : '-'}
+                </td>
+                {pair.calendar.map(day => {
+                  const style = cellStyle(day.parent, day.child)
+                  return (
+                    <td
+                      key={day.date}
+                      title={`${day.date}\nP: ${day.parent ? `V:${day.parent.voice} P:${day.parent.photo}` : 'none'}\nC: ${day.child ? `V:${day.child.voice} P:${day.child.photo}` : 'none'}`}
+                      style={{
+                        padding: '2px 1px',
+                        textAlign: 'center',
+                        borderBottom: '1px solid #ddd',
+                        borderRadius: 2,
+                        fontSize: 9,
+                        fontWeight: 500,
+                        ...style,
+                      }}
+                    >
+                      {cellLabel(day)}
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
 
 export default function AdminPage({ lang = 'ja' }) {
   const [secretInput, setSecretInput] = useState('')
@@ -186,7 +313,7 @@ export default function AdminPage({ lang = 'ja' }) {
                 cursor: loading ? 'not-allowed' : 'pointer',
               }}
             >
-              Reset (snapshot作成)
+              Reset (snapshot)
             </button>
             <button
               type="button"
@@ -203,7 +330,7 @@ export default function AdminPage({ lang = 'ja' }) {
                 cursor: loading ? 'not-allowed' : 'pointer',
               }}
             >
-              Restore (最新snapshot)
+              Restore (latest)
             </button>
           </div>
 
@@ -238,6 +365,8 @@ export default function AdminPage({ lang = 'ja' }) {
               <span style={{ color: '#666' }}>REQ: {restoreResult.requestId}</span>
             </div>
           )}
+
+          <ActivityDashboard secret={secretInput} />
         </div>
       )}
     </div>

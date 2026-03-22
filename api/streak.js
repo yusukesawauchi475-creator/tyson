@@ -25,7 +25,6 @@ function initFirebaseAdmin() {
     const envBucket = process.env.FIREBASE_STORAGE_BUCKET || process.env.VITE_FIREBASE_STORAGE_BUCKET || '';
     const storageBucketName = envBucket || `${projectId}.firebasestorage.app`;
 
-    // 既存appがある場合もstorageBucketNameを渡す（他のAPIがstorageBucketなしで初期化した場合のバグを回避）
     if (admin.apps && admin.apps.length > 0) {
       adminApp = admin.app();
       firestore = admin.firestore();
@@ -85,6 +84,52 @@ function getPrevDateKey(dateKey) {
   return `${py}-${pm}-${pd}`;
 }
 
+/**
+ * pair_mediaのFirestoreデータからparent・child両方がuploadした日を集計し、
+ * 今日から遡って連続日数を計算する。
+ */
+async function calculateStreakFromUploads(pairId) {
+  initFirebaseAdmin();
+  const daysSnap = await firestore.collection('pair_media').doc(pairId).collection('days').get();
+
+  // parent・child両方が存在する日を抽出
+  const bothDays = [];
+  daysSnap.forEach(doc => {
+    const data = doc.data();
+    if (data.parent && data.child) {
+      bothDays.push(doc.id); // doc.id = dateKey (YYYY-MM-DD)
+    }
+  });
+
+  if (bothDays.length === 0) return { count: 0, lastDateKey: null };
+
+  // 日付降順ソート
+  bothDays.sort((a, b) => b.localeCompare(a));
+
+  const today = getDateKeyNY();
+
+  // 今日または昨日から開始して連続日数をカウント
+  let count = 0;
+  let checkDate = today;
+
+  // 今日がbothDaysに含まれていなければ昨日から開始
+  if (!bothDays.includes(today)) {
+    checkDate = getPrevDateKey(today);
+    if (!bothDays.includes(checkDate)) {
+      // 昨日もなければstreak=0
+      return { count: 0, lastDateKey: bothDays[0] };
+    }
+  }
+
+  // checkDateから遡ってカウント
+  while (bothDays.includes(checkDate)) {
+    count++;
+    checkDate = getPrevDateKey(checkDate);
+  }
+
+  return { count, lastDateKey: bothDays[0] };
+}
+
 export default async function handler(req, res) {
   const requestId = genRequestId();
 
@@ -106,17 +151,11 @@ export default async function handler(req, res) {
     }
 
     try {
-      initFirebaseAdmin();
-      const snap = await firestore.doc(`pairs/${pairId}/meta/streak`).get();
-      if (!snap.exists) {
-        return res.status(200).json({ success: true, count: 0, lastDateKey: null, requestId });
-      }
-      const data = snap.data();
+      const streak = await calculateStreakFromUploads(pairId);
       return res.status(200).json({
         success: true,
-        count: data.count ?? 0,
-        lastDateKey: data.lastDateKey ?? null,
-        updatedAt: data.updatedAt ?? null,
+        count: streak.count,
+        lastDateKey: streak.lastDateKey,
         requestId,
       });
     } catch (e) {
@@ -125,44 +164,25 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { pairId, dateKey } = req.body || {};
+    const { pairId } = req.body || {};
     if (!pairId) {
       return res.status(400).json({ success: false, error: 'pairId is required', requestId });
     }
 
-    const today = dateKey || getDateKeyNY();
-
     try {
+      // Recalculate streak from actual upload data
+      const streak = await calculateStreakFromUploads(pairId);
+
+      // Save to Firestore for caching
       initFirebaseAdmin();
       const ref = firestore.doc(`pairs/${pairId}/meta/streak`);
-
-      const newData = await firestore.runTransaction(async (tx) => {
-        const snap = await tx.get(ref);
-        const current = snap.exists ? snap.data() : {};
-        const lastDateKey = current.lastDateKey ?? null;
-        const prevDateKey = getPrevDateKey(today);
-
-        let count;
-        if (lastDateKey === today) {
-          // 今日すでに更新済み → そのまま
-          count = current.count ?? 1;
-        } else if (lastDateKey === prevDateKey) {
-          // 昨日と連続 → +1
-          count = (current.count ?? 0) + 1;
-        } else {
-          // 途切れ → リセット
-          count = 1;
-        }
-
-        const data = { count, lastDateKey: today, updatedAt: Date.now() };
-        tx.set(ref, data);
-        return data;
-      });
+      const data = { count: streak.count, lastDateKey: streak.lastDateKey, updatedAt: Date.now() };
+      await ref.set(data);
 
       return res.status(200).json({
         success: true,
-        count: newData.count,
-        lastDateKey: newData.lastDateKey,
+        count: streak.count,
+        lastDateKey: streak.lastDateKey,
         requestId,
       });
     } catch (e) {
