@@ -320,8 +320,8 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
     const pairId = getPairId()
     const url = `https://tyson-two.vercel.app/#/?pairId=${encodeURIComponent(pairId)}`
     const text = lang === 'en'
-      ? "Let's exchange voices every day on Tyson. Listen to today's message 👋"
-      : 'Tysonで毎日声を交換しよう。今日のメッセージを聞いてね 👋'
+      ? "Let's exchange voices every day on Hum. Listen to today's message 👋"
+      : 'Humで毎日声を交換しよう。今日のメッセージを聞いてね 👋'
     if (navigator.share) {
       try { await navigator.share({ text, url }) } catch (_) {}
     } else {

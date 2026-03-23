@@ -640,8 +640,8 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
     const pairId = getPairId()
     const url = `https://tyson-two.vercel.app/#/?pairId=${encodeURIComponent(pairId)}`
     const text = lang === 'en'
-      ? "Let's exchange voices every day on Tyson. Listen to today's message 👋"
-      : 'Tysonで毎日声を交換しよう。今日のメッセージを聞いてね 👋'
+      ? "Let's exchange voices every day on Hum. Listen to today's message 👋"
+      : 'Humで毎日声を交換しよう。今日のメッセージを聞いてね 👋'
     if (navigator.share) {
       try { await navigator.share({ text, url }) } catch (_) {}
     } else {
@@ -703,11 +703,11 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
                 const newId = generatePairId()
                 const url = `https://tyson-two.vercel.app/#/?pairId=${encodeURIComponent(newId)}`
                 const text = lang === 'en'
-                  ? `Join me on Tyson with this link! Your pair ID: ${newId}`
-                  : `Tysonで一緒に使おう！あなた専用リンク（ID: ${newId}）`
+                  ? `Join me on Hum with this link! Your pair ID: ${newId}`
+                  : `Humで一緒に使おう！あなた専用リンク（ID: ${newId}）`
                 try {
                   if (navigator.share) {
-                    await navigator.share({ title: 'Tyson', text, url })
+                    await navigator.share({ title: 'Hum', text, url })
                   } else {
                     await navigator.clipboard.writeText(`${text}\n${url}`)
                     alert(lang === 'en' ? 'Link copied!' : 'リンクをコピーしました')

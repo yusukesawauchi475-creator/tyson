@@ -1,7 +1,7 @@
 {
-  "name": "タイソン修行",
-  "short_name": "タイソン修行",
-  "description": "おかんの修行記録アプリ",
+  "name": "Hum",
+  "short_name": "Hum",
+  "description": "一日1分で繋がる家族",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
