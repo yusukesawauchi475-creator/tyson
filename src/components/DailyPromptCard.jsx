@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getDateKey, PAIR_ID_DEMO } from '../lib/pairDaily'
+import { getDateKey, getPairId, PAIR_ID_DEMO } from '../lib/pairDaily'
 import { t } from '../lib/i18n'
 
 const TOPICS = [
@@ -83,6 +83,22 @@ export function cycleCountry() {
   const next = COUNTRIES[(COUNTRIES.indexOf(cur) + 1) % COUNTRIES.length]
   try { localStorage.setItem(COUNTRY_KEY, next) } catch {}
   return next
+}
+
+/** Collect recent AI topics from localStorage for personalization */
+function getRecentAiTopics() {
+  try {
+    const topics = []
+    for (let i = 1; i <= 14; i++) {
+      const d = new Date(Date.now() - i * 86400000)
+      const dk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      for (const lang of ['ja', 'en']) {
+        const v = localStorage.getItem(`dailyPrompt_ai_${dk}_${lang}`)
+        if (v && !topics.includes(v)) topics.push(v)
+      }
+    }
+    return topics.slice(0, 10).join('、')
+  } catch { return '' }
 }
 
 /** Get seasonal/event topic override for today */
@@ -192,7 +208,7 @@ export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role, onTopicCh
         // Show fallback immediately, then try AI
         if (onTopicChange) try { onTopicChange(TOPICS[finalIndex] || null) } catch {}
 
-        fetch(`/api/daily-theme?lang=${lang}`)
+        fetch(`/api/daily-theme?lang=${lang}&pairId=${encodeURIComponent(getPairId())}&pastTopics=${encodeURIComponent(getRecentAiTopics())}`)
           .then(r => r.json())
           .then(data => {
             if (data.success && data.topic) {
@@ -224,7 +240,7 @@ export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role, onTopicCh
       if (onTopicChange) try { onTopicChange(TOPICS[finalIndex] || null) } catch {}
 
       // Fetch new AI topic
-      fetch(`/api/daily-theme?lang=${lang}`)
+      fetch(`/api/daily-theme?lang=${lang}&pairId=${encodeURIComponent(getPairId())}&pastTopics=${encodeURIComponent(getRecentAiTopics())}`)
         .then(r => r.json())
         .then(data => {
           if (data.success && data.topic) {

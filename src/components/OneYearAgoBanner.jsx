@@ -1,13 +1,36 @@
 import { useState, useEffect, useRef } from 'react'
 import { getIdTokenForApi } from '../lib/firebase'
-import { getPairId, getDateKeyNY } from '../lib/pairDaily'
+import { getPairId } from '../lib/pairDaily'
 
 /**
- * "1 year ago today" banner.
- * Checks ±3 days around 1 year ago for audio. If found, shows play button.
+ * Past voice banner.
+ * Searches for audio at 7/14/30/90/365 days ago (±1 day each).
+ * Hidden if app used less than 7 days.
  */
+
+const CHECKPOINTS = [
+  { days: 7, ja: '先週のあなたの声', en: 'Your voice from last week' },
+  { days: 14, ja: '2週間前のあなたの声', en: 'Your voice from 2 weeks ago' },
+  { days: 30, ja: '1ヶ月前のあなたの声', en: 'Your voice from 1 month ago' },
+  { days: 90, ja: '3ヶ月前のあなたの声', en: 'Your voice from 3 months ago' },
+  { days: 365, ja: '1年前のあなたの声', en: 'Your voice from 1 year ago' },
+]
+
+function datesToCheck(daysAgo) {
+  const dates = []
+  const base = new Date(Date.now() - daysAgo * 86400000)
+  for (const offset of [0, -1, 1]) {
+    const d = new Date(base.getTime() + offset * 86400000)
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    dates.push(`${y}-${m}-${dd}`)
+  }
+  return [...new Set(dates)]
+}
+
 export default function OneYearAgoBanner({ lang = 'ja' }) {
-  const [audioData, setAudioData] = useState(null)
+  const [result, setResult] = useState(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const audioRef = useRef(null)
 
@@ -18,59 +41,61 @@ export default function OneYearAgoBanner({ lang = 'ja' }) {
         if (!idToken) return
         const pairId = getPairId()
 
-        // Generate dates: 1 year ago ± 3 days
-        const now = new Date()
-        const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())
-        const dates = []
-        for (let offset = 0; offset <= 3; offset++) {
-          for (const sign of [0, 1, -1]) {
-            if (offset === 0 && sign !== 0) continue
-            const d = new Date(oneYearAgo.getTime() + sign * offset * 86400000)
-            const y = d.getFullYear()
-            const m = String(d.getMonth() + 1).padStart(2, '0')
-            const dd = String(d.getDate()).padStart(2, '0')
-            dates.push(`${y}-${m}-${dd}`)
-          }
-        }
-        // Remove duplicates
-        const uniqueDates = [...new Set(dates)]
-
-        // Try each date for audio (check both roles)
-        for (const dateKey of uniqueDates) {
-          for (const listenRole of ['parent', 'child']) {
+        // First check if 7 days of data exists (app usage check)
+        const sevenDaysAgo = datesToCheck(7)
+        let hasMinHistory = false
+        for (const dateKey of sevenDaysAgo) {
+          for (const role of ['parent', 'child']) {
             try {
               const res = await fetch(
-                `/api/pair-media?pairId=${encodeURIComponent(pairId)}&dateKey=${encodeURIComponent(dateKey)}&listenRole=${encodeURIComponent(listenRole)}&mode=signed&v=${Date.now()}`,
+                `/api/pair-media?pairId=${encodeURIComponent(pairId)}&dateKey=${encodeURIComponent(dateKey)}&listenRole=${encodeURIComponent(role)}&mode=signed&v=${Date.now()}`,
                 { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }
               )
               if (res.ok) {
                 const d = await res.json().catch(() => ({}))
-                if (d?.url) {
-                  setAudioData({ url: d.url, dateKey, role: listenRole })
-                  return
-                }
+                if (d?.url) { hasMinHistory = true; break }
               }
             } catch {}
+          }
+          if (hasMinHistory) break
+        }
+        if (!hasMinHistory) return // Less than 7 days of usage
+
+        // Search checkpoints in order
+        for (const checkpoint of CHECKPOINTS) {
+          const dates = datesToCheck(checkpoint.days)
+          for (const dateKey of dates) {
+            for (const role of ['parent', 'child']) {
+              try {
+                const res = await fetch(
+                  `/api/pair-media?pairId=${encodeURIComponent(pairId)}&dateKey=${encodeURIComponent(dateKey)}&listenRole=${encodeURIComponent(role)}&mode=signed&v=${Date.now()}`,
+                  { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }
+                )
+                if (res.ok) {
+                  const d = await res.json().catch(() => ({}))
+                  if (d?.url) {
+                    setResult({ url: d.url, dateKey, checkpoint })
+                    return
+                  }
+                }
+              } catch {}
+            }
           }
         }
       } catch {}
     })()
   }, [])
 
-  if (!audioData) return null
+  if (!result) return null
 
   const isEn = lang === 'en'
+  const label = isEn ? result.checkpoint.en : result.checkpoint.ja
 
   const handlePlay = () => {
     const el = audioRef.current
     if (!el) return
-    if (isPlaying) {
-      el.pause()
-      setIsPlaying(false)
-    } else {
-      el.src = audioData.url
-      el.play().then(() => setIsPlaying(true)).catch(() => {})
-    }
+    if (isPlaying) { el.pause(); setIsPlaying(false) }
+    else { el.src = result.url; el.play().then(() => setIsPlaying(true)).catch(() => {}) }
   }
 
   return (
@@ -78,24 +103,19 @@ export default function OneYearAgoBanner({ lang = 'ja' }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)' }}>
-            📅 {isEn ? '1 year ago today' : '1年前のあなたの声'}
+            📅 {label}
           </span>
           <span style={{ fontSize: 11, color: 'var(--color-text-muted)', marginLeft: 8 }}>
-            {audioData.dateKey.slice(5)}
+            {result.dateKey.slice(5)}
           </span>
         </div>
         <button
           type="button"
           onClick={handlePlay}
           style={{
-            padding: '6px 16px',
-            fontSize: 13,
-            fontWeight: 600,
-            color: '#fff',
+            padding: '6px 16px', fontSize: 13, fontWeight: 600, color: '#fff',
             background: isPlaying ? 'var(--color-danger)' : 'var(--color-primary)',
-            border: 'none',
-            borderRadius: 'var(--radius-sm)',
-            cursor: 'pointer',
+            border: 'none', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
           }}
         >
           {isPlaying ? (isEn ? 'Stop' : '停止') : (isEn ? 'Play' : '再生')}
