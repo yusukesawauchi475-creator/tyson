@@ -677,6 +677,15 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           >
             🗂 {lang === 'en' ? 'View Library' : 'ライブラリを見る'}
           </button>
+          {photos.some(p => p.role === LISTEN_ROLE_CHILD) && (
+            <button
+              type="button"
+              onClick={() => { setDailyTopic(lang === 'en' ? "Talk about the photo your partner sent" : '相手が送った写真について話してみよう'); topicRef.current = lang === 'en' ? "Talk about the photo your partner sent" : '相手が送った写真について話してみよう' }}
+              style={{ width: '100%', marginTop: 8, padding: '8px 12px', fontSize: 13, color: 'var(--color-secondary)', background: 'transparent', border: '1px solid var(--color-secondary)', borderRadius: 8, cursor: 'pointer', textAlign: 'center' }}
+            >
+              📷 {lang === 'en' ? 'Talk about this photo' : 'この写真について話してみよう'}
+            </button>
+          )}
         </section>
 
         {/* (4) ジャーナル（非公開・1日1枚） */}
