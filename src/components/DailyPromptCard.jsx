@@ -72,7 +72,6 @@ if (import.meta?.env?.DEV && TOPICS.length !== TOPICS_EN.length) {
   console.warn('[DailyPromptCard] TOPICS.length !== TOPICS_EN.length', TOPICS.length, TOPICS_EN.length)
 }
 
-// 簡単なハッシュ関数（文字列→数値）
 function simpleHash(str) {
   let hash = 0
   for (let i = 0; i < str.length; i++) {
@@ -91,8 +90,20 @@ function getSkipKey(pairId, role, dateKey) {
   return `dailyPrompt_skip_${pairId}_${role}_${dateKey}`
 }
 
+function getAiCacheKey(dateKey, lang) {
+  return `dailyPrompt_ai_${dateKey}_${lang}`
+}
+
+/** Get fallback topic from hardcoded list */
+function getFallbackTopic(pairId, role, dateKey, offset) {
+  const seed = `${pairId}|${role}|${dateKey}`
+  const baseIndex = simpleHash(seed) % TOPICS.length
+  return (baseIndex + offset) % TOPICS.length
+}
+
 export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role, onTopicChange, lang = 'ja' }) {
   const [topicIndex, setTopicIndex] = useState(0)
+  const [aiTopic, setAiTopic] = useState(null)
   const [isSkipped, setIsSkipped] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
 
@@ -100,97 +111,87 @@ export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role, onTopicCh
     try {
       const dateKey = getDateKey()
       const skipKey = getSkipKey(pairId, role, dateKey)
-      const skipped = localStorage.getItem(skipKey) === 'true'
-      if (skipped) {
+      if (localStorage.getItem(skipKey) === 'true') {
         setIsSkipped(true)
         setIsVisible(false)
         return
       }
 
-      const seed = `${pairId}|${role}|${dateKey}`
-      const baseIndex = simpleHash(seed) % TOPICS.length
-      
       const storageKey = getStorageKey(pairId, role, dateKey)
       const savedOffset = parseInt(localStorage.getItem(storageKey) || '0', 10)
-      const offset = Math.min(savedOffset, 2) // 最大3回（0,1,2）
-      
-      const finalIndex = (baseIndex + offset) % TOPICS.length
+      const offset = Math.min(savedOffset, 2)
+      const finalIndex = getFallbackTopic(pairId, role, dateKey, offset)
       setTopicIndex(finalIndex)
       setIsVisible(true)
-      // 初期表示でtopic確定時にコールバック
-      if (onTopicChange) {
-        try {
-          onTopicChange(TOPICS[finalIndex] || null)
-        } catch (e) {
-          // コールバックエラーは無視
-        }
+
+      // Try AI topic (cached per day+lang)
+      const aiCacheKey = getAiCacheKey(dateKey, lang)
+      const cached = localStorage.getItem(aiCacheKey)
+      if (cached) {
+        setAiTopic(cached)
+        if (onTopicChange) try { onTopicChange(cached) } catch {}
+      } else {
+        // Show fallback immediately, then try AI
+        if (onTopicChange) try { onTopicChange(TOPICS[finalIndex] || null) } catch {}
+
+        fetch(`/api/daily-theme?lang=${lang}`)
+          .then(r => r.json())
+          .then(data => {
+            if (data.success && data.topic) {
+              setAiTopic(data.topic)
+              try { localStorage.setItem(aiCacheKey, data.topic) } catch {}
+              if (onTopicChange) try { onTopicChange(data.topic) } catch {}
+            }
+          })
+          .catch(() => {}) // Silent fallback to hardcoded
       }
-    } catch (e) {
-      // エラー時は非表示（赤画面にしない）
+    } catch {
       setIsVisible(false)
-      if (onTopicChange) {
-        try {
-          onTopicChange(null)
-        } catch (e) {
-          // コールバックエラーは無視
-        }
-      }
+      if (onTopicChange) try { onTopicChange(null) } catch {}
     }
-  }, [pairId, role, onTopicChange])
+  }, [pairId, role, onTopicChange, lang])
 
   const handleNextTopic = () => {
     try {
       const dateKey = getDateKey()
       const storageKey = getStorageKey(pairId, role, dateKey)
       const currentOffset = parseInt(localStorage.getItem(storageKey) || '0', 10)
-      const newOffset = (currentOffset + 1) % 3 // 0→1→2→0 でループ
+      const newOffset = (currentOffset + 1) % 3
       localStorage.setItem(storageKey, String(newOffset))
-      
-      const seed = `${pairId}|${role}|${dateKey}`
-      const baseIndex = simpleHash(seed) % TOPICS.length
-      const finalIndex = (baseIndex + newOffset) % TOPICS.length
+
+      // Clear AI topic, use fallback cycle
+      setAiTopic(null)
+      const finalIndex = getFallbackTopic(pairId, role, dateKey, newOffset)
       setTopicIndex(finalIndex)
-      // 「別の話題」で変わった時にコールバック
-      if (onTopicChange) {
-        try {
-          onTopicChange(TOPICS[finalIndex] || null)
-        } catch (e) {
-          // コールバックエラーは無視
-        }
-      }
-    } catch (e) {
-      // エラー時は何もしない
-    }
+      if (onTopicChange) try { onTopicChange(TOPICS[finalIndex] || null) } catch {}
+
+      // Fetch new AI topic
+      fetch(`/api/daily-theme?lang=${lang}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && data.topic) {
+            setAiTopic(data.topic)
+            if (onTopicChange) try { onTopicChange(data.topic) } catch {}
+          }
+        })
+        .catch(() => {})
+    } catch {}
   }
 
   const handleSkip = () => {
     try {
       const dateKey = getDateKey()
-      const skipKey = getSkipKey(pairId, role, dateKey)
-      localStorage.setItem(skipKey, 'true')
+      localStorage.setItem(getSkipKey(pairId, role, dateKey), 'true')
       setIsSkipped(true)
       setIsVisible(false)
-      // スキップ時にnullをコールバック
-      if (onTopicChange) {
-        try {
-          onTopicChange(null)
-        } catch (e) {
-          // コールバックエラーは無視
-        }
-      }
-    } catch (e) {
-      // エラー時は何もしない
-    }
+      if (onTopicChange) try { onTopicChange(null) } catch {}
+    } catch {}
   }
 
-  if (!isVisible || isSkipped) {
-    return null
-  }
+  if (!isVisible || isSkipped) return null
 
-  const topicJa = TOPICS[topicIndex] || TOPICS[0]
-  const topicEn = TOPICS_EN[topicIndex] || TOPICS_EN[0]
   const isEn = String(lang) === 'en'
-  const topicDisplay = isEn ? topicEn : topicJa
+  const topicDisplay = aiTopic || (isEn ? TOPICS_EN[topicIndex] : TOPICS[topicIndex]) || TOPICS[0]
 
   return (
     <div style={{
