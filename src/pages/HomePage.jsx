@@ -12,6 +12,7 @@ import { formatDeployedAtLocal, getBuildHash } from '../lib/dateFormat'
 import { useAudioLevel } from '../lib/useAudioLevel'
 import UploadErrorModal from '../components/UploadErrorModal'
 import WeeklySummary from '../components/WeeklySummary'
+import OneYearAgoBanner from '../components/OneYearAgoBanner'
 
 export default function HomePage({ lang = 'ja', onChangeRole }) {
   const navigate = useNavigate()
@@ -506,6 +507,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
       </header>
 
       <main className="page-content page" style={{ flex: 1, maxWidth: 320, margin: '0 auto', width: '100%' }}>
+        <OneYearAgoBanner lang={lang} />
         <WeeklySummary lang={lang} />
         {/* (1) 相手の録音（聞く） */}
         <section className="card" style={{ width: '100%' }}>
