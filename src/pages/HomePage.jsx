@@ -13,6 +13,7 @@ import { useAudioLevel } from '../lib/useAudioLevel'
 import UploadErrorModal from '../components/UploadErrorModal'
 import WeeklySummary from '../components/WeeklySummary'
 import OneYearAgoBanner from '../components/OneYearAgoBanner'
+import FamilyInsightCard from '../components/FamilyInsightCard'
 
 export default function HomePage({ lang = 'ja', onChangeRole }) {
   const navigate = useNavigate()
@@ -488,6 +489,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
               🔥 {streakCount}日連続
             </p>
           )}
+          <FamilyInsightCard lang={lang} />
           {onChangeRole && (
             <button type="button" onClick={onChangeRole} style={{ marginTop: 6, padding: '2px 8px', fontSize: 11, color: 'var(--color-text-sub)', border: '1px solid var(--color-border, #ddd)', borderRadius: 4, background: 'transparent', cursor: 'pointer' }}>
               👨‍👩‍👧 {lang === 'en' ? 'Switch role' : '役割変更'}
