@@ -72,6 +72,55 @@ if (import.meta?.env?.DEV && TOPICS.length !== TOPICS_EN.length) {
   console.warn('[DailyPromptCard] TOPICS.length !== TOPICS_EN.length', TOPICS.length, TOPICS_EN.length)
 }
 
+const COUNTRY_KEY = 'hum_country'
+const COUNTRIES = ['jp', 'us', 'other']
+
+export function getCountry() {
+  try { const v = localStorage.getItem(COUNTRY_KEY); return COUNTRIES.includes(v) ? v : 'jp' } catch { return 'jp' }
+}
+export function cycleCountry() {
+  const cur = getCountry()
+  const next = COUNTRIES[(COUNTRIES.indexOf(cur) + 1) % COUNTRIES.length]
+  try { localStorage.setItem(COUNTRY_KEY, next) } catch {}
+  return next
+}
+
+/** Get seasonal/event topic override for today */
+function getEventTopic(dateKey, country, lang) {
+  const [, m, d] = dateKey.split('-').map(Number)
+  const date = new Date(dateKey + 'T12:00:00')
+  const dow = date.getDay() // 0=Sun
+  const isEn = lang === 'en'
+
+  // Shared events
+  if (m === 1 && d === 1) return isEn ? "What's your New Year's wish for our family?" : '家族への新年の願いは？'
+  if (m === 12 && d === 25) return isEn ? 'Best Christmas memory with family?' : '家族との一番のクリスマスの思い出は？'
+
+  // Mother's Day: 2nd Sunday of May
+  if (m === 5 && dow === 0 && d >= 8 && d <= 14) return isEn ? 'What do you want to tell Mom today?' : 'お母さんに今日伝えたいことは？'
+  // Father's Day: 3rd Sunday of June
+  if (m === 6 && dow === 0 && d >= 15 && d <= 21) return isEn ? 'What do you want to tell Dad today?' : 'お父さんに今日伝えたいことは？'
+
+  if (country === 'jp') {
+    if (m === 8 && d === 15) return isEn ? 'Share a memory of Obon with family.' : 'お盆の家族の思い出を話そう'
+    if (m === 12 && d === 31) return isEn ? 'Reflect on this year with family.' : '家族と今年を振り返ろう'
+  }
+  if (country === 'us') {
+    // Thanksgiving: 4th Thursday of November
+    if (m === 11 && dow === 4 && d >= 22 && d <= 28) return isEn ? "What are you thankful for about our family?" : '家族で感謝していることは？'
+  }
+
+  // Seasonal defaults for 'other'
+  if (country === 'other' || !['jp', 'us'].includes(country)) {
+    if (m >= 3 && m <= 5) return isEn ? 'What spring memory do you cherish?' : '春の思い出で大切なものは？'
+    if (m >= 6 && m <= 8) return isEn ? 'What summer adventure do you remember?' : '夏の冒険で覚えていることは？'
+    if (m >= 9 && m <= 11) return isEn ? 'What autumn tradition do you love?' : '秋の家族の習慣で好きなものは？'
+    return isEn ? 'What winter memory warms your heart?' : '冬の思い出で心が温まるものは？'
+  }
+
+  return null // No event today
+}
+
 function simpleHash(str) {
   let hash = 0
   for (let i = 0; i < str.length; i++) {
@@ -123,6 +172,15 @@ export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role, onTopicCh
       const finalIndex = getFallbackTopic(pairId, role, dateKey, offset)
       setTopicIndex(finalIndex)
       setIsVisible(true)
+
+      // Check for event/seasonal topic first
+      const country = getCountry()
+      const eventTopic = getEventTopic(dateKey, country, lang)
+      if (eventTopic) {
+        setAiTopic(eventTopic)
+        if (onTopicChange) try { onTopicChange(eventTopic) } catch {}
+        return // Event topic takes priority, skip AI fetch
+      }
 
       // Try AI topic (cached per day+lang)
       const aiCacheKey = getAiCacheKey(dateKey, lang)

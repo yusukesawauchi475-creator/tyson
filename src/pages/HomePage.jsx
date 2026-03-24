@@ -4,7 +4,7 @@ import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, getPai
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import { t } from '../lib/i18n'
-import DailyPromptCard from '../components/DailyPromptCard'
+import DailyPromptCard, { getCountry, cycleCountry } from '../components/DailyPromptCard'
 import LanguageSwitch from '../components/LanguageSwitch'
 import { getIdTokenForApi, auth, isFirebaseConfigured } from '../lib/firebase'
 import { getAuth } from 'firebase/auth'
@@ -491,6 +491,9 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
               👨‍👩‍👧 {lang === 'en' ? 'Switch role' : '役割変更'}
             </button>
           )}
+          <button type="button" onClick={() => { cycleCountry(); window.location.reload() }} style={{ marginTop: 6, padding: '2px 8px', fontSize: 11, color: 'var(--color-text-sub)', border: '1px solid var(--color-border, #ddd)', borderRadius: 4, background: 'transparent', cursor: 'pointer' }}>
+            🌍 {getCountry().toUpperCase()}
+          </button>
         </div>
         <button
           type="button"
