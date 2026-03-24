@@ -1,0 +1,98 @@
+import { useState, useEffect } from 'react'
+import { getIdTokenForApi } from '../lib/firebase'
+import { getPairId, getDateKeyNY } from '../lib/pairDaily'
+
+/**
+ * Weekly summary card - shown only on Sundays.
+ * Shows voice and photo counts for parent/child this week (Mon-Sun).
+ */
+export default function WeeklySummary({ lang = 'ja' }) {
+  const [data, setData] = useState(null)
+
+  useEffect(() => {
+    const today = new Date()
+    // Only show on Sundays (0 = Sunday)
+    if (today.getDay() !== 0) return
+
+    ;(async () => {
+      try {
+        const idToken = await getIdTokenForApi()
+        if (!idToken) return
+        const pairId = getPairId()
+
+        // Get this week's dates (Mon-Sun)
+        const dates = []
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(today.getTime() - i * 86400000)
+          const y = d.getFullYear()
+          const m = String(d.getMonth() + 1).padStart(2, '0')
+          const dd = String(d.getDate()).padStart(2, '0')
+          dates.push(`${y}-${m}-${dd}`)
+        }
+
+        // Fetch voice data for each day
+        let parentVoice = 0, childVoice = 0, parentPhoto = 0, childPhoto = 0
+        const promises = dates.map(async (dateKey) => {
+          try {
+            const res = await fetch(
+              `/api/pair-media?pairId=${encodeURIComponent(pairId)}&listenRole=parent&mode=signed&v=${Date.now()}`,
+              { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }
+            )
+            if (res.ok) {
+              const d = await res.json().catch(() => ({}))
+              if (d?.url) parentVoice++
+            }
+          } catch {}
+          try {
+            const res = await fetch(
+              `/api/pair-media?pairId=${encodeURIComponent(pairId)}&listenRole=child&mode=signed&v=${Date.now()}`,
+              { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }
+            )
+            if (res.ok) {
+              const d = await res.json().catch(() => ({}))
+              if (d?.url) childVoice++
+            }
+          } catch {}
+        })
+
+        // Fetch photo count from journal meta
+        try {
+          const res = await fetch(
+            `/api/journal?pairId=${encodeURIComponent(pairId)}&role=parent&v=${Date.now()}`,
+            { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }
+          )
+          if (res.ok) {
+            const d = await res.json().catch(() => ({}))
+            parentPhoto = (d?.photos || []).filter(p => p.role === 'parent').length
+            childPhoto = (d?.photos || []).filter(p => p.role === 'child').length
+          }
+        } catch {}
+
+        await Promise.all(promises)
+        setData({ parentVoice, childVoice, parentPhoto, childPhoto })
+      } catch {}
+    })()
+  }, [])
+
+  if (!data) return null
+
+  const isEn = lang === 'en'
+
+  return (
+    <div className="card" style={{ padding: '12px 16px', textAlign: 'center' }}>
+      <p style={{ margin: '0 0 8px', fontSize: 12, fontWeight: 700, color: 'var(--color-text-sub)' }}>
+        {isEn ? "This Week's Summary" : '今週のまとめ'}
+      </p>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 24, fontSize: 13 }}>
+        <div>
+          <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>👴 {isEn ? 'Parent' : '親'}</span>
+          <div style={{ fontWeight: 600 }}>🎙 {data.parentVoice} 📷 {data.parentPhoto}</div>
+        </div>
+        <div>
+          <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>👶 {isEn ? 'Child' : '子'}</span>
+          <div style={{ fontWeight: 600 }}>🎙 {data.childVoice} 📷 {data.childPhoto}</div>
+        </div>
+      </div>
+    </div>
+  )
+}
