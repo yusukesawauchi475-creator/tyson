@@ -253,13 +253,7 @@ export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role, onTopicCh
   }
 
   const handleSkip = () => {
-    try {
-      const dateKey = getDateKey()
-      localStorage.setItem(getSkipKey(pairId, role, dateKey), 'true')
-      setIsSkipped(true)
-      setIsVisible(false)
-      if (onTopicChange) try { onTopicChange(null) } catch {}
-    } catch {}
+    handleNextTopic()
   }
 
   if (!isVisible || isSkipped) return null
