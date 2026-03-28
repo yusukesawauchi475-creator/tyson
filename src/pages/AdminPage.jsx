@@ -5,12 +5,37 @@ import { getPairId, getDateKey, genRequestId } from '../lib/pairDaily.js'
 
 const STORAGE_KEY = 'tyson_admin_secret'
 
-function PairCard({ pair }) {
+function PairCard({ pair, secret }) {
   const [open, setOpen] = useState(false)
+  const [ocrLoading, setOcrLoading] = useState(null)
+  const [ocrResult, setOcrResult] = useState(null)
   const today = pair.calendar[pair.calendar.length - 1]
   const todayParent = today?.parent
   const todayChild = today?.child
   const t = pair.totals || {}
+
+  const handleOcr = async (dateKey) => {
+    setOcrLoading(dateKey)
+    setOcrResult(null)
+    try {
+      const res = await fetch('/api/journal-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': secret },
+        body: JSON.stringify({ pairId: pair.pairId, dateKey }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (data.success) {
+        const texts = (data.results || []).map(r => `[${r.role}] ${r.text?.slice(0, 100) || '-'}`).join('\n')
+        setOcrResult({ ok: true, dateKey, msg: texts })
+      } else {
+        setOcrResult({ ok: false, dateKey, msg: data.error || 'Failed' })
+      }
+    } catch (e) {
+      setOcrResult({ ok: false, dateKey, msg: e?.message || String(e) })
+    } finally {
+      setOcrLoading(null)
+    }
+  }
 
   return (
     <div className="card" style={{ padding: '14px 16px' }}>
@@ -82,9 +107,30 @@ function PairCard({ pair }) {
                 <span>👴{p ? ` V${p.voice?'○':'×'} 📷${p.genericImage||0} 📔${p.journalImage||0}` : ' -'}</span>
                 <span>👶{c ? ` V${c.voice?'○':'×'} 📷${c.genericImage||0} 📔${c.journalImage||0}` : ' -'}</span>
                 {p?.voice && c?.voice && <span style={{ color: 'var(--color-success)' }}>✓</span>}
+                {(p?.journalImage > 0 || c?.journalImage > 0) && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); handleOcr(day.date) }}
+                    disabled={ocrLoading === day.date}
+                    style={{
+                      padding: '1px 6px', fontSize: 10, marginLeft: 4,
+                      background: ocrLoading === day.date ? 'var(--color-border)' : 'var(--color-primary)',
+                      color: '#fff', border: 'none', borderRadius: 3, cursor: 'pointer',
+                    }}
+                  >{ocrLoading === day.date ? '...' : 'OCR'}</button>
+                )}
               </div>
             )
           })}
+          {ocrResult && (
+            <div style={{ marginTop: 8, padding: '8px 10px', fontSize: 11, borderRadius: 6,
+              background: ocrResult.ok ? 'var(--color-success-bg, #f0fff0)' : 'var(--color-danger-bg, #fff0f0)',
+              color: ocrResult.ok ? 'var(--color-text)' : 'var(--color-danger)',
+              whiteSpace: 'pre-wrap', wordBreak: 'break-all',
+            }}>
+              <strong>{ocrResult.dateKey}</strong>: {ocrResult.msg}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -243,7 +289,7 @@ export default function AdminPage({ lang = 'ja' }) {
       {dashLoading && <p style={{ fontSize: 13, color: 'var(--color-text-muted)', textAlign: 'center' }}>読み込み中...</p>}
       {dashError && <p style={{ fontSize: 13, color: 'var(--color-danger)', textAlign: 'center' }}>{dashError}</p>}
 
-      {pairs && pairs.map(pair => <PairCard key={pair.pairId} pair={pair} />)}
+      {pairs && pairs.map(pair => <PairCard key={pair.pairId} pair={pair} secret={secret} />)}
       {pairs && pairs.length === 0 && <p style={{ fontSize: 13, color: 'var(--color-text-muted)', textAlign: 'center' }}>データなし</p>}
     </div>
   )
