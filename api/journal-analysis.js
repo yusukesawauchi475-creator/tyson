@@ -43,6 +43,40 @@ function initFirebaseAdmin() {
 
 const OCR_PROMPT = 'この画像に含まれるすべてのテキストを正確に書き起こしてください。手書きの文字も含めて、できるだけ忠実にテキスト化してください。テキストが見つからない場合は「テキストなし」と返してください。画像の内容も簡潔に1-2文で説明してください。\n\n出力形式:\n【OCRテキスト】\n(抽出したテキスト)\n\n【画像の説明】\n(簡潔な説明)';
 
+/** Classify OCR text as "journal" (handwritten diary) or "daily" (everyday photo) */
+function classifyOcrText(ocrText) {
+  if (!ocrText) return 'daily';
+  const text = ocrText;
+
+  // Check if image description mentions handwriting
+  const descMatch = text.match(/【画像の説明】[\s\S]*$/);
+  const desc = descMatch ? descMatch[0] : '';
+  const hasHandwritingDesc = /手書き|ノート|メモ|日記|ジャーナル/.test(desc);
+
+  // Extract OCR portion
+  const ocrMatch = text.match(/【OCRテキスト】([\s\S]*?)(?=【画像の説明】|$)/);
+  const ocrPortion = ocrMatch ? ocrMatch[1].trim() : text;
+
+  // "テキストなし" with handwriting description = journal
+  if (/テキストなし/.test(ocrPortion) && hasHandwritingDesc) return 'journal';
+  // Pure "テキストなし" without handwriting = daily
+  if (/テキストなし/.test(ocrPortion)) return 'daily';
+
+  // Journal indicators in OCR text
+  const journalKeywords = /今日|感じた|気づい|気持ち|振り返|思った|考えた|学んだ|習得|ジャーナル|日ぐらし|つれつれ|あけぼの|忙しかった|楽しかった|月命日/;
+  const numberedList = /[①②③④⑤]|[1-9][.．)）][\s　]/;
+  const datePattern = /\d{1,2}[\/\.]\d{1,2}|月\d{1,2}日|\d{1,2}月/;
+  const longText = ocrPortion.length > 100;
+
+  // Strong journal signals
+  if (numberedList.test(ocrPortion) && journalKeywords.test(ocrPortion)) return 'journal';
+  if (datePattern.test(ocrPortion) && journalKeywords.test(ocrPortion)) return 'journal';
+  if (hasHandwritingDesc && journalKeywords.test(ocrPortion)) return 'journal';
+  if (hasHandwritingDesc && longText) return 'journal';
+
+  return 'daily';
+}
+
 async function ocrOneImage(apiKey, journalImg, docRef, existingData, role) {
   const fileRef = storageBucket.file(journalImg.storagePath);
   const [exists] = await fileRef.exists();
@@ -112,6 +146,50 @@ export default async function handler(req, res) {
     const body = req.body || {};
     const pairId = (body.pairId || '').trim();
     if (!pairId) return res.status(400).json({ success: false, error: 'pairId required' });
+
+    // Classify mode: read existing OCR data and classify as journal/daily
+    if (body.mode === 'classify') {
+      const monthRefs = await firestore.collection('journal').doc(pairId).collection('months').listDocuments();
+      const allResults = [];
+
+      for (const monthRef of monthRefs) {
+        const dayRefs = await monthRef.collection('days').listDocuments();
+        for (const dayRef of dayRefs) {
+          const dateKey = dayRef.id;
+          const snap = await dayRef.get();
+          if (!snap.exists) continue;
+          const data = snap.data();
+          if (!data.journal_ocr) continue;
+
+          for (const role of ['parent', 'child']) {
+            const ocr = data.journal_ocr[role];
+            if (!ocr?.text) continue;
+
+            const type = classifyOcrText(ocr.text);
+
+            // Save type to Firestore
+            await dayRef.set({
+              journal_ocr: {
+                ...data.journal_ocr,
+                [role]: { ...ocr, type },
+              },
+            }, { merge: true });
+
+            allResults.push({
+              dateKey, role, type,
+              storagePath: ocr.storagePath || null,
+              textPreview: ocr.text.slice(0, 120),
+            });
+          }
+        }
+      }
+
+      return res.status(200).json({
+        success: true, pairId,
+        summary: { total: allResults.length, journal: allResults.filter(r => r.type === 'journal').length, daily: allResults.filter(r => r.type === 'daily').length },
+        results: allResults.sort((a, b) => a.dateKey.localeCompare(b.dateKey)),
+      });
+    }
 
     // Batch mode: scan all dates
     if (body.mode === 'batch') {
