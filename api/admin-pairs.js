@@ -100,7 +100,7 @@ export default async function handler(req, res) {
         }
       }
 
-      // Get journal months/days
+      // Get journal months/days — count journal_image and generic_image separately
       const months = await firestore.collection('journal').doc(pairId).collection('months').listDocuments();
       for (const monthRef of months) {
         const days = await monthRef.collection('days').listDocuments();
@@ -110,11 +110,22 @@ export default async function handler(req, res) {
           if (!snap.exists) continue;
           const data = snap.data();
           if (!activity[dateKey]) activity[dateKey] = { parent: {}, child: {} };
-          if (data.roleData?.parent) {
-            activity[dateKey].parent.photo = true;
-          }
-          if (data.roleData?.child) {
-            activity[dateKey].child.photo = true;
+          for (const r of ['parent', 'child']) {
+            const rd = data.roleData?.[r];
+            if (!rd) continue;
+            activity[dateKey][r].photo = true;
+            // Count journal_image
+            if (rd.journal_image && typeof rd.journal_image.storagePath === 'string') {
+              activity[dateKey][r].journalImage = 1;
+            }
+            // Count generic_images (array) or legacy generic_image (single)
+            let genericCount = 0;
+            if (Array.isArray(rd.generic_images)) {
+              genericCount = rd.generic_images.filter(g => g && typeof g.storagePath === 'string').length;
+            } else if (rd.generic_image && typeof rd.generic_image.storagePath === 'string') {
+              genericCount = 1;
+            }
+            if (genericCount > 0) activity[dateKey][r].genericImage = genericCount;
           }
         }
       }
@@ -122,6 +133,7 @@ export default async function handler(req, res) {
       // Aggregate totals from all activity data
       const allDates = Object.keys(activity).sort();
       let parentVoiceTotal = 0, parentPhotoTotal = 0, childVoiceTotal = 0, childPhotoTotal = 0;
+      let parentJournalTotal = 0, parentGenericTotal = 0, childJournalTotal = 0, childGenericTotal = 0;
       const bothVoiceDays = []; // days where both parent+child have voice
       for (const dateKey of allDates) {
         const a = activity[dateKey];
@@ -129,6 +141,10 @@ export default async function handler(req, res) {
         if (a.parent.photo) parentPhotoTotal++;
         if (a.child.voice) childVoiceTotal++;
         if (a.child.photo) childPhotoTotal++;
+        parentJournalTotal += a.parent.journalImage || 0;
+        parentGenericTotal += a.parent.genericImage || 0;
+        childJournalTotal += a.child.journalImage || 0;
+        childGenericTotal += a.child.genericImage || 0;
         if (a.parent.voice && a.child.voice) bothVoiceDays.push(dateKey);
       }
 
@@ -158,10 +174,14 @@ export default async function handler(req, res) {
           parent: (a.parent.voice || a.parent.photo) ? {
             voice: !!a.parent.voice,
             photo: !!a.parent.photo,
+            journalImage: a.parent.journalImage || 0,
+            genericImage: a.parent.genericImage || 0,
           } : null,
           child: (a.child.voice || a.child.photo) ? {
             voice: !!a.child.voice,
             photo: !!a.child.photo,
+            journalImage: a.child.journalImage || 0,
+            genericImage: a.child.genericImage || 0,
           } : null,
         };
       });
@@ -173,8 +193,12 @@ export default async function handler(req, res) {
         totals: {
           parentVoice: parentVoiceTotal,
           parentPhoto: parentPhotoTotal,
+          parentJournal: parentJournalTotal,
+          parentGeneric: parentGenericTotal,
           childVoice: childVoiceTotal,
           childPhoto: childPhotoTotal,
+          childJournal: childJournalTotal,
+          childGeneric: childGenericTotal,
         },
         streak,
       });

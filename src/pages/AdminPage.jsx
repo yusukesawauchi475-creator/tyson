@@ -39,13 +39,13 @@ function PairCard({ pair }) {
           <span>👴 </span>
           <span style={{ color: todayParent?.voice ? 'var(--color-success)' : 'var(--color-text-muted)' }}>V{todayParent?.voice ? '○' : '×'}</span>
           <span style={{ color: todayParent?.photo ? 'var(--color-success)' : 'var(--color-text-muted)' }}> P{todayParent?.photo ? '○' : '×'}</span>
-          <span style={{ fontSize: 11, color: 'var(--color-text-muted)', marginLeft: 6 }}>計V{t.parentVoice||0} P{t.parentPhoto||0}</span>
+          <span style={{ fontSize: 11, color: 'var(--color-text-muted)', marginLeft: 6 }}>計V{t.parentVoice||0} 📷{t.parentGeneric||0} 📔{t.parentJournal||0}</span>
         </div>
         <div>
           <span>👶 </span>
           <span style={{ color: todayChild?.voice ? 'var(--color-success)' : 'var(--color-text-muted)' }}>V{todayChild?.voice ? '○' : '×'}</span>
           <span style={{ color: todayChild?.photo ? 'var(--color-success)' : 'var(--color-text-muted)' }}> P{todayChild?.photo ? '○' : '×'}</span>
-          <span style={{ fontSize: 11, color: 'var(--color-text-muted)', marginLeft: 6 }}>計V{t.childVoice||0} P{t.childPhoto||0}</span>
+          <span style={{ fontSize: 11, color: 'var(--color-text-muted)', marginLeft: 6 }}>計V{t.childVoice||0} 📷{t.childGeneric||0} 📔{t.childJournal||0}</span>
         </div>
       </div>
 
@@ -79,8 +79,8 @@ function PairCard({ pair }) {
             return (
               <div key={day.date} style={{ display: 'flex', gap: 12, fontSize: 12, padding: '3px 0', color: 'var(--color-text-sub)' }}>
                 <span style={{ fontWeight: 600, minWidth: 42 }}>{day.date.slice(5)}</span>
-                <span>👴{p ? ` V${p.voice?'○':'×'} P${p.photo?'○':'×'}` : ' -'}</span>
-                <span>👶{c ? ` V${c.voice?'○':'×'} P${c.photo?'○':'×'}` : ' -'}</span>
+                <span>👴{p ? ` V${p.voice?'○':'×'} 📷${p.genericImage||0} 📔${p.journalImage||0}` : ' -'}</span>
+                <span>👶{c ? ` V${c.voice?'○':'×'} 📷${c.genericImage||0} 📔${c.journalImage||0}` : ' -'}</span>
                 {p?.voice && c?.voice && <span style={{ color: 'var(--color-success)' }}>✓</span>}
               </div>
             )
