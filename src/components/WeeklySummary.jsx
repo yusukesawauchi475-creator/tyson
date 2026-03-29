@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { getIdTokenForApi } from '../lib/firebase'
-import { getPairId, getDateKeyNY } from '../lib/pairDaily'
+import { getPairId } from '../lib/pairDaily'
 
 /**
- * Weekly summary card - shown only on Sundays.
- * Shows voice and photo counts for parent/child this week (Mon-Sun).
+ * Weekly summary bar - shown only on Sundays.
+ * Shows combined voice and photo counts for the week.
  */
 export default function WeeklySummary({ lang = 'ja' }) {
   const [data, setData] = useState(null)
@@ -76,23 +76,12 @@ export default function WeeklySummary({ lang = 'ja' }) {
 
   if (!data) return null
 
-  const isEn = lang === 'en'
+  const totalVoice = data.parentVoice + data.childVoice
+  const totalPhoto = data.parentPhoto + data.childPhoto
 
   return (
-    <div className="card" style={{ padding: '12px 16px', textAlign: 'center' }}>
-      <p style={{ margin: '0 0 8px', fontSize: 12, fontWeight: 700, color: 'var(--color-text-sub)' }}>
-        {isEn ? "This Week's Summary" : '今週のまとめ'}
-      </p>
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 24, fontSize: 13 }}>
-        <div>
-          <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>👴 {isEn ? 'Parent' : '親'}</span>
-          <div style={{ fontWeight: 600 }}>🎙 {data.parentVoice} 📷 {data.parentPhoto}</div>
-        </div>
-        <div>
-          <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>👶 {isEn ? 'Child' : '子'}</span>
-          <div style={{ fontWeight: 600 }}>🎙 {data.childVoice} 📷 {data.childPhoto}</div>
-        </div>
-      </div>
+    <div style={{ background: 'rgba(192,128,255,0.12)', borderRadius: 10, padding: '8px 14px', fontSize: 12, color: '#8060B0', fontWeight: 600 }}>
+      {lang === 'en' ? 'This week' : '今週'} 🎙{totalVoice}{lang === 'en' ? '' : '回'} 📷{totalPhoto}{lang === 'en' ? '' : '枚'}
     </div>
   )
 }

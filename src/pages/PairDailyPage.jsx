@@ -709,7 +709,6 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
       </div>
 
       <main className="page-content page" style={{ flex: 1, maxWidth: 480, margin: '0 auto', width: '100%', paddingTop: 14 }}>
-        <OneYearAgoBanner lang={lang} />
         <WeeklySummary lang={lang} />
 
         {/* (1) Receive card */}
@@ -805,10 +804,12 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
             {lang === 'en' ? '📷 Add Photo' : '📷 写真を追加する'}
           </button>
 
-          <button type="button" onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album', { state: { scrollToDate: dateKey } })} style={{ width: '100%', marginTop: 10, padding: 0, fontSize: 12, color: '#9070C8', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center', fontWeight: 500 }}>
-            {lang === 'en' ? 'View past photos →' : '過去の写真を見る →'}
+          <button type="button" onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album', { state: { scrollToDate: dateKey } })} style={{ width: '100%', marginTop: 10, padding: 11, fontSize: 13, fontWeight: 600, color: '#7050C0', background: 'rgba(112,80,208,0.1)', border: '1.5px solid #9070C8', borderRadius: 12, cursor: 'pointer', textAlign: 'center' }}>
+            {lang === 'en' ? '🖼 View past photos' : '🖼 過去の写真を見る'}
           </button>
         </section>
+
+        <OneYearAgoBanner lang={lang} />
 
         {/* (4) Journal card - HIDDEN */}
         {false && <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
