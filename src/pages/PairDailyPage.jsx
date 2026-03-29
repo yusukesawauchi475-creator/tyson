@@ -777,13 +777,15 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
 
         {/* (3) Photos card */}
         <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t(lang, 'dailyPhotosShared')}</p>
-          <p style={{ fontSize: 12, color: '#8070A0', margin: '0 0 10px', fontWeight: 500 }}>{t(lang, 'todayPhotosCount', { count: photos.filter((p) => p.role === ROLE_CHILD).length })}</p>
+          <p style={{ fontSize: 13, fontWeight: 700, color: '#7050C0', margin: '0 0 10px' }}>
+            📷 {lang === 'en' ? "Today's Photos" : '今日の写真'}　<span style={{ fontWeight: 500, color: '#8070A0' }}>{photos.filter((p) => p.role === ROLE_CHILD).length}/3{lang === 'en' ? '' : '枚'}</span>
+          </p>
 
           <input ref={genericGalleryInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f && typeof f.type === 'string' && f.type.startsWith('image/')) handleJournalFile(f, 'generic_image'); e.target.value = '' }} />
           <input ref={genericCameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'generic_image'); e.target.value = '' }} />
 
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+          {/* Thumbnails + add box */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
             {photos.slice(0, 6).map((ph, i) => (
               <button key={ph.storagePath + String(i)} type="button" onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album', { state: { scrollToDate: dateKey } })} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 11, overflow: 'hidden', flexShrink: 0 }} aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}>
                 <img src={ph.url || ''} alt="" width={52} height={52} style={{ width: 52, height: 52, objectFit: 'cover', display: 'block', borderRadius: 11 }} />
@@ -803,14 +805,8 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
             {lang === 'en' ? '📷 Add Photo' : '📷 写真を追加する'}
           </button>
 
-          {photos.some(p => p.role === LISTEN_ROLE_PARENT) && (
-            <button type="button" onClick={() => { setDailyTopic(lang === 'en' ? "Talk about the photo your partner sent" : '相手が送った写真について話してみよう'); topicRef.current = lang === 'en' ? "Talk about the photo your partner sent" : '相手が送った写真について話してみよう' }} style={{ width: '100%', marginTop: 10, padding: '10px 12px', fontSize: 13, color: '#7050C0', background: 'rgba(255,255,255,0.55)', border: '1.5px solid #C0B8D8', borderRadius: 10, cursor: 'pointer', textAlign: 'center', fontWeight: 600 }}>
-              {lang === 'en' ? 'Talk about this photo' : 'この写真について話してみよう'}
-            </button>
-          )}
-
-          <button type="button" onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album', { state: { scrollToDate: dateKey } })} style={{ width: '100%', marginTop: 8, padding: 0, fontSize: 12, color: '#9070C8', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center', fontWeight: 500 }}>
-            {lang === 'en' ? 'View Library' : 'ライブラリを見る'}
+          <button type="button" onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album', { state: { scrollToDate: dateKey } })} style={{ width: '100%', marginTop: 10, padding: 0, fontSize: 12, color: '#9070C8', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center', fontWeight: 500 }}>
+            {lang === 'en' ? 'View past photos →' : '過去の写真を見る →'}
           </button>
         </section>
 
