@@ -607,8 +607,8 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           )}
         </section>
 
-        {/* (4) Journal card - same purple style */}
-        <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
+        {/* (4) Journal card - HIDDEN */}
+        {false && <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t(lang, 'journalSharedAi')}</p>
           <p style={{ fontSize: 11, color: '#8070A0', margin: '0 0 12px', lineHeight: 1.4 }}>{t(lang, 'journalNotice')}</p>
           <p style={{ fontSize: 13, color: '#7050C0', margin: '0 0 6px', fontWeight: 600 }}>{t(lang, 'myJournal')}</p>
@@ -644,7 +644,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
             </span>
           )}
           {journalError && <p style={{ fontSize: 11, color: '#E04040', margin: '4px 0 0' }}>{journalError}</p>}
-        </section>
+        </section>}
 
         {errorLine && <p style={{ fontSize: 14, color: '#E04040', textAlign: 'center', margin: 0 }}>{errorLine}</p>}
       </main>
