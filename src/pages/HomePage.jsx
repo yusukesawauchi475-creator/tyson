@@ -605,44 +605,40 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
 
         <OneYearAgoBanner lang={lang} />
 
-        {/* (4) Journal card - HIDDEN */}
-        {false && <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t(lang, 'journalSharedAi')}</p>
-          <p style={{ fontSize: 11, color: '#8070A0', margin: '0 0 12px', lineHeight: 1.4 }}>{t(lang, 'journalNotice')}</p>
-          <p style={{ fontSize: 13, color: '#7050C0', margin: '0 0 6px', fontWeight: 600 }}>{t(lang, 'myJournal')}</p>
-          {myJournalLoading && <p style={{ fontSize: 12, color: '#B0A0C8', margin: '0 0 8px' }}>{t(lang, 'loading')}</p>}
-          {!myJournalLoading && myJournalUrl && (
-            <>
-              <div style={{ width: 96, height: 96, borderRadius: 11, overflow: 'hidden', marginBottom: 4 }}>
-                <img src={myJournalUrl} alt={t(lang, 'myJournal')} role="button" tabIndex={0} onClick={() => setPreviewOpen(true)} onKeyDown={(e) => e.key === 'Enter' && setPreviewOpen(true)} width={96} height={96} style={{ width: 96, height: 96, objectFit: 'cover', display: 'block', cursor: 'pointer' }} />
-              </div>
-              <p style={{ fontSize: 12, color: '#B0A0C8', margin: '0 0 8px' }}>{t(lang, 'tapToEnlarge')}</p>
-            </>
-          )}
-          {!myJournalLoading && !myJournalUrl && !myJournalError && <p style={{ fontSize: 12, color: '#B0A0C8', margin: '0 0 8px' }}>{t(lang, 'notUploadedYet')}</p>}
-          {myJournalError && <p style={{ fontSize: 12, color: '#8070A0', margin: '0 0 8px' }}>{myJournalError}</p>}
+        {/* (4) Journal card */}
+        <section style={{ width: '100%', background: '#FFF4F8', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
+          <p style={{ fontSize: 9, fontWeight: 700, color: '#C04080', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.09em' }}>
+            {lang === 'en' ? '📔 TODAY\'S NOTE' : '📔 今日の記録'}
+          </p>
+          <p style={{ fontSize: 11, color: '#A06080', margin: '0 0 10px' }}>
+            {lang === 'en' ? 'A private memo just for you' : '自分だけに残す、今日のメモ'}
+          </p>
 
           <input ref={journalGalleryInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'journal_image'); e.target.value = '' }} />
           <input ref={journalCameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'journal_image'); e.target.value = '' }} />
 
-          <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-            <button type="button" disabled={journalUploading} onClick={() => { if (journalGalleryInputRef.current) { journalGalleryInputRef.current.value = ''; journalGalleryInputRef.current.click() } }} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '10px 0', fontSize: 22, background: 'linear-gradient(160deg,#B890F8,#8058D0)', color: '#fff', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 0 #5838A8' }}>
-              <span>📁</span><span style={{ fontSize: 11, fontWeight: 700 }}>{lang === 'en' ? 'Gallery' : 'ギャラリー'}</span>
-            </button>
-            <button type="button" disabled={journalUploading} onClick={() => { if (journalCameraInputRef.current) { journalCameraInputRef.current.value = ''; journalCameraInputRef.current.click() } }} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '10px 0', fontSize: 22, background: 'linear-gradient(160deg,#B890F8,#8058D0)', color: '#fff', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 0 #5838A8' }}>
-              <span>📸</span><span style={{ fontSize: 11, fontWeight: 700 }}>{t(lang, 'camera')}</span>
-            </button>
-          </div>
-
-          {journalUploaded && <p style={{ fontSize: 12, color: '#30A870', fontWeight: 600, margin: '0 0 4px' }}>{journalDateKey ? t(lang, 'savedWithDate', { date: journalDateKey }) : t(lang, 'saved')}</p>}
-          {(journalRequestId || lastRequestId) && (
-            <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12, color: '#8070A0', marginTop: 4 }}>
-              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>REQ: {journalRequestId || lastRequestId}</span>
-              <button type="button" onClick={() => navigator.clipboard?.writeText(journalRequestId || lastRequestId).then(() => {}).catch(() => {})} style={{ flex: '0 0 auto', padding: '2px 8px', fontSize: 11, cursor: 'pointer', border: '1px solid #DDD4FF', borderRadius: 6, background: '#fff', fontWeight: 600, color: '#8070A0' }}>{t(lang, 'copy')}</button>
-            </span>
+          {myJournalUrl ? (
+            <>
+              <button type="button" onClick={() => setPreviewOpen(true)} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 10, overflow: 'hidden', marginBottom: 6 }}>
+                <img src={myJournalUrl} alt="" width={52} height={52} style={{ width: 52, height: 52, objectFit: 'cover', display: 'block', borderRadius: 10 }} />
+              </button>
+              <button type="button" onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album')} style={{ display: 'block', padding: 0, fontSize: 11, color: '#C04080', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>
+                {lang === 'en' ? '📔 View note' : '📔 記録を見る'}
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" disabled={journalUploading} onClick={() => { if (journalCameraInputRef.current) { journalCameraInputRef.current.value = ''; journalCameraInputRef.current.click() } }} style={{ width: '100%', padding: 13, fontSize: 14, fontWeight: 700, color: '#fff', background: 'linear-gradient(160deg,#E870A0,#C04080)', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 0 #A02860' }}>
+                {lang === 'en' ? '📸 Record today' : '📸 今日の記録を残す'}
+              </button>
+              <button type="button" disabled={journalUploading} onClick={() => { if (journalGalleryInputRef.current) { journalGalleryInputRef.current.value = ''; journalGalleryInputRef.current.click() } }} style={{ display: 'block', width: '100%', marginTop: 8, padding: 0, fontSize: 11, color: '#C04080', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, textAlign: 'center' }}>
+                {lang === 'en' ? '📁 Choose from library' : '📁 ライブラリから選ぶ'}
+              </button>
+            </>
           )}
+          {journalUploading && <p style={{ fontSize: 11, color: '#A06080', margin: '6px 0 0' }}>{t(lang, 'sending')}</p>}
           {journalError && <p style={{ fontSize: 11, color: '#E04040', margin: '4px 0 0' }}>{journalError}</p>}
-        </section>}
+        </section>
 
         {errorLine && <p style={{ fontSize: 14, color: '#E04040', textAlign: 'center', margin: 0 }}>{errorLine}</p>}
       </main>
