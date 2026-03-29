@@ -583,7 +583,10 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
               </button>
             ))}
             {photos.filter((p) => p.role === ROLE_PARENT).length < 3 && (
-              <button type="button" onClick={() => { if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }} disabled={journalUploading} style={{ width: 52, height: 52, border: '2px dashed #C0B8D8', borderRadius: 11, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#B0A0C8', cursor: 'pointer' }}>+</button>
+              <button type="button" onClick={() => { if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }} disabled={journalUploading} style={{ width: 52, height: 52, border: '2px dashed #9070C8', borderRadius: 11, background: 'rgba(112,80,208,0.12)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, cursor: 'pointer', padding: 0 }}>
+                <span style={{ fontSize: 20, lineHeight: 1 }}>📷</span>
+                <span style={{ fontSize: 8, color: '#9070C8', fontWeight: 600, lineHeight: 1 }}>{lang === 'en' ? 'Add' : '追加'}</span>
+              </button>
             )}
           </div>
 
@@ -591,20 +594,19 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
             <p style={{ fontSize: 12, color: '#B0A0C8', margin: '0 0 8px' }}>{dailyPhotoLimitMessage}</p>
           )}
 
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button type="button" disabled={journalUploading} onClick={() => { if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '10px 0', fontSize: 22, background: 'linear-gradient(160deg,#B890F8,#8058D0)', color: '#fff', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 0 #5838A8' }}>
-              <span>📁</span><span style={{ fontSize: 11, fontWeight: 700 }}>{lang === 'en' ? 'Gallery' : 'ギャラリー'}</span>
-            </button>
-            <button type="button" disabled={journalUploading} onClick={() => { if (genericCameraInputRef.current) { genericCameraInputRef.current.value = ''; genericCameraInputRef.current.click() } }} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '10px 0', fontSize: 22, background: 'linear-gradient(160deg,#B890F8,#8058D0)', color: '#fff', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 0 #5838A8' }}>
-              <span>📸</span><span style={{ fontSize: 11, fontWeight: 700 }}>{t(lang, 'camera')}</span>
-            </button>
-          </div>
+          <button type="button" disabled={journalUploading} onClick={() => { if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }} style={{ width: '100%', padding: 13, fontSize: 14, fontWeight: 700, color: '#fff', background: 'linear-gradient(160deg,#B890F8,#8058D0)', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 0 #5838A8' }}>
+            {lang === 'en' ? '📷 Add Photo' : '📷 写真を追加する'}
+          </button>
 
           {photos.some(p => p.role === LISTEN_ROLE_CHILD) && (
             <button type="button" onClick={() => { setDailyTopic(lang === 'en' ? "Talk about the photo your partner sent" : '相手が送った写真について話してみよう'); topicRef.current = lang === 'en' ? "Talk about the photo your partner sent" : '相手が送った写真について話してみよう' }} style={{ width: '100%', marginTop: 10, padding: '10px 12px', fontSize: 13, color: '#7050C0', background: 'rgba(255,255,255,0.55)', border: '1.5px solid #C0B8D8', borderRadius: 10, cursor: 'pointer', textAlign: 'center', fontWeight: 600 }}>
               {lang === 'en' ? 'Talk about this photo' : 'この写真について話してみよう'}
             </button>
           )}
+
+          <button type="button" onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album', { state: { scrollToDate: dateKey } })} style={{ width: '100%', marginTop: 8, padding: 0, fontSize: 12, color: '#9070C8', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'center', fontWeight: 500 }}>
+            {lang === 'en' ? 'View Library' : 'ライブラリを見る'}
+          </button>
         </section>
 
         {/* (4) Journal card - HIDDEN */}
