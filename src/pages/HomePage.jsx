@@ -472,125 +472,72 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   })
 
   return (
-    <div style={{
-      minHeight: '100dvh',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '24px 20px',
-      fontFamily: 'var(--font-sans)',
-      background: 'var(--color-bg)',
-      color: 'var(--color-text)',
-    }}>
-      <header style={{ flexShrink: 0, marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-        <div>
-          <time style={{ fontSize: 14, color: 'var(--color-text-sub)' }}>{today}</time>
-          {streakCount > 0 && (
-            <p style={{ margin: '4px 0 0', fontSize: 13, color: '#e65c00', fontWeight: 600 }}>
-              🔥 {streakCount}日連続
-            </p>
-          )}
-          <FamilyInsightCard lang={lang} />
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-sans)', background: 'var(--color-bg)', color: 'var(--color-text)', paddingBottom: 72, overflow: 'hidden' }}>
+      {/* Gradient Header */}
+      <header style={{ flexShrink: 0, background: 'linear-gradient(135deg, #FF80C0 0%, #C080FF 50%, #80C0FF 100%)', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <img src="/logo.png" alt="Hum" width={36} height={36} style={{ borderRadius: 10, objectFit: 'cover' }} />
+          <span style={{ fontSize: 24, fontWeight: 800, color: '#fff' }}>Hum</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {onChangeRole && (
-            <button type="button" onClick={onChangeRole} style={{ marginTop: 6, padding: '2px 8px', fontSize: 11, color: 'var(--color-text-sub)', border: '1px solid var(--color-border, #ddd)', borderRadius: 4, background: 'transparent', cursor: 'pointer' }}>
-              👨‍👩‍👧 {lang === 'en' ? 'Switch role' : '役割変更'}
+            <button type="button" onClick={onChangeRole} style={{ padding: '4px 10px', fontSize: 11, color: '#fff', background: 'rgba(255,255,255,0.25)', border: 'none', borderRadius: 20, cursor: 'pointer', fontWeight: 600 }}>
+              {lang === 'en' ? 'Switch' : '変更'}
             </button>
           )}
-          <button type="button" onClick={() => { cycleCountry(); window.location.reload() }} style={{ marginTop: 6, padding: '2px 8px', fontSize: 11, color: 'var(--color-text-sub)', border: '1px solid var(--color-border, #ddd)', borderRadius: 4, background: 'transparent', cursor: 'pointer' }}>
-            🌍 {getCountry().toUpperCase()}
+          <button type="button" onClick={() => { cycleCountry(); window.location.reload() }} style={{ padding: '4px 10px', fontSize: 11, color: '#fff', background: 'rgba(255,255,255,0.25)', border: 'none', borderRadius: 20, cursor: 'pointer', fontWeight: 600 }}>
+            {getCountry().toUpperCase()}
           </button>
+          {streakCount > 0 && (
+            <span style={{ padding: '4px 12px', fontSize: 13, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,0.25)', borderRadius: 20 }}>
+              {streakCount}
+            </span>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={handleShare}
-          style={{ padding: '4px 10px', fontSize: 13, color: 'var(--color-primary)', border: '1px solid var(--color-primary)', borderRadius: 6, background: 'var(--color-surface)', cursor: 'pointer', whiteSpace: 'nowrap' }}
-        >
-          {lang === 'en' ? '👋 Invite' : '👋 招待'}
-        </button>
       </header>
 
-      <main className="page-content page" style={{ flex: 1, maxWidth: 320, margin: '0 auto', width: '100%' }}>
+      {/* Date bar */}
+      <div style={{ background: '#F8F0FF', borderBottom: '1px solid #EEE8FF', padding: '8px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', overflow: 'hidden' }}>
+        <time style={{ fontSize: 11, color: '#8070A0', fontWeight: 600 }}>{today}</time>
+        <FamilyInsightCard lang={lang} />
+      </div>
+
+      <main className="page-content page" style={{ flex: 1, maxWidth: 480, margin: '0 auto', width: '100%', paddingTop: 14 }}>
         <OneYearAgoBanner lang={lang} />
         <WeeklySummary lang={lang} />
-        {/* (1) 相手の録音（聞く） */}
-        <section className="card" style={{ width: '100%' }}>
-          <h2 className="cardHead">🎧 {t(lang, 'partnerRecordingListen')}</h2>
+
+        {/* (1) Receive card */}
+        <section style={{ width: '100%', background: '#E8FFF4', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(48,168,112,0.06)', overflow: 'hidden' }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: '#30A870', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t(lang, 'partnerRecordingListen')}</p>
           {hasParentAudio === true ? (
             <>
-              <p style={{ fontSize: 14, color: 'var(--color-success)', textAlign: 'center', margin: '0 0 8px', fontWeight: 500 }}>
+              <p style={{ fontSize: 14, color: '#1A6040', fontWeight: 700, margin: '0 0 10px' }}>
                 {t(lang, 'received')}
-                {isParentUnseen && <span style={{ marginLeft: 4, color: 'var(--color-danger)' }} title={lang === 'en' ? 'Unplayed' : '未再生'}>●</span>}
+                {isParentUnseen && <span style={{ marginLeft: 6, color: '#E04040' }} title={lang === 'en' ? 'Unplayed' : '未再生'}>●</span>}
               </p>
-              <button
-                type="button"
-                onClick={handlePlayParent}
-                disabled={isLoadingParent}
-                style={{
-                  width: '100%',
-                  padding: '12px 24px',
-                  fontSize: 16,
-                  fontWeight: 500,
-                  color: '#fff',
-                  background: isLoadingParent ? 'var(--color-text-muted)' : '#4a90d9',
-                  border: 'none',
-                  borderRadius: 8,
-                  cursor: isLoadingParent ? 'wait' : 'pointer',
-                  marginBottom: 16,
-                }}
-              >
+              <button type="button" onClick={handlePlayParent} disabled={isLoadingParent} style={{ width: '100%', padding: 14, fontSize: 15, fontWeight: 700, color: '#fff', background: isLoadingParent ? '#B0A0C8' : 'linear-gradient(160deg,#40D890,#18B868)', border: 'none', borderRadius: 14, cursor: isLoadingParent ? 'wait' : 'pointer', boxShadow: isLoadingParent ? 'none' : '0 5px 0 #109848', marginBottom: 10 }}>
                 {isLoadingParent ? t(lang, 'loading') : isPlayingParent ? t(lang, 'playing') : t(lang, 'play')}
               </button>
             </>
           ) : hasParentAudio === false ? (
-            <p style={{ fontSize: 14, color: 'var(--color-text-muted)', textAlign: 'center', margin: '0 0 16px' }}>
-              {t(lang, 'notReceivedYet')}
-            </p>
+            <p style={{ fontSize: 14, color: '#1A6040', margin: '0 0 10px', opacity: 0.6 }}>{t(lang, 'notReceivedYet')}</p>
           ) : (
             <>
-              <p style={{ fontSize: 14, color: 'var(--color-text-muted)', textAlign: 'center', margin: '0 0 16px' }}>
-                {t(lang, 'checking')}
-              </p>
+              <p style={{ fontSize: 14, color: '#1A6040', margin: '0 0 10px', opacity: 0.6 }}>{t(lang, 'checking')}</p>
               {showReloadButton && (
-                <button
-                  type="button"
-                  onClick={() => window.location.reload()}
-                  style={{ padding: '6px 12px', fontSize: 12, color: '#4a90d9', border: '1px solid #4a90d9', borderRadius: 6, background: 'var(--color-surface)', cursor: 'pointer' }}
-                >
-                  {t(lang, 'reload')}
-                </button>
+                <button type="button" onClick={() => window.location.reload()} style={{ padding: '6px 14px', fontSize: 12, color: '#30A870', border: '1.5px solid #30A870', borderRadius: 10, background: '#fff', cursor: 'pointer', fontWeight: 600 }}>{t(lang, 'reload')}</button>
               )}
             </>
           )}
           {hasParentAudio !== null && (
-            <button
-              type="button"
-              onClick={refreshParentStatus}
-              style={{ padding: '4px 12px', fontSize: 12, color: '#4a90d9', background: 'transparent', border: '1px solid #4a90d9', borderRadius: 6, cursor: 'pointer', marginBottom: 0 }}
-            >
-              {t(lang, 'refresh')}
-            </button>
+            <button type="button" onClick={refreshParentStatus} style={{ padding: '5px 14px', fontSize: 12, color: '#30A870', background: 'transparent', border: '1.5px solid #30A870', borderRadius: 10, cursor: 'pointer', fontWeight: 600 }}>{t(lang, 'refresh')}</button>
           )}
         </section>
 
-        {/* (2) 自分の録音（録る/送る） */}
-        <section className="card" style={{ width: '100%' }}>
-          <h2 className="cardHead">🎙 {t(lang, 'myRecordingRecordSend')}</h2>
-          <button
-            type="button"
-            onClick={handleClick}
-            disabled={isUploading}
-            style={{
-              width: '100%',
-              padding: '18px 24px',
-              fontSize: 18,
-              fontWeight: 500,
-              color: '#fff',
-              background: isUploading ? 'var(--color-text-muted)' : isRecording ? 'var(--color-danger)' : '#4a90d9',
-              border: 'none',
-              borderRadius: 12,
-              cursor: isUploading ? 'wait' : 'pointer',
-              boxShadow: isRecording ? '0 0 0 4px rgba(192,57,43,0.25)' : 'none',
-            }}
-          >
+        {/* (2) Send card */}
+        <section style={{ width: '100%', background: '#FFF4E8', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(208,112,48,0.06)', overflow: 'hidden' }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: '#D07030', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t(lang, 'myRecordingRecordSend')}</p>
+          <button type="button" onClick={handleClick} disabled={isUploading} style={{ width: '100%', padding: 14, fontSize: 15, fontWeight: 700, color: '#fff', background: isUploading ? '#B0A0C8' : isRecording ? 'linear-gradient(160deg,#FF4040,#C02020)' : 'linear-gradient(160deg,#FF8848,#F04818)', border: 'none', borderRadius: 14, cursor: isUploading ? 'wait' : 'pointer', boxShadow: isUploading ? 'none' : isRecording ? '0 5px 0 #901010' : '0 5px 0 #C03010' }}>
             {isUploading ? t(lang, 'sending') : isRecording ? t(lang, 'recording') : t(lang, 'record')}
           </button>
 
@@ -599,15 +546,13 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
               {[0, 1, 2, 3, 4].map((i) => {
                 const jitter = (Math.random() - 0.5) * 0.1
                 const scale = Math.max(0.2, Math.min(1.0, level * 8 + jitter))
-                return (
-                  <span key={i} style={{ width: 3, height: '100%', background: '#4a90d9', borderRadius: 2, transform: `scaleY(${scale})`, transformOrigin: 'center', transition: 'transform 0.1s ease-out' }} />
-                )
+                return <span key={i} style={{ width: 3, height: '100%', background: '#FF8848', borderRadius: 2, transform: `scaleY(${scale})`, transformOrigin: 'center', transition: 'transform 0.1s ease-out' }} />
               })}
             </div>
           )}
 
           {sentAt && (
-            <p style={{ fontSize: 16, color: 'var(--color-success)', fontWeight: 500, margin: '8px 0 0', textAlign: 'center' }}>
+            <p style={{ fontSize: 14, color: '#804020', fontWeight: 600, margin: '10px 0 0', textAlign: 'center' }}>
               {t(lang, 'sentAt', { time: sentAtStr })}
             </p>
           )}
@@ -615,200 +560,115 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           <DailyPromptCard pairId={getPairId()} role={ROLE_PARENT} onTopicChange={handleTopicChange} lang={lang} />
 
           {oneLinerVisible && oneLiner && (
-            <div style={{ width: '100%', marginTop: 12, padding: '12px 16px', background: '#e8f5e9', border: '1px solid #c8e6c9', borderRadius: 8, fontSize: 14, color: 'var(--color-success)', textAlign: 'center', lineHeight: 1.5 }}>
-              {oneLiner}
-            </div>
+            <div style={{ width: '100%', marginTop: 12, padding: '12px 16px', background: 'rgba(255,255,255,0.55)', borderRadius: 10, fontSize: 14, color: '#804020', textAlign: 'center', lineHeight: 1.5 }}>{oneLiner}</div>
           )}
-
           {analysisVisible && analysisComment && (
-            <div style={{ width: '100%', marginTop: 8, padding: '8px 12px', fontSize: 12, color: 'var(--color-text-sub)', textAlign: 'center', lineHeight: 1.4, whiteSpace: 'pre-line' }}>
-              {analysisComment}
-            </div>
+            <div style={{ width: '100%', marginTop: 8, padding: '8px 12px', fontSize: 12, color: '#B08050', textAlign: 'center', lineHeight: 1.4, whiteSpace: 'pre-line' }}>{analysisComment}</div>
           )}
         </section>
 
-        {/* (3) 日常写真（共有）※最大3枚 */}
-        <section className="card card-photos" style={{ width: '100%' }}>
-          <h2 className="cardHead">📷 {t(lang, 'dailyPhotosShared')}</h2>
-          <p className="title">{t(lang, 'todayPhotosCount', { count: photos.filter((p) => p.role === ROLE_PARENT).length })}</p>
-          <input ref={genericGalleryInputRef} type="file" accept="image/*" style={{ display: 'none' }}
-            onChange={(e) => { const f = e.target.files?.[0]; if (f && typeof f.type === 'string' && f.type.startsWith('image/')) handleJournalFile(f, 'generic_image'); e.target.value = '' }}
-          />
-          <input ref={genericCameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'generic_image'); e.target.value = '' }}
-          />
-          <div className="btnGrid" style={{ marginBottom: 10 }}>
-            <button
-              type="button"
-              className="btn"
-              disabled={journalUploading}
-              onClick={() => { if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }}
-              style={{ borderColor: '#4a90d9', color: '#4a90d9', background: 'var(--color-surface)' }}
-            >
-              {lang === 'en' ? 'Upload' : 'アップロード'}
+        {/* (3) Photos card */}
+        <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t(lang, 'dailyPhotosShared')}</p>
+          <p style={{ fontSize: 12, color: '#8070A0', margin: '0 0 10px', fontWeight: 500 }}>{t(lang, 'todayPhotosCount', { count: photos.filter((p) => p.role === ROLE_PARENT).length })}</p>
+
+          <input ref={genericGalleryInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f && typeof f.type === 'string' && f.type.startsWith('image/')) handleJournalFile(f, 'generic_image'); e.target.value = '' }} />
+          <input ref={genericCameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'generic_image'); e.target.value = '' }} />
+
+          {/* Photo thumbnails */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+            {photos.slice(0, 6).map((ph, i) => (
+              <button key={ph.storagePath + String(i)} type="button" onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album', { state: { scrollToDate: dateKey } })} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 11, overflow: 'hidden', flexShrink: 0 }} aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}>
+                <img src={ph.url || ''} alt="" width={52} height={52} style={{ width: 52, height: 52, objectFit: 'cover', display: 'block', borderRadius: 11 }} />
+              </button>
+            ))}
+            {photos.filter((p) => p.role === ROLE_PARENT).length < 3 && (
+              <button type="button" onClick={() => { if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }} disabled={journalUploading} style={{ width: 52, height: 52, border: '2px dashed #C0B8D8', borderRadius: 11, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#B0A0C8', cursor: 'pointer' }}>+</button>
+            )}
+          </div>
+
+          {dailyPhotoLimitMessage && (
+            <p style={{ fontSize: 12, color: '#B0A0C8', margin: '0 0 8px' }}>{dailyPhotoLimitMessage}</p>
+          )}
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button type="button" disabled={journalUploading} onClick={() => { if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '10px 0', fontSize: 22, background: 'linear-gradient(160deg,#B890F8,#8058D0)', color: '#fff', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 0 #5838A8' }}>
+              <span>📁</span><span style={{ fontSize: 11, fontWeight: 700 }}>{lang === 'en' ? 'Gallery' : 'ギャラリー'}</span>
             </button>
-            <button
-              type="button"
-              className="btn"
-              disabled={journalUploading}
-              onClick={() => { if (genericCameraInputRef.current) { genericCameraInputRef.current.value = ''; genericCameraInputRef.current.click() } }}
-              style={{ borderColor: '#4a90d9', color: '#4a90d9', background: 'var(--color-surface)' }}
-            >
-              {t(lang, 'camera')}
+            <button type="button" disabled={journalUploading} onClick={() => { if (genericCameraInputRef.current) { genericCameraInputRef.current.value = ''; genericCameraInputRef.current.click() } }} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '10px 0', fontSize: 22, background: 'linear-gradient(160deg,#B890F8,#8058D0)', color: '#fff', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 0 #5838A8' }}>
+              <span>📸</span><span style={{ fontSize: 11, fontWeight: 700 }}>{t(lang, 'camera')}</span>
             </button>
           </div>
-          {dailyPhotoLimitMessage && (
-            <p style={{ fontSize: 12, color: 'var(--color-text-muted)', margin: '0 0 8px' }}>{dailyPhotoLimitMessage}</p>
-          )}
-          {photos.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-              {photos.slice(0, 9).map((ph, i) => (
-                <button
-                  key={ph.storagePath + String(i)}
-                  type="button"
-                  onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album', { state: { scrollToDate: dateKey } })}
-                  style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 6, overflow: 'hidden', flexShrink: 0 }}
-                  aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}
-                >
-                  <img src={ph.url || ''} alt="" width={48} height={48} style={{ width: 48, height: 48, objectFit: 'cover', display: 'block', borderRadius: 6 }} />
-                </button>
-              ))}
-            </div>
-          )}
-          <button
-            type="button"
-            className="btn"
-            onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album', { state: { scrollToDate: dateKey } })}
-            style={{ width: '100%', borderColor: 'var(--color-primary)', color: 'var(--color-primary)', background: 'var(--color-surface)' }}
-          >
-            🗂 {lang === 'en' ? 'View Library' : 'ライブラリを見る'}
-          </button>
+
           {photos.some(p => p.role === LISTEN_ROLE_CHILD) && (
-            <button
-              type="button"
-              onClick={() => { setDailyTopic(lang === 'en' ? "Talk about the photo your partner sent" : '相手が送った写真について話してみよう'); topicRef.current = lang === 'en' ? "Talk about the photo your partner sent" : '相手が送った写真について話してみよう' }}
-              style={{ width: '100%', marginTop: 8, padding: '8px 12px', fontSize: 13, color: 'var(--color-secondary)', background: 'transparent', border: '1px solid var(--color-secondary)', borderRadius: 8, cursor: 'pointer', textAlign: 'center' }}
-            >
-              📷 {lang === 'en' ? 'Talk about this photo' : 'この写真について話してみよう'}
+            <button type="button" onClick={() => { setDailyTopic(lang === 'en' ? "Talk about the photo your partner sent" : '相手が送った写真について話してみよう'); topicRef.current = lang === 'en' ? "Talk about the photo your partner sent" : '相手が送った写真について話してみよう' }} style={{ width: '100%', marginTop: 10, padding: '10px 12px', fontSize: 13, color: '#7050C0', background: 'rgba(255,255,255,0.55)', border: '1.5px solid #C0B8D8', borderRadius: 10, cursor: 'pointer', textAlign: 'center', fontWeight: 600 }}>
+              {lang === 'en' ? 'Talk about this photo' : 'この写真について話してみよう'}
             </button>
           )}
         </section>
 
-        {/* (4) ジャーナル（非公開・1日1枚） */}
-        <section className="card card-journal" style={{ width: '100%' }}>
-          <h2 className="cardHead">📝 {t(lang, 'journalSharedAi')}</h2>
-          <p style={{ fontSize: 11, color: 'var(--color-text-sub)', margin: '0 0 12px', lineHeight: 1.4 }}>{t(lang, 'journalNotice')}</p>
-          <p className="title">{t(lang, 'myJournal')}</p>
-          {myJournalLoading && (
-            <p className="sub" style={{ margin: '0 0 8px' }}>{t(lang, 'loading')}</p>
-          )}
+        {/* (4) Journal card - same purple style */}
+        <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t(lang, 'journalSharedAi')}</p>
+          <p style={{ fontSize: 11, color: '#8070A0', margin: '0 0 12px', lineHeight: 1.4 }}>{t(lang, 'journalNotice')}</p>
+          <p style={{ fontSize: 13, color: '#7050C0', margin: '0 0 6px', fontWeight: 600 }}>{t(lang, 'myJournal')}</p>
+          {myJournalLoading && <p style={{ fontSize: 12, color: '#B0A0C8', margin: '0 0 8px' }}>{t(lang, 'loading')}</p>}
           {!myJournalLoading && myJournalUrl && (
             <>
-              <div className="thumbWrap media-thumb-wrap">
-                <img
-                  src={myJournalUrl}
-                  alt={t(lang, 'myJournal')}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setPreviewOpen(true)}
-                  onKeyDown={(e) => e.key === 'Enter' && setPreviewOpen(true)}
-                  className="media-thumb"
-                  width={96}
-                  height={96}
-                  style={{ cursor: 'pointer' }}
-                />
+              <div style={{ width: 96, height: 96, borderRadius: 11, overflow: 'hidden', marginBottom: 4 }}>
+                <img src={myJournalUrl} alt={t(lang, 'myJournal')} role="button" tabIndex={0} onClick={() => setPreviewOpen(true)} onKeyDown={(e) => e.key === 'Enter' && setPreviewOpen(true)} width={96} height={96} style={{ width: 96, height: 96, objectFit: 'cover', display: 'block', cursor: 'pointer' }} />
               </div>
-              <p style={{ fontSize: 12, color: 'var(--color-text-muted)', margin: '4px 0 0', textAlign: 'center' }}>{t(lang, 'tapToEnlarge')}</p>
+              <p style={{ fontSize: 12, color: '#B0A0C8', margin: '0 0 8px' }}>{t(lang, 'tapToEnlarge')}</p>
             </>
           )}
-          {!myJournalLoading && !myJournalUrl && !myJournalError && (
-            <p className="sub" style={{ margin: '0 0 8px' }}>{t(lang, 'notUploadedYet')}</p>
-          )}
-          {myJournalError && (
-            <p style={{ fontSize: 12, color: 'var(--color-text-sub)', margin: '0 0 8px', textAlign: 'center' }}>{myJournalError}</p>
-          )}
-          <input ref={journalGalleryInputRef} type="file" accept="image/*" style={{ display: 'none' }}
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'journal_image'); e.target.value = '' }}
-          />
-          <input ref={journalCameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'journal_image'); e.target.value = '' }}
-          />
-          <div className="btnGrid" style={{ marginBottom: 12 }}>
-            <button
-              type="button"
-              className="btn"
-              disabled={journalUploading}
-              onClick={() => { if (journalGalleryInputRef.current) { journalGalleryInputRef.current.value = ''; journalGalleryInputRef.current.click() } }}
-              style={{ borderColor: '#4a90d9', color: '#4a90d9', background: 'var(--color-surface)' }}
-            >
-              {lang === 'en' ? 'Upload' : 'アップロード'}
+          {!myJournalLoading && !myJournalUrl && !myJournalError && <p style={{ fontSize: 12, color: '#B0A0C8', margin: '0 0 8px' }}>{t(lang, 'notUploadedYet')}</p>}
+          {myJournalError && <p style={{ fontSize: 12, color: '#8070A0', margin: '0 0 8px' }}>{myJournalError}</p>}
+
+          <input ref={journalGalleryInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'journal_image'); e.target.value = '' }} />
+          <input ref={journalCameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'journal_image'); e.target.value = '' }} />
+
+          <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+            <button type="button" disabled={journalUploading} onClick={() => { if (journalGalleryInputRef.current) { journalGalleryInputRef.current.value = ''; journalGalleryInputRef.current.click() } }} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '10px 0', fontSize: 22, background: 'linear-gradient(160deg,#B890F8,#8058D0)', color: '#fff', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 0 #5838A8' }}>
+              <span>📁</span><span style={{ fontSize: 11, fontWeight: 700 }}>{lang === 'en' ? 'Gallery' : 'ギャラリー'}</span>
             </button>
-            <button
-              type="button"
-              className="btn btnPrimary"
-              disabled={journalUploading}
-              onClick={() => { if (journalCameraInputRef.current) { journalCameraInputRef.current.value = ''; journalCameraInputRef.current.click() } }}
-              style={{ background: journalUploading ? 'var(--color-text-muted)' : '#4a90d9', borderColor: journalUploading ? 'var(--color-text-muted)' : '#4a90d9' }}
-            >
-              {t(lang, 'camera')}
+            <button type="button" disabled={journalUploading} onClick={() => { if (journalCameraInputRef.current) { journalCameraInputRef.current.value = ''; journalCameraInputRef.current.click() } }} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '10px 0', fontSize: 22, background: 'linear-gradient(160deg,#B890F8,#8058D0)', color: '#fff', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 0 #5838A8' }}>
+              <span>📸</span><span style={{ fontSize: 11, fontWeight: 700 }}>{t(lang, 'camera')}</span>
             </button>
           </div>
-          {journalUploaded && (
-            <p className="sub" style={{ color: 'var(--color-success)', margin: '0 0 4px' }}>
-              {journalDateKey ? t(lang, 'savedWithDate', { date: journalDateKey }) : t(lang, 'saved')}
-            </p>
-          )}
+
+          {journalUploaded && <p style={{ fontSize: 12, color: '#30A870', fontWeight: 600, margin: '0 0 4px' }}>{journalDateKey ? t(lang, 'savedWithDate', { date: journalDateKey }) : t(lang, 'saved')}</p>}
           {(journalRequestId || lastRequestId) && (
-            <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--color-text-sub)', marginTop: 4 }}>
+            <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12, color: '#8070A0', marginTop: 4 }}>
               <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>REQ: {journalRequestId || lastRequestId}</span>
-              <button
-                type="button"
-                onClick={() => navigator.clipboard?.writeText(journalRequestId || lastRequestId).then(() => {}).catch(() => {})}
-                style={{ flex: '0 0 auto', padding: '2px 6px', fontSize: 11, cursor: 'pointer', border: '1px solid var(--color-border)', borderRadius: 4, background: 'var(--color-surface)' }}
-              >
-                {t(lang, 'copy')}
-              </button>
+              <button type="button" onClick={() => navigator.clipboard?.writeText(journalRequestId || lastRequestId).then(() => {}).catch(() => {})} style={{ flex: '0 0 auto', padding: '2px 8px', fontSize: 11, cursor: 'pointer', border: '1px solid #DDD4FF', borderRadius: 6, background: '#fff', fontWeight: 600, color: '#8070A0' }}>{t(lang, 'copy')}</button>
             </span>
           )}
-          {journalError && (
-            <p style={{ fontSize: 11, color: 'var(--color-danger)', margin: '4px 0 0' }}>{journalError}</p>
-          )}
+          {journalError && <p style={{ fontSize: 11, color: '#E04040', margin: '4px 0 0' }}>{journalError}</p>}
         </section>
 
-        {errorLine && (
-          <p style={{ fontSize: 14, color: 'var(--color-danger)', textAlign: 'center', margin: 0 }}>
-            {errorLine}
-          </p>
-        )}
+        {errorLine && <p style={{ fontSize: 14, color: '#E04040', textAlign: 'center', margin: 0 }}>{errorLine}</p>}
       </main>
+
+      {/* Bottom nav */}
+      <nav className="bottom-nav">
+        <button type="button" className="active"><span style={{ fontSize: 20 }}>🏠</span><span>{lang === 'en' ? 'Home' : 'ホーム'}</span></button>
+        <button type="button" onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album')}><span style={{ fontSize: 20 }}>🖼</span><span>{lang === 'en' ? 'Album' : 'アルバム'}</span></button>
+        <button type="button" onClick={handleShare}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : '招待'}</span></button>
+      </nav>
 
       <audio ref={parentAudioRef} onEnded={handleParentEnded} onPause={() => setIsPlayingParent(false)} style={{ display: 'none' }} />
 
       {previewOpen && myJournalUrl && (
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => setPreviewOpen(false)}
-          onKeyDown={(e) => e.key === 'Escape' && setPreviewOpen(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, boxSizing: 'border-box', cursor: 'pointer' }}
-        >
+        <div role="button" tabIndex={0} onClick={() => setPreviewOpen(false)} onKeyDown={(e) => e.key === 'Escape' && setPreviewOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, boxSizing: 'border-box', cursor: 'pointer' }}>
           <img src={myJournalUrl} alt={t(lang, 'myJournal')} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 8, pointerEvents: 'none' }} />
         </div>
       )}
 
       {toastMsg && (
-        <div style={{ position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.75)', color: '#fff', fontSize: 14, padding: '8px 20px', borderRadius: 20, zIndex: 20000, whiteSpace: 'nowrap', pointerEvents: 'none' }}>
-          {toastMsg}
-        </div>
+        <div style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.75)', color: '#fff', fontSize: 14, padding: '8px 20px', borderRadius: 20, zIndex: 20000, whiteSpace: 'nowrap', pointerEvents: 'none' }}>{toastMsg}</div>
       )}
 
-      <UploadErrorModal
-        visible={uploadErrorModal.visible}
-        message={uploadErrorModal.message}
-        onRetry={uploadErrorModal.onRetry}
-        onClose={() => setUploadErrorModal({ visible: false, message: '', onRetry: null })}
-        lang={lang}
-      />
+      <UploadErrorModal visible={uploadErrorModal.visible} message={uploadErrorModal.message} onRetry={uploadErrorModal.onRetry} onClose={() => setUploadErrorModal({ visible: false, message: '', onRetry: null })} lang={lang} />
     </div>
   )
 }
