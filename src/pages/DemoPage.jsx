@@ -105,6 +105,23 @@ export default function DemoPage({ lang = 'ja' }) {
     }
   }
 
+  const handleShareDemo = async () => {
+    const url = 'https://tyson-two.vercel.app/#/demo'
+    const text = lang === 'en'
+      ? 'Check out Hum — a family voice app. Try the demo!'
+      : 'Humを見てみて！家族の声アプリのデモです'
+    if (navigator.share) {
+      try { await navigator.share({ text, url }) } catch (_) {}
+    } else {
+      try {
+        await navigator.clipboard.writeText(`${text}\n${url}`)
+        alert(lang === 'en' ? 'Link copied!' : 'リンクをコピーしました')
+      } catch (_) {
+        alert(lang === 'en' ? 'Copy failed' : 'コピーに失敗しました')
+      }
+    }
+  }
+
   const today = new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', {
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
   })
@@ -123,7 +140,7 @@ export default function DemoPage({ lang = 'ja' }) {
   }
 
   return (
-    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-sans)', background: 'var(--color-bg)', color: 'var(--color-text)', paddingBottom: 100, overflow: 'hidden' }}>
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-sans)', background: 'var(--color-bg)', color: 'var(--color-text)', paddingBottom: 160, overflow: 'hidden' }}>
       {/* Hero Header */}
       <header style={{ flexShrink: 0, background: 'linear-gradient(135deg, #FF60B0 0%, #A060FF 50%, #60B0FF 100%)', padding: '20px 18px 24px', textAlign: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
@@ -179,6 +196,11 @@ export default function DemoPage({ lang = 'ja' }) {
             📷 {lang === 'en' ? 'Photo Album' : 'フォトアルバム'}　<span style={{ fontWeight: 500, color: '#8070A0' }}>{allPhotos.length}{lang === 'en' ? ' photos' : '枚'}</span>
           </p>
 
+          {/* Disabled add button */}
+          <button type="button" disabled style={{ width: '100%', padding: 13, fontSize: 14, fontWeight: 700, color: '#fff', background: '#B0A0C8', border: 'none', borderRadius: 14, cursor: 'not-allowed', boxShadow: 'none', opacity: 0.4, marginBottom: 14 }}>
+            {lang === 'en' ? '📷 Add Photo' : '📷 写真を追加する'}
+          </button>
+
           {albumDays.map((day) => (
             <div key={day.date} style={{ marginBottom: 16 }}>
               <p style={{ fontSize: 12, fontWeight: 700, color: '#8070A0', margin: '0 0 6px' }}>{day.date}</p>
@@ -203,6 +225,13 @@ export default function DemoPage({ lang = 'ja' }) {
 
         {errorLine && <p style={{ fontSize: 14, color: '#E04040', textAlign: 'center', margin: 0 }}>{errorLine}</p>}
       </main>
+
+      {/* Bottom nav */}
+      <nav className="bottom-nav" style={{ bottom: 72 }}>
+        <button type="button" className="active"><span style={{ fontSize: 20 }}>🏠</span><span>{lang === 'en' ? 'Home' : 'ホーム'}</span></button>
+        <button type="button" disabled style={{ opacity: 0.4 }}><span style={{ fontSize: 20 }}>🖼</span><span>{lang === 'en' ? 'Album' : 'アルバム'}</span></button>
+        <button type="button" onClick={handleShareDemo}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Share' : '共有'}</span></button>
+      </nav>
 
       {/* CTA button - fixed bottom with pulse */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9000, background: 'linear-gradient(0deg, #FFF8FF 80%, transparent)', padding: '16px 18px max(16px, env(safe-area-inset-bottom))' }}>
