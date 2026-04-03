@@ -13,8 +13,6 @@ import { formatDeployedAtLocal, getBuildHash } from '../lib/dateFormat'
 import { useAudioLevel } from '../lib/useAudioLevel'
 import UploadErrorModal from '../components/UploadErrorModal'
 import WeeklySummary from '../components/WeeklySummary'
-import OneYearAgoBanner from '../components/OneYearAgoBanner'
-import VoiceLibrary from '../components/VoiceLibrary'
 
 export default function HomePage({ lang = 'ja', onChangeRole }) {
   const navigate = useNavigate()
@@ -669,10 +667,6 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           )}
 
         </section>
-
-        <OneYearAgoBanner lang={lang} />
-
-        <VoiceLibrary lang={lang} role="parent" pairId={currentPairId} />
 
         {/* (4) Journal card */}
         <section style={{ width: '100%', background: '#FFF4F8', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
