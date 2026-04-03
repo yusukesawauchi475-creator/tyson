@@ -299,6 +299,7 @@ async function handleVoiceHistory(req, res) {
     }
     return res.status(200).json({ success: true, days });
   } catch (e) {
+    console.error('[voice-history] error:', e.message, e.stack?.substring(0, 200));
     return res.status(500).json({ error: e.message });
   }
 }
@@ -415,23 +416,28 @@ async function handleGet(req, res) {
     const fileRef = storageBucket.file(audioPath);
 
     if (mode === 'signed') {
-      const [signedUrl] = await fileRef.getSignedUrl({
-        action: 'read',
-        expires: Date.now() + 60 * 60 * 1000,
-      });
-      const updatedAt = roleData.updatedAt?.toMillis?.() ?? roleData.version ?? Date.now();
-      const seenAt = roleData.seenAt?.toMillis?.() ?? null;
-      return res.status(200).json({
-        success: true,
-        mode: 'signed',
-        url: signedUrl,
-        version,
-        updatedAt,
-        seenAt,
-        audioPath,
-        requestId: reqId,
-        hasAudio: true,
-      });
+      try {
+        const [signedUrl] = await fileRef.getSignedUrl({
+          action: 'read',
+          expires: Date.now() + 60 * 60 * 1000,
+        });
+        const updatedAt = roleData.updatedAt?.toMillis?.() ?? roleData.version ?? Date.now();
+        const seenAt = roleData.seenAt?.toMillis?.() ?? null;
+        return res.status(200).json({
+          success: true,
+          mode: 'signed',
+          url: signedUrl,
+          version,
+          updatedAt,
+          seenAt,
+          audioPath,
+          requestId: reqId,
+          hasAudio: true,
+        });
+      } catch (signErr) {
+        console.error('[handleGet] getSignedUrl failed:', signErr.message?.substring(0, 100), { audioPath });
+        return res.status(500).json({ success: false, error: 'Failed to generate signed URL', requestId: reqId, errorCode: 'signed_url_failed' });
+      }
     }
 
     const [contents] = await fileRef.download();
