@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef, useMemo, useEffect } from 'react'
 import { t } from '../lib/i18n'
 
 const DEMO_PAIR_ID = 'PAIR-FSEAN5'
@@ -18,6 +18,16 @@ function generateSamplePhotos() {
   return photos
 }
 
+// Inject pulse animation CSS once
+const PULSE_STYLE_ID = 'demo-pulse-style'
+function ensurePulseStyle() {
+  if (document.getElementById(PULSE_STYLE_ID)) return
+  const style = document.createElement('style')
+  style.id = PULSE_STYLE_ID
+  style.textContent = `@keyframes demoPulse { 0%, 100% { transform: scale(1); box-shadow: 0 4px 16px rgba(192,128,255,0.4); } 50% { transform: scale(1.03); box-shadow: 0 6px 24px rgba(192,128,255,0.6); } }`
+  document.head.appendChild(style)
+}
+
 export default function DemoPage({ lang = 'ja' }) {
   const [isPlayingParent, setIsPlayingParent] = useState(false)
   const [errorLine, setErrorLine] = useState(null)
@@ -26,6 +36,8 @@ export default function DemoPage({ lang = 'ja' }) {
   const touchStartRef = useRef(null)
 
   const samplePhotos = useMemo(() => generateSamplePhotos(), [])
+
+  useEffect(() => { ensurePulseStyle() }, [])
 
   const handlePlayParent = async () => {
     const el = parentAudioRef.current
@@ -65,15 +77,18 @@ export default function DemoPage({ lang = 'ja' }) {
   }
 
   return (
-    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-sans)', background: 'var(--color-bg)', color: 'var(--color-text)', paddingBottom: 90, overflow: 'hidden' }}>
-      {/* Gradient Header */}
-      <header style={{ flexShrink: 0, background: 'linear-gradient(135deg, #FF80C0 0%, #C080FF 50%, #80C0FF 100%)', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img src="/logo.png" alt="Hum" width={36} height={36} style={{ borderRadius: 10, objectFit: 'cover' }} />
-          <span style={{ fontSize: 24, fontWeight: 800, color: '#fff' }}>Hum</span>
-          <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.7)', background: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: 10 }}>DEMO</span>
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-sans)', background: 'var(--color-bg)', color: 'var(--color-text)', paddingBottom: 100, overflow: 'hidden' }}>
+      {/* Hero Header */}
+      <header style={{ flexShrink: 0, background: 'linear-gradient(135deg, #FF60B0 0%, #A060FF 50%, #60B0FF 100%)', padding: '20px 18px 24px', textAlign: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
+          <img src="/logo.png" alt="Hum" width={44} height={44} style={{ borderRadius: 12, objectFit: 'cover' }} />
+          <span style={{ fontSize: 32, fontWeight: 800, color: '#fff' }}>Hum</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: '#FF8C00', padding: '3px 10px', borderRadius: 10 }}>DEMO</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <p style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.9)', margin: 0, letterSpacing: '0.02em' }}>
+          {lang === 'en' ? '1 min a day, connected by voice' : '毎日1分、声でつながる家族アプリ'}
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 12 }}>
           <span style={{ padding: '4px 12px', fontSize: 13, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,0.25)', borderRadius: 20 }}>
             55{lang === 'en' ? 'd' : '日目'}
           </span>
@@ -84,11 +99,8 @@ export default function DemoPage({ lang = 'ja' }) {
       </header>
 
       {/* Date bar */}
-      <div style={{ background: '#F8F0FF', borderBottom: '1px solid #EEE8FF', padding: '8px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <time style={{ fontSize: 11, color: '#8070A0', fontWeight: 600 }}>{today}</time>
-          <span style={{ fontSize: 11, fontStyle: 'italic', color: '#9080B0' }}>{lang === 'en' ? '1 min a day, connected by voice' : '毎日1分、声でつながる'}</span>
-        </div>
+      <div style={{ background: '#F8F0FF', borderBottom: '1px solid #EEE8FF', padding: '8px 18px' }}>
+        <time style={{ fontSize: 11, color: '#8070A0', fontWeight: 600 }}>{today}</time>
       </div>
 
       <main className="page-content page" style={{ flex: 1, maxWidth: 480, margin: '0 auto', width: '100%', paddingTop: 14 }}>
@@ -115,17 +127,32 @@ export default function DemoPage({ lang = 'ja' }) {
           </p>
         </section>
 
-        {/* (3) Sample photo gallery */}
+        {/* (3) Sample photo gallery - hero + 2-col grid */}
         <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: '#7050C0', margin: '0 0 10px' }}>
             📷 {lang === 'en' ? 'Photo Album' : 'フォトアルバム'}　<span style={{ fontWeight: 500, color: '#8070A0' }}>100{lang === 'en' ? ' photos' : '枚'}</span>
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
-            {samplePhotos.map((photo, i) => (
+
+          {/* Hero photo (first image full-width) */}
+          <button
+            type="button"
+            onClick={() => setLightboxIndex(0)}
+            style={{ padding: 0, border: 'none', background: '#E8E0FF', cursor: 'pointer', borderRadius: 12, overflow: 'hidden', display: 'block', width: '100%', marginBottom: 4 }}
+          >
+            <img
+              src={samplePhotos[0].url}
+              alt=""
+              style={{ width: '100%', height: 200, objectFit: 'cover', display: 'block' }}
+            />
+          </button>
+
+          {/* 2-col grid for the rest */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4 }}>
+            {samplePhotos.slice(1).map((photo, i) => (
               <button
                 key={photo.id}
                 type="button"
-                onClick={() => setLightboxIndex(i)}
+                onClick={() => setLightboxIndex(i + 1)}
                 style={{ padding: 0, border: 'none', background: '#E8E0FF', cursor: 'pointer', borderRadius: 8, overflow: 'hidden', aspectRatio: '1', display: 'block' }}
               >
                 <img
@@ -142,12 +169,12 @@ export default function DemoPage({ lang = 'ja' }) {
         {errorLine && <p style={{ fontSize: 14, color: '#E04040', textAlign: 'center', margin: 0 }}>{errorLine}</p>}
       </main>
 
-      {/* CTA button */}
+      {/* CTA button - fixed bottom with pulse */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9000, background: 'linear-gradient(0deg, #FFF8FF 80%, transparent)', padding: '16px 18px max(16px, env(safe-area-inset-bottom))' }}>
         <button
           type="button"
           onClick={() => { window.location.href = '/#/?pairId=PAIR-FSEAN5' }}
-          style={{ width: '100%', maxWidth: 480, margin: '0 auto', display: 'block', padding: 16, fontSize: 16, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg, #FF80C0 0%, #C080FF 50%, #80C0FF 100%)', border: 'none', borderRadius: 16, cursor: 'pointer', boxShadow: '0 4px 16px rgba(192,128,255,0.4)' }}
+          style={{ width: '100%', maxWidth: 480, margin: '0 auto', display: 'block', padding: 20, fontSize: 18, fontWeight: 800, color: '#fff', background: 'linear-gradient(135deg, #FF60B0 0%, #A060FF 50%, #60B0FF 100%)', border: 'none', borderRadius: 18, cursor: 'pointer', boxShadow: '0 4px 16px rgba(192,128,255,0.4)', animation: 'demoPulse 2s ease-in-out infinite', letterSpacing: '0.02em' }}
         >
           {lang === 'en' ? '✨ Try this app' : '✨ このアプリを使ってみる'}
         </button>
