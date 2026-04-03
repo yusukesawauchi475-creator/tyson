@@ -20,6 +20,8 @@ function getDemoAllPhotos() {
   return all
 }
 
+const BLOCKED_PAIR_IDS = ['TYSON-ZH90']
+
 export default function AlbumPage({ lang = 'ja' }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -29,7 +31,8 @@ export default function AlbumPage({ lang = 'ja' }) {
   const [error, setError] = useState(null)
   const [lightboxIndex, setLightboxIndex] = useState(null) // index into allPhotos
   const [activeTab, setActiveTab] = useState('photo') // 'photo' | 'voice'
-  const pairId = getPairId()
+  const rawPairId = getPairId()
+  const pairId = BLOCKED_PAIR_IDS.includes(rawPairId) ? null : rawPairId
   const [samplePlayed, setSamplePlayed] = useState({
     '2026-03-25-parent': true, '2026-03-25-child': true,
     '2026-03-28-parent': true, '2026-03-28-child': true,
@@ -40,7 +43,8 @@ export default function AlbumPage({ lang = 'ja' }) {
   const [samplePlayingKey, setSamplePlayingKey] = useState(null)
 
   useEffect(() => {
-    fetchAlbum(getPairId())
+    if (!pairId) { setLoading(false); return }
+    fetchAlbum(pairId)
       .then(({ days: d }) => {
         setDays(d)
         setLoading(false)
@@ -131,6 +135,19 @@ export default function AlbumPage({ lang = 'ja' }) {
   }
 
   const currentPhoto = lightboxIndex != null ? allPhotos[lightboxIndex] : null
+
+  if (!pairId) {
+    return (
+      <div style={{ minHeight: '100dvh', background: '#FFF8FF', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', padding: 24 }}>
+        <p style={{ fontSize: 16, color: '#7050C0', fontWeight: 600, textAlign: 'center' }}>
+          {lang === 'en' ? 'Pair ID required to view album.' : 'アルバムを表示するにはペアIDが必要です。'}
+        </p>
+        <button type="button" onClick={() => navigate(-1)} style={{ marginTop: 16, padding: '10px 24px', fontSize: 14, fontWeight: 600, color: '#fff', background: 'linear-gradient(135deg, #FF80C0, #A060FF)', border: 'none', borderRadius: 12, cursor: 'pointer' }}>
+          {lang === 'en' ? '← Back' : '← 戻る'}
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div style={{
