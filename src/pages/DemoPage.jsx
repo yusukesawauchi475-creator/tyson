@@ -229,9 +229,9 @@ export default function DemoPage({ lang = 'ja' }) {
         {errorLine && <p style={{ fontSize: 14, color: '#E04040', textAlign: 'center', margin: 0 }}>{errorLine}</p>}
       </main>
 
-      {/* Bottom nav - invite only */}
+      {/* Bottom nav - invite disabled */}
       <nav className="bottom-nav" style={{ bottom: 72, justifyContent: 'center' }}>
-        <button type="button" onClick={handleShareDemo}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : '招待'}</span></button>
+        <button type="button" disabled style={{ opacity: 0.4, pointerEvents: 'none' }}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : '招待'}</span></button>
       </nav>
 
       {/* CTA button - fixed bottom with pulse */}

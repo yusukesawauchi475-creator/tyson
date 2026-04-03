@@ -10,11 +10,15 @@ import RoleSelectPage from './pages/RoleSelectPage'
 import { getUserRole, clearUserRole, hasPairId } from './lib/pairDaily'
 
 function RootOrLanding({ lang = 'ja' }) {
-  // pairIdがURL or localStorageにある → 既存ユーザー → RootRoute
-  // なければランディングページ
-  if (hasPairId()) return <RootRoute lang={lang} />
-  const stored = getUserRole()
-  if (stored) return <RootRoute lang={lang} />
+  // URLに?pairId=がある場合は既存ユーザー → RootRoute
+  try {
+    const hash = window.location.hash || ''
+    const qIndex = hash.indexOf('?')
+    const qs = qIndex >= 0 ? hash.slice(qIndex + 1) : ''
+    const pairIdFromUrl = new URLSearchParams(qs).get('pairId')?.trim()
+    if (pairIdFromUrl) return <RootRoute lang={lang} />
+  } catch (_) {}
+  // それ以外は常にLandingPage
   return <LandingPage lang={lang} />
 }
 

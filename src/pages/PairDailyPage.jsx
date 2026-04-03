@@ -888,7 +888,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
       <nav className="bottom-nav">
         <button type="button" className="active"><span style={{ fontSize: 20 }}>🏠</span><span>{lang === 'en' ? 'Home' : 'ホーム'}</span></button>
         <button type="button" onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album')}><span style={{ fontSize: 20 }}>🖼</span><span>{lang === 'en' ? 'Album' : 'アルバム'}</span></button>
-        <button type="button" onClick={handleShare}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'New Link' : '新規リンク'}</span></button>
+        <button type="button" onClick={handleShare}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : '招待'}</span></button>
       </nav>
 
       <audio ref={audioRef} onEnded={handleEnded} onPause={() => setIsPlaying(false)} style={{ display: 'none' }} />
