@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getDateKey, fetchAudioForPlayback, hasTodayAudio, getListenRoleMeta, markSeen, uploadAudio, getPairId, genRequestId, getStreak, updateStreak, generatePairId } from '../lib/pairDaily'
+import { getDateKey, fetchAudioForPlayback, hasTodayAudio, getListenRoleMeta, markSeen, uploadAudio, getPairId, genRequestId, getStreak, updateStreak } from '../lib/pairDaily'
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import { t } from '../lib/i18n'
@@ -672,26 +672,20 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   }
 
   const handleShare = async () => {
-    const pairId = getPairId()
-    const shareId = generatePairId()
-    const url = `https://tyson-two.vercel.app/#/?pairId=${encodeURIComponent(shareId)}`
+    const currentPairId = getPairId()
+    const url = `https://tyson-two.vercel.app/#/?pairId=${encodeURIComponent(currentPairId)}`
     const text = lang === 'en'
       ? "Let's exchange voices every day on Hum. Listen to today's message 👋"
       : 'Humで毎日声を交換しよう。今日のメッセージを聞いてね 👋'
     if (navigator.share) {
-      try { await navigator.share({ text, url }) } catch (_) {}
+      try { await navigator.share({ title: 'Hum', text, url }) } catch (_) {}
     } else {
       try {
-        await navigator.clipboard.writeText(`${text}\n${url}`)
+        await navigator.clipboard.writeText(url)
         alert(lang === 'en' ? 'Link copied!' : 'リンクをコピーしました')
       } catch (_) {
         alert(lang === 'en' ? 'Copy failed' : 'コピーに失敗しました')
       }
-    }
-    // demo の場合、生成した新しい pairId を自分にもセット
-    if (pairId === 'demo') {
-      localStorage.setItem('tyson_pairId', shareId)
-      window.location.reload()
     }
   }
 
