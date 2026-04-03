@@ -13,9 +13,9 @@ import { doc, getDoc } from 'firebase/firestore'
 
 function NumberResolver({ lang = 'ja', number }) {
   const [status, setStatus] = useState(() => {
-    // 即座にlocalStorageをクリア（古いpairIdでAPIを叩くのを防ぐ）
+    // 即座にlocalStorageのpairIdをクリア（古いpairIdでAPIを叩くのを防ぐ）
+    // roleはクリアしない（リフレッシュ時に再選択させない）
     localStorage.removeItem(PAIR_ID_STORAGE_KEY)
-    clearUserRole()
     return 'loading'
   })
   useEffect(() => {
