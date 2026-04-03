@@ -4,11 +4,10 @@ import { getPairId } from '../lib/pairDaily'
 import { fetchAlbum } from '../lib/journal'
 
 const demoAlbumDays = [
-  { date: '4月1日', photos: ['/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp','/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp','/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png'] },
-  { date: '3月31日', photos: ['/demo-photos/nekocyanPAKE5233-481_TP_V.webp','/demo-photos/Gemini_Generated_Image_dm6kcmdm6kcmdm6k.png'] },
-  { date: '3月30日', photos: ['/demo-photos/08redsugar720_TP_V.webp','/demo-photos/susipakuKYPKPAR52703_TP_V.webp','/demo-photos/Gemini_Generated_Image_9jztwk9jztwk9jzt.png','/demo-photos/CCIMG_8140_TP_V4.webp'] },
-  { date: '3月28日', photos: ['/demo-photos/pakutaso_go33036_TP_V.jpg','/demo-photos/Gemini_Generated_Image_ejq9x3ejq9x3ejq9.png'] },
-  { date: '3月25日', photos: ['/demo-photos/TKLA__7DA5611_TP_V.jpg','/demo-photos/Family%20fun%20in%20winter%20wonderland.png'] },
+  { date: '2026-04-01', label: '4月1日', photos: ['/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp','/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp','/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png'] },
+  { date: '2026-03-31', label: '3月31日', photos: ['/demo-photos/nekocyanPAKE5233-481_TP_V.webp','/demo-photos/Gemini_Generated_Image_dm6kcmdm6kcmdm6k.png'] },
+  { date: '2026-03-30', label: '3月30日', photos: ['/demo-photos/08redsugar720_TP_V.webp','/demo-photos/susipakuKYPKPAR52703_TP_V.webp','/demo-photos/CCIMG_8140_TP_V4.webp'] },
+  { date: '2026-03-25', label: '3月25日', photos: ['/demo-photos/TKLA__7DA5611_TP_V.jpg','/demo-photos/Family fun in winter wonderland.png','/demo-photos/pakutaso_go33036_TP_V.jpg'] },
 ]
 
 function getDemoAllPhotos() {
@@ -40,7 +39,8 @@ export default function AlbumPage({ lang = 'ja' }) {
     } catch (_) {}
     return getPairId()
   })()
-  const pairId = (BLOCKED_PAIR_IDS.includes(rawPairId) || rawPairId === 'PAIR-DEMOTEST') ? null : rawPairId
+  const isDemo = !rawPairId || rawPairId === 'PAIR-DEMOTEST' || rawPairId === 'demo'
+  const pairId = (BLOCKED_PAIR_IDS.includes(rawPairId) || isDemo) ? null : rawPairId
 
   useEffect(() => {
     if (!pairId) { setLoading(false); return }
@@ -67,7 +67,7 @@ export default function AlbumPage({ lang = 'ja' }) {
       return flat
     }
     // Fallback: demo photos only for PAIR-DEMOTEST
-    if (rawPairId === 'PAIR-DEMOTEST') return getDemoAllPhotos().map((url) => ({ url, dateKey: '', storagePath: url }))
+    if (isDemo) return getDemoAllPhotos().map((url) => ({ url, dateKey: '', storagePath: url }))
     return []
   }, [days])
 
@@ -137,7 +137,7 @@ export default function AlbumPage({ lang = 'ja' }) {
 
   const currentPhoto = lightboxIndex != null ? allPhotos[lightboxIndex] : null
 
-  if (!pairId) {
+  if (!pairId && !isDemo) {
     return (
       <div style={{ minHeight: '100dvh', background: '#FFF8FF', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', padding: 24 }}>
         <p style={{ fontSize: 16, color: '#7050C0', fontWeight: 600, textAlign: 'center' }}>
@@ -203,7 +203,7 @@ export default function AlbumPage({ lang = 'ja' }) {
             <p style={{ fontSize: 13, color: '#E04040', textAlign: 'center', margin: 0 }}>{error}</p>
           </section>
         )}
-        {!loading && !error && days.length === 0 && rawPairId !== 'PAIR-DEMOTEST' && (
+        {!loading && !error && days.length === 0 && !isDemo && (
           <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {lang === 'en' ? '📷 Photos' : '📷 写真'}
@@ -213,7 +213,7 @@ export default function AlbumPage({ lang = 'ja' }) {
             </p>
           </section>
         )}
-        {!loading && !error && days.length === 0 && rawPairId === 'PAIR-DEMOTEST' && (
+        {!loading && !error && days.length === 0 && isDemo && (
           <>
             <p style={{ textAlign: 'center', color: '#999', fontSize: 12, margin: '16px 0 20px', fontStyle: 'italic' }}>
               {lang === 'en' ? 'Sample photos — your photos will appear here' : 'サンプル写真 — あなたの写真がここに表示されます'}
@@ -222,13 +222,13 @@ export default function AlbumPage({ lang = 'ja' }) {
               const demoAll = getDemoAllPhotos()
               return (
                 <section key={day.date} style={{ marginBottom: 28 }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: '#7a6a55', margin: '0 0 10px', letterSpacing: '0.03em' }}>{day.date}</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: '#7a6a55', margin: '0 0 10px', letterSpacing: '0.03em' }}>{day.label}</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
                     {day.photos.map((url, i) => {
                       const globalIdx = demoAll.indexOf(url)
                       return (
-                        <button key={url + i} type="button" onClick={() => setLightboxIndex(globalIdx >= 0 ? globalIdx : 0)} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 8, overflow: 'hidden', display: 'block' }}>
-                          <img src={url} alt="" width={88} height={88} style={{ width: 88, height: 88, objectFit: 'cover', display: 'block', borderRadius: 8 }} loading="lazy" />
+                        <button key={url + i} type="button" onClick={() => setLightboxIndex(globalIdx >= 0 ? globalIdx : 0)} style={{ padding: 0, border: 'none', background: '#E8E0FF', cursor: 'pointer', borderRadius: 8, overflow: 'hidden', aspectRatio: '1', display: 'block' }}>
+                          <img src={url} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                         </button>
                       )
                     })}
