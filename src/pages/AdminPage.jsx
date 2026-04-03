@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { getIdTokenForApi } from '../lib/firebase.js'
+import { getIdTokenForApi, db } from '../lib/firebase.js'
 import { getPairId, getDateKey, genRequestId } from '../lib/pairDaily.js'
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore'
 
 const STORAGE_KEY = 'tyson_admin_secret'
 
@@ -291,6 +292,118 @@ export default function AdminPage({ lang = 'ja' }) {
 
       {pairs && pairs.map(pair => <PairCard key={pair.pairId} pair={pair} secret={secret} />)}
       {pairs && pairs.length === 0 && <p style={{ fontSize: 13, color: 'var(--color-text-muted)', textAlign: 'center' }}>データなし</p>}
+
+      <PairNumberManager secret={secret} />
     </div>
+  )
+}
+
+function PairNumberManager({ secret }) {
+  const [memo, setMemo] = useState('')
+  const [creating, setCreating] = useState(false)
+  const [created, setCreated] = useState(null)
+  const [numbers, setNumbers] = useState([])
+  const [listLoading, setListLoading] = useState(true)
+  const [copied, setCopied] = useState(null)
+
+  const fetchNumbers = useCallback(async () => {
+    setListLoading(true)
+    try {
+      const q = query(collection(db, 'pair_numbers'), orderBy('createdAt', 'desc'), limit(20))
+      const snap = await getDocs(q)
+      const list = []
+      snap.forEach(doc => {
+        const d = doc.data()
+        list.push({ number: doc.id, pairId: d.pairId, memo: d.memo || '', createdAt: d.createdAt?.toDate?.()?.toLocaleDateString('ja-JP') || '' })
+      })
+      setNumbers(list)
+    } catch (e) {
+      console.error('[PairNumberManager] fetch error:', e)
+    } finally {
+      setListLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchNumbers() }, [fetchNumbers])
+
+  const handleCreate = async () => {
+    setCreating(true)
+    setCreated(null)
+    try {
+      const idToken = await getIdTokenForApi()
+      if (!idToken) { setCreating(false); return }
+      const res = await fetch('/api/invite?action=create-numbered', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ memo: memo.trim() }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (data.success) {
+        setCreated(data)
+        setMemo('')
+        fetchNumbers()
+      } else {
+        alert(data.error || 'Failed')
+      }
+    } catch (e) {
+      alert(e?.message || String(e))
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  const copyUrl = (num) => {
+    const url = `https://humfamily.com/pair/${num}`
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(num)
+      setTimeout(() => setCopied(null), 1500)
+    }).catch(() => {})
+  }
+
+  return (
+    <>
+      <h2 style={{ margin: '24px 0 8px', fontSize: 15, fontWeight: 700, color: 'var(--color-text)' }}>ペア発行</h2>
+
+      <div className="card" style={{ padding: '12px 16px' }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <input
+            type="text"
+            value={memo}
+            onChange={(e) => setMemo(e.target.value)}
+            placeholder="メモ（誰に渡すか）"
+            style={{ flex: 1, padding: '8px 10px', fontSize: 13, border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', outline: 'none', fontFamily: 'var(--font-sans)' }}
+          />
+          <button type="button" onClick={handleCreate} disabled={creating} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, background: creating ? 'var(--color-border)' : 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 'var(--radius-sm)', cursor: creating ? 'wait' : 'pointer' }}>
+            {creating ? '...' : '発行'}
+          </button>
+        </div>
+        {created && (
+          <div style={{ padding: '8px 10px', background: 'var(--color-success-bg, #f0fff0)', borderRadius: 6, fontSize: 12 }}>
+            <div><strong>/pair/{created.number}</strong> → {created.pairId}</div>
+            <div style={{ marginTop: 4 }}>
+              <button type="button" onClick={() => copyUrl(created.number)} style={{ padding: '2px 8px', fontSize: 11, background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 3, cursor: 'pointer' }}>URLコピー</button>
+              <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--color-text-muted)' }}>{created.url}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <h2 style={{ margin: '16px 0 8px', fontSize: 15, fontWeight: 700, color: 'var(--color-text)' }}>発行済みペア</h2>
+
+      {listLoading && <p style={{ fontSize: 13, color: 'var(--color-text-muted)', textAlign: 'center' }}>読み込み中...</p>}
+
+      {!listLoading && numbers.length === 0 && <p style={{ fontSize: 13, color: 'var(--color-text-muted)', textAlign: 'center' }}>まだ発行されていません</p>}
+
+      {!listLoading && numbers.map(n => (
+        <div key={n.number} className="card" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-primary)', minWidth: 50 }}>/pair/{n.number}</span>
+          <span style={{ fontSize: 12, color: 'var(--color-text-sub)', flex: 1 }}>{n.memo || '-'}</span>
+          <span style={{ fontSize: 10, color: 'var(--color-text-muted)', minWidth: 60 }}>{n.createdAt}</span>
+          <button type="button" onClick={() => copyUrl(n.number)} style={{ padding: '2px 8px', fontSize: 11, background: copied === n.number ? 'var(--color-success)' : 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 3, cursor: 'pointer' }}>
+            {copied === n.number ? '✓' : 'コピー'}
+          </button>
+        </div>
+      ))}
+    </>
   )
 }
