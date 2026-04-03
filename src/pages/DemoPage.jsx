@@ -224,11 +224,6 @@ export default function DemoPage({ lang = 'ja' }) {
         {errorLine && <p style={{ fontSize: 14, color: '#E04040', textAlign: 'center', margin: 0 }}>{errorLine}</p>}
       </main>
 
-      {/* Bottom nav - invite disabled */}
-      <nav className="bottom-nav" style={{ bottom: 72, justifyContent: 'center' }}>
-        <button type="button" disabled style={{ opacity: 0.4, pointerEvents: 'none' }}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : '招待'}</span></button>
-      </nav>
-
       {/* CTA button - fixed bottom with pulse */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9000, background: 'linear-gradient(0deg, #FFF8FF 80%, transparent)', padding: '16px 18px max(16px, env(safe-area-inset-bottom))' }}>
         <button
