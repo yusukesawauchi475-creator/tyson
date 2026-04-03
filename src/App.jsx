@@ -8,7 +8,22 @@ import RoleSelectPage from './pages/RoleSelectPage'
 import { getUserRole, clearUserRole } from './lib/pairDaily'
 
 function RootRoute({ lang = 'ja' }) {
-  const [role, setRole] = useState(() => getUserRole())
+  const [role, setRole] = useState(() => {
+    // URLに?pairId=がある場合は古いroleをクリアして役割選択を強制表示
+    try {
+      const hash = window.location.hash || '';
+      const qIndex = hash.indexOf('?');
+      const qs = qIndex >= 0 ? hash.slice(qIndex + 1) : '';
+      const pairIdFromUrl = new URLSearchParams(qs).get('pairId')?.trim();
+      const storedPairId = localStorage.getItem('tyson_pairId')?.trim();
+      // URLのpairIdが既存のlocalStorageと違う場合 → 新規ユーザー → roleクリア
+      if (pairIdFromUrl && pairIdFromUrl !== storedPairId) {
+        clearUserRole();
+        return null;
+      }
+    } catch (_) {}
+    return getUserRole();
+  })
 
   const handleSelect = (selectedRole) => setRole(selectedRole)
   const handleChangeRole = () => { clearUserRole(); setRole(null) }
