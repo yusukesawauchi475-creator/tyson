@@ -7,12 +7,14 @@ const DEMO_AUDIO_URL = '/demo-audio.mp3'
 // Generate 100 sample photo URLs
 function generateSamplePhotos() {
   const photos = []
-  for (let i = 0; i < 40; i++) {
-    photos.push({ url: `https://place.dog/300/300?sig=${i}`, id: i })
-  }
-  for (let i = 40; i < 100; i++) {
-    photos.push({ url: `https://picsum.photos/300/300?random=${i}`, id: i })
-  }
+  let id = 0
+  for (let i = 0; i < 15; i++) photos.push({ url: `https://place.dog/300/300?sig=${i}`, id: id++ })
+  for (let i = 0; i < 10; i++) photos.push({ url: `https://cataas.com/cat?width=300&height=300&sig=${i}`, id: id++ })
+  for (let i = 0; i < 15; i++) photos.push({ url: `https://picsum.photos/seed/flower${i}/300/300`, id: id++ })
+  for (let i = 0; i < 15; i++) photos.push({ url: `https://picsum.photos/seed/fruit${i}/300/300`, id: id++ })
+  for (let i = 0; i < 15; i++) photos.push({ url: `https://picsum.photos/seed/nature${i}/300/300`, id: id++ })
+  for (let i = 0; i < 15; i++) photos.push({ url: `https://picsum.photos/seed/family${i}/300/300`, id: id++ })
+  for (let i = 85; i < 100; i++) photos.push({ url: `https://picsum.photos/300/300?random=${i}`, id: id++ })
   return photos
 }
 
