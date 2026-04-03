@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { HashRouter, Routes, Route } from 'react-router-dom'
 import PairDailyPage from './pages/PairDailyPage'
 import HomePage from './pages/HomePage'
@@ -7,18 +7,41 @@ import AlbumPage from './pages/AlbumPage'
 import DemoPage from './pages/DemoPage'
 import LandingPage from './pages/LandingPage'
 import RoleSelectPage from './pages/RoleSelectPage'
-import { getUserRole, clearUserRole, hasPairId } from './lib/pairDaily'
+import { getUserRole, clearUserRole, hasPairId, PAIR_ID_STORAGE_KEY } from './lib/pairDaily'
+import { db } from './lib/firebase'
+import { doc, getDoc } from 'firebase/firestore'
+
+function NumberResolver({ lang = 'ja', number }) {
+  const [resolved, setResolved] = useState(false)
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const snap = await getDoc(doc(db, 'pair_numbers', String(number)))
+        if (snap.exists()) {
+          const pairId = snap.data()?.pairId
+          if (pairId) {
+            localStorage.setItem(PAIR_ID_STORAGE_KEY, pairId)
+          }
+        }
+      } catch (_) {}
+      setResolved(true)
+    })()
+  }, [number])
+  if (!resolved) return <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8070A0', fontFamily: 'var(--font-sans)' }}>...</div>
+  return <RootRoute lang={lang} />
+}
 
 function RootOrLanding({ lang = 'ja' }) {
-  // URLに?pairId=がある場合は既存ユーザー → RootRoute
   try {
     const hash = window.location.hash || ''
     const qIndex = hash.indexOf('?')
     const qs = qIndex >= 0 ? hash.slice(qIndex + 1) : ''
-    const pairIdFromUrl = new URLSearchParams(qs).get('pairId')?.trim()
+    const params = new URLSearchParams(qs)
+    const pairIdFromUrl = params.get('pairId')?.trim()
     if (pairIdFromUrl) return <RootRoute lang={lang} />
+    const numberFromUrl = params.get('number')?.trim()
+    if (numberFromUrl) return <NumberResolver lang={lang} />
   } catch (_) {}
-  // それ以外は常にLandingPage
   return <LandingPage lang={lang} />
 }
 

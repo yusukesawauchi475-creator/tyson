@@ -82,6 +82,8 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
 
   const ROLE_PARENT = 'parent'
   const LISTEN_ROLE_CHILD = 'child'
+  const [currentPairId] = useState(() => getPairId())
+  const isDemoTest = currentPairId === 'PAIR-DEMOTEST'
 
   const handleTopicChange = useCallback((topic) => {
     setDailyTopic(topic)
@@ -89,7 +91,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   }, [])
 
   const startRecording = async () => {
-    if (getPairId() === 'PAIR-DEMOTEST') { setToastMsg(lang === 'en' ? 'This is a demo. Audio will not be sent.' : 'これはデモです。音声は送信されません'); setTimeout(() => setToastMsg(null), 2500); return }
+    if (isDemoTest) { setToastMsg(lang === 'en' ? 'This is a demo. Audio will not be sent.' : 'これはデモです。音声は送信されません'); setTimeout(() => setToastMsg(null), 2500); return }
     if (isUploading) return
     setErrorLine(null)
     setSentAt(null)
@@ -252,7 +254,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   }
 
   const handleJournalFile = async (file, kind = 'journal_image') => {
-    if (getPairId() === 'PAIR-DEMOTEST') { setToastMsg(lang === 'en' ? 'This is a demo. Photos will not be added.' : 'これはデモです。写真はアルバムに追加されません'); setTimeout(() => setToastMsg(null), 2500); return }
+    if (isDemoTest) { setToastMsg(lang === 'en' ? 'This is a demo. Photos will not be added.' : 'これはデモです。写真はアルバムに追加されません'); setTimeout(() => setToastMsg(null), 2500); return }
     if (!file || journalUploading) return
     if (typeof file.type !== 'string' || !file.type.startsWith('image/')) {
       setJournalError(t(lang, 'selectImage'))
@@ -622,10 +624,10 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
         {/* (3) Photos card */}
         <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: '#7050C0', margin: '0 0 10px' }}>
-            📷 {lang === 'en' ? "Today's Photos" : '今日の写真'}　<span style={{ fontWeight: 500, color: '#8070A0' }}>{getPairId() === 'PAIR-DEMOTEST' ? 3 : photos.filter((p) => p.role === ROLE_PARENT).length}/3{lang === 'en' ? '' : '枚'}</span>
+            📷 {lang === 'en' ? "Today's Photos" : '今日の写真'}　<span style={{ fontWeight: 500, color: '#8070A0' }}>{isDemoTest ? 3 : photos.filter((p) => p.role === ROLE_PARENT).length}/3{lang === 'en' ? '' : '枚'}</span>
           </p>
 
-          {getPairId() === 'PAIR-DEMOTEST' ? (
+          {isDemoTest ? (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {['/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp', '/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png', '/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp'].map((url, i) => (
                 <img key={i} src={url} alt="" width={88} height={88} style={{ width: 88, height: 88, objectFit: 'cover', display: 'block', borderRadius: 11 }} />
