@@ -256,17 +256,32 @@ export default function AlbumPage({ lang = 'ja' }) {
       {activeTab === 'photo' && (<>
 
         {loading && (
-          <p style={{ textAlign: 'center', color: '#888', fontSize: 14, marginTop: 32 }}>
-            {lang === 'en' ? 'Loading...' : '読み込み中…'}
-          </p>
+          <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              {lang === 'en' ? '📷 Photos' : '📷 写真'}
+            </p>
+            <p style={{ fontSize: 13, color: '#8070A0', textAlign: 'center', margin: 0 }}>
+              {lang === 'en' ? 'Loading...' : '読み込み中…'}
+            </p>
+          </section>
         )}
         {error && (
-          <p style={{ textAlign: 'center', color: '#c00', fontSize: 14, marginTop: 32 }}>{error}</p>
+          <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              {lang === 'en' ? '📷 Photos' : '📷 写真'}
+            </p>
+            <p style={{ fontSize: 13, color: '#E04040', textAlign: 'center', margin: 0 }}>{error}</p>
+          </section>
         )}
         {!loading && !error && days.length === 0 && rawPairId !== 'PAIR-DEMOTEST' && (
-          <p style={{ textAlign: 'center', color: '#888', fontSize: 14, marginTop: 32 }}>
-            {lang === 'en' ? 'No photos yet.' : 'まだ写真がありません。'}
-          </p>
+          <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              {lang === 'en' ? '📷 Photos' : '📷 写真'}
+            </p>
+            <p style={{ fontSize: 13, color: '#8070A0', textAlign: 'center', margin: 0 }}>
+              {lang === 'en' ? 'No photos yet.' : 'まだ写真がありません'}
+            </p>
+          </section>
         )}
         {!loading && !error && days.length === 0 && rawPairId === 'PAIR-DEMOTEST' && (
           <>
