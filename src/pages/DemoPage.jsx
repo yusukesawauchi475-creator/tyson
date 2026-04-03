@@ -4,34 +4,16 @@ import { t } from '../lib/i18n'
 const DEMO_PAIR_ID = 'PAIR-FSEAN5'
 const DEMO_AUDIO_URL = '/demo-audio.mp3'
 
-// Generate 100 sample photo URLs from Unsplash Source API
+// Generate 100 sample photo URLs
 function generateSamplePhotos() {
   const photos = []
-  const categories = [
-    { query: 'dog,cat', count: 40 },
-    { query: 'portrait,family', count: 20 },
-    { query: 'orange,fruit', count: 20 },
-    { query: 'kotatsu,japanese-room', count: 20 },
-  ]
-  let idx = 0
-  for (const { query, count } of categories) {
-    for (let i = 0; i < count; i++) {
-      photos.push({
-        url: `https://source.unsplash.com/300x300/?${query}&sig=${idx}`,
-        id: idx,
-      })
-      idx++
-    }
-  }
-  // Shuffle deterministically by interleaving categories
-  const shuffled = []
   for (let i = 0; i < 40; i++) {
-    shuffled.push(photos[i]) // dog,cat
-    if (i < 20) shuffled.push(photos[40 + i]) // portrait
-    if (i < 20) shuffled.push(photos[60 + i]) // fruit
-    if (i < 20) shuffled.push(photos[80 + i]) // kotatsu
+    photos.push({ url: `https://place.dog/300/300?sig=${i}`, id: i })
   }
-  return shuffled
+  for (let i = 40; i < 100; i++) {
+    photos.push({ url: `https://picsum.photos/300/300?random=${i}`, id: i })
+  }
+  return photos
 }
 
 export default function DemoPage({ lang = 'ja' }) {
