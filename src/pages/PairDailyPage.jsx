@@ -131,6 +131,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   }, [dateKey])
 
   const handleJournalFile = async (file, kind = 'journal_image') => {
+    if (getPairId() === 'PAIR-DEMOTEST') { setToastMsg(lang === 'en' ? 'This is a demo. Photos will not be added.' : 'これはデモです。写真はアルバムに追加されません'); setTimeout(() => setToastMsg(null), 2500); return }
     if (!file || journalUploading) return
     if (typeof file.type !== 'string' || !file.type.startsWith('image/')) {
       setJournalError(t(lang, 'selectImage'))
@@ -375,6 +376,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   }, [audioUrl])
 
   const startRecording = async () => {
+    if (getPairId() === 'PAIR-DEMOTEST') { setToastMsg(lang === 'en' ? 'This is a demo. Audio will not be sent.' : 'これはデモです。音声は送信されません'); setTimeout(() => setToastMsg(null), 2500); return }
     if (isUploading) return
     setErrorLine(null)
     setSentAt(null)
