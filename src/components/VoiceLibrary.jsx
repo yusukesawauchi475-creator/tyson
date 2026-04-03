@@ -59,7 +59,16 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
   }
 
   if (loading) return null
-  if (days.length === 0) return null
+  if (days.length === 0) return (
+    <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
+      <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        {lang === 'en' ? '🎧 Voice History' : '🎧 過去の声'}
+      </p>
+      <p style={{ fontSize: 13, color: '#8070A0', textAlign: 'center', margin: 0 }}>
+        {lang === 'en' ? 'No voice messages yet.' : 'まだ音声がありません'}
+      </p>
+    </section>
+  )
 
   return (
     <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
