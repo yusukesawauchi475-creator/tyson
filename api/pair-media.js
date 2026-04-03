@@ -248,8 +248,63 @@ async function sendPushIfUnseen(reqId, pairId, role, dateKey) {
   }
 }
 
+/** GET: voice-history action */
+async function handleVoiceHistory(req, res) {
+  const reqId = req.headers['x-request-id'] || genRequestId();
+  const authHeader = req.headers.authorization || '';
+  const idToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+  if (!idToken) return res.status(401).json({ error: 'Unauthorized' });
+  try { await verifyIdToken(idToken); } catch { return res.status(401).json({ error: 'Invalid token' }); }
+
+  const pairId = req.query?.pairId;
+  if (!pairId) return res.status(400).json({ error: 'pairId is required' });
+  const limit = Math.min(parseInt(req.query?.limit) || 7, 30);
+
+  try {
+    initFirebaseAdmin();
+    const daysSnap = await firestore
+      .collection('pair_media').doc(pairId).collection('days')
+      .orderBy(admin.firestore.FieldPath.documentId(), 'desc')
+      .limit(limit)
+      .get();
+
+    const days = [];
+    for (const doc of daysSnap.docs) {
+      const data = doc.data();
+      const dateKey = doc.id;
+      const entry = { dateKey, parent: null, child: null };
+
+      for (const role of ['parent', 'child']) {
+        const rd = data[role];
+        if (rd && rd.audioPath) {
+          const updatedAt = rd.updatedAt?.toMillis?.() ?? rd.version ?? null;
+          const seenAt = rd.seenAt?.toMillis?.() ?? null;
+          const isUnseen = seenAt == null || (updatedAt != null && updatedAt > seenAt);
+          let url = null;
+          try {
+            const fileRef = storageBucket.file(rd.audioPath);
+            const [exists] = await fileRef.exists();
+            if (exists) {
+              const [signedUrl] = await fileRef.getSignedUrl({ action: 'read', expires: Date.now() + 3600000 });
+              url = signedUrl;
+            }
+          } catch (_) {}
+          entry[role] = { hasAudio: true, isUnseen, updatedAt, seenAt, url, mimeType: rd.mimeType || 'audio/mp4' };
+        }
+      }
+      if (entry.parent || entry.child) days.push(entry);
+    }
+    return res.status(200).json({ success: true, days });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+}
+
 /** GET: blob または signed URL */
 async function handleGet(req, res) {
+  // voice-history アクション
+  if (req.query?.action === 'voice-history') return handleVoiceHistory(req, res);
+
   const reqId = req.headers['x-request-id'] || genRequestId();
   const pairId = req.query?.pairId || req.query?.pair_id;
   const clientDateKey = req.query?.dateKey || req.query?.date_key;
@@ -377,10 +432,13 @@ async function handleGet(req, res) {
     }
 
     const [contents] = await fileRef.download();
-    const mimeType = roleData.mimeType || 'audio/mp4';
+    const storedMime = roleData.mimeType || 'audio/mp4';
+    // Android browsers may not play audio/mp4 from iOS; serve as audio/mpeg for broader compat
+    const mimeType = storedMime.includes('webm') ? 'audio/webm' : storedMime.includes('aac') ? 'audio/aac' : storedMime;
     const updatedAt = roleData.updatedAt?.toMillis?.() ?? roleData.version ?? Date.now();
     const seenAt = roleData.seenAt?.toMillis?.() ?? null;
     res.setHeader('Content-Type', mimeType);
+    res.setHeader('X-Audio-MimeType', mimeType);
     res.setHeader('Cache-Control', 'private, max-age=0, must-revalidate');
     res.setHeader('X-Audio-Version', String(version));
     res.setHeader('X-Audio-UpdatedAt', String(updatedAt));
@@ -477,7 +535,18 @@ async function handlePost(req, res) {
 
     const mimeType = audioFile.mimeType || 'audio/mp4';
     const ext = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('m4a') ? 'm4a' : 'webm';
+    // 固定ファイル名で上書き保証。拡張子が変わった場合は旧ファイルを削除
     const objectPath = `pair-media/${pairId}/${dateKey}/${role}/recording.${ext}`;
+    // 旧ファイル削除（異なる拡張子の残骸を防ぐ）
+    const otherExts = ['mp4', 'm4a', 'webm'].filter(e => e !== ext);
+    for (const oldExt of otherExts) {
+      try {
+        const oldPath = `pair-media/${pairId}/${dateKey}/${role}/recording.${oldExt}`;
+        const oldFile = storageBucket.file(oldPath);
+        const [exists] = await oldFile.exists();
+        if (exists) await oldFile.delete();
+      } catch (_) {}
+    }
     const version = Date.now();
     try {
       const fileRef = storageBucket.file(objectPath);
