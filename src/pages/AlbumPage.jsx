@@ -31,8 +31,18 @@ export default function AlbumPage({ lang = 'ja' }) {
   const [error, setError] = useState(null)
   const [lightboxIndex, setLightboxIndex] = useState(null) // index into allPhotos
   const [activeTab, setActiveTab] = useState('photo') // 'photo' | 'voice'
-  const rawPairId = getPairId()
-  const pairId = BLOCKED_PAIR_IDS.includes(rawPairId) ? null : rawPairId
+  // URLの?pairId= or localStorageからpairIdを取得（NumberResolver完了後はlocalStorageに正しい値が入っている）
+  const rawPairId = (() => {
+    try {
+      const hash = window.location.hash || ''
+      const qi = hash.indexOf('?')
+      const qs = qi >= 0 ? hash.slice(qi + 1) : ''
+      const fromUrl = new URLSearchParams(qs).get('pairId')?.trim()
+      if (fromUrl) return fromUrl
+    } catch (_) {}
+    return getPairId()
+  })()
+  const pairId = (BLOCKED_PAIR_IDS.includes(rawPairId) || rawPairId === 'PAIR-DEMOTEST') ? null : rawPairId
   const [samplePlayed, setSamplePlayed] = useState({
     '2026-03-25-parent': true, '2026-03-25-child': true,
     '2026-03-28-parent': true, '2026-03-28-child': true,
