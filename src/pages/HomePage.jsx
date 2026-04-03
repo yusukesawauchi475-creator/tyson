@@ -6,7 +6,8 @@ import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import { t } from '../lib/i18n'
 import DailyPromptCard, { getCountry, cycleCountry } from '../components/DailyPromptCard'
 import LanguageSwitch from '../components/LanguageSwitch'
-import { getIdTokenForApi, auth, isFirebaseConfigured } from '../lib/firebase'
+import { getIdTokenForApi, auth, isFirebaseConfigured, db } from '../lib/firebase'
+import { doc, getDoc } from 'firebase/firestore'
 import { getAuth } from 'firebase/auth'
 import { formatDeployedAtLocal, getBuildHash } from '../lib/dateFormat'
 import { useAudioLevel } from '../lib/useAudioLevel'
@@ -326,8 +327,13 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   }
 
   const handleShare = async () => {
-    const currentPairId = getPairId()
-    const url = `https://tyson-two.vercel.app/#/?pairId=${encodeURIComponent(currentPairId)}`
+    const pid = getPairId()
+    let url = `https://www.humfamily.com/#/?pairId=${encodeURIComponent(pid)}`
+    try {
+      const snap = await getDoc(doc(db, 'pairs', pid))
+      const num = snap.data()?.number
+      if (num) url = `https://www.humfamily.com/pair/${num}`
+    } catch (_) {}
     const text = lang === 'en'
       ? "Let's exchange voices every day on Hum. Listen to today's message 👋"
       : 'Humで毎日声を交換しよう。今日のメッセージを聞いてね 👋'
