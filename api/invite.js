@@ -140,16 +140,15 @@ export default async function handler(req, res) {
       for (let i = 0; i < 6; i++) pairId += chars[Math.floor(Math.random() * chars.length)];
 
       try {
-        // Get next number: query pair_numbers ordered by docId desc, limit 1
-        const lastSnap = await firestore.collection('pair_numbers')
-          .orderBy(admin.firestore.FieldPath.documentId(), 'desc')
-          .limit(1)
-          .get();
-        let nextNum = 1;
-        if (!lastSnap.empty) {
-          const lastId = parseInt(lastSnap.docs[0].id, 10);
-          if (!isNaN(lastId)) nextNum = lastId + 1;
-        }
+        // Get next number: fetch all pair_numbers docs and find max
+        const allSnap = await firestore.collection('pair_numbers').get();
+        let maxNum = 0;
+        allSnap.forEach(doc => {
+          const n = parseInt(doc.id, 10);
+          if (!isNaN(n) && n > maxNum) maxNum = n;
+        });
+        const nextNum = maxNum + 1;
+        console.log('[invite] create-numbered: maxNum=', maxNum, 'nextNum=', nextNum, 'total docs=', allSnap.size);
 
         // Write pair_numbers/{N}
         await firestore.collection('pair_numbers').doc(String(nextNum)).set({
@@ -174,6 +173,7 @@ export default async function handler(req, res) {
           requestId,
         });
       } catch (e) {
+        console.error('[invite] create-numbered error:', e.message, e.stack?.substring(0, 200));
         return res.status(500).json({ success: false, error: e.message, requestId });
       }
     }
