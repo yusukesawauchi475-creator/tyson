@@ -267,12 +267,14 @@ async function handleVoiceHistory(req, res) {
     initFirebaseAdmin();
     const daysSnap = await firestore
       .collection('pair_media').doc(pairId).collection('days')
-      .orderBy(admin.firestore.FieldPath.documentId(), 'desc')
-      .limit(limit)
       .get();
 
+    const sortedDocs = daysSnap.docs
+      .sort((a, b) => b.id.localeCompare(a.id))
+      .slice(0, limit);
+
     const days = [];
-    for (const doc of daysSnap.docs) {
+    for (const doc of sortedDocs) {
       const data = doc.data();
       const dateKey = doc.id;
       const entry = { dateKey, parent: null, child: null };
