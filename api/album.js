@@ -61,14 +61,27 @@ async function verifyIdToken(idToken) {
 }
 
 async function getSignedUrl(storagePath) {
+  const fileRef = storageBucket.file(storagePath);
+  // Try signed URL first
   try {
-    const [url] = await storageBucket.file(storagePath).getSignedUrl({
+    const [url] = await fileRef.getSignedUrl({
       action: 'read',
       expires: Date.now() + 60 * 60 * 1000,
     });
-    return url || null;
+    if (url) return url;
   } catch (e) {
-    console.error('[album] getSignedUrl error:', e.message, { storagePath });
+    console.warn('[album] getSignedUrl failed, trying download fallback:', e.message?.substring(0, 80), { storagePath });
+  }
+  // Fallback: download and return data URL
+  try {
+    const [exists] = await fileRef.exists();
+    if (!exists) { console.warn('[album] file not found:', storagePath); return null; }
+    const [contents] = await fileRef.download();
+    const meta = await fileRef.getMetadata();
+    const contentType = meta?.[0]?.contentType || 'image/jpeg';
+    return `data:${contentType};base64,${contents.toString('base64')}`;
+  } catch (e2) {
+    console.error('[album] download fallback error:', e2.message?.substring(0, 80), { storagePath });
     return null;
   }
 }
