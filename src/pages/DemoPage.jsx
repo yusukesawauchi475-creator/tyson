@@ -4,30 +4,63 @@ import { t } from '../lib/i18n'
 const DEMO_PAIR_ID = 'PAIR-FSEAN5'
 const DEMO_AUDIO_URL = '/demo-audio.mp3'
 
-const demoPhotos = [
-  '/demo-photos/Family%20fun%20in%20winter%20wonderland.png',
-  '/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png',
-  '/demo-photos/Gemini_Generated_Image_7if52r7if52r7if5.png',
-  '/demo-photos/Gemini_Generated_Image_9jztwk9jztwk9jzt.png',
-  '/demo-photos/Gemini_Generated_Image_a8fon3a8fon3a8fo.png',
-  '/demo-photos/Gemini_Generated_Image_bnqbafbnqbafbnqb.png',
-  '/demo-photos/Gemini_Generated_Image_dkjiz0dkjiz0dkji.png',
-  '/demo-photos/Gemini_Generated_Image_dm6kcmdm6kcmdm6k.png',
-  '/demo-photos/Gemini_Generated_Image_ejq9x3ejq9x3ejq9.png',
-  '/demo-photos/Gemini_Generated_Image_jq19t9jq19t9jq19.png',
-  '/demo-photos/Gemini_Generated_Image_oth8wvoth8wvoth8.png',
-  '/demo-photos/Gemini_Generated_Image_s0fbejs0fbejs0fb.png',
-  '/demo-photos/Gemini_Generated_Image_v6ips5v6ips5v6ip.png',
+const albumDays = [
+  {
+    date: '4月1日',
+    photos: [
+      '/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp',
+      '/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp',
+      '/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png',
+    ]
+  },
+  {
+    date: '3月31日',
+    photos: [
+      '/demo-photos/nekocyanPAKE5233-481_TP_V.webp',
+      '/demo-photos/Gemini_Generated_Image_dm6kcmdm6kcmdm6k.png',
+    ]
+  },
+  {
+    date: '3月30日',
+    photos: [
+      '/demo-photos/08redsugar720_TP_V.webp',
+      '/demo-photos/susipakuKYPKPAR52703_TP_V.webp',
+      '/demo-photos/Gemini_Generated_Image_9jztwk9jztwk9jzt.png',
+      '/demo-photos/CCIMG_8140_TP_V4.webp',
+    ]
+  },
+  {
+    date: '3月28日',
+    photos: [
+      '/demo-photos/pakutaso_go33036_TP_V.jpg',
+      '/demo-photos/Gemini_Generated_Image_ejq9x3ejq9x3ejq9.png',
+    ]
+  },
+  {
+    date: '3月25日',
+    photos: [
+      '/demo-photos/TKLA__7DA5611_TP_V.jpg',
+      '/demo-photos/Family%20fun%20in%20winter%20wonderland.png',
+      '/demo-photos/Gemini_Generated_Image_v6ips5v6ips5v6ip.png',
+    ]
+  },
+  {
+    date: '3月20日',
+    photos: [
+      '/demo-photos/nekocyanPAKE5233-481_TP_V4.webp',
+      '/demo-photos/Gemini_Generated_Image_7if52r7if52r7if5.png',
+      '/demo-photos/Gemini_Generated_Image_bnqbafbnqbafbnqb.png',
+    ]
+  },
 ]
 
-function generateSamplePhotos() {
-  const photos = demoPhotos.map((url, i) => ({ url, id: i }))
-  // Fisher-Yates shuffle
-  for (let i = photos.length - 1; i > 0; i--) {
-    const j = (i * 7 + 3) % (i + 1) // deterministic shuffle
-    ;[photos[i], photos[j]] = [photos[j], photos[i]]
+// Flatten all photos for lightbox navigation
+function getAllPhotos() {
+  const all = []
+  for (const day of albumDays) {
+    for (const url of day.photos) all.push(url)
   }
-  return photos
+  return all
 }
 
 // Inject pulse animation CSS once
@@ -47,7 +80,7 @@ export default function DemoPage({ lang = 'ja' }) {
   const parentAudioRef = useRef(null)
   const touchStartRef = useRef(null)
 
-  const samplePhotos = useMemo(() => generateSamplePhotos(), [])
+  const allPhotos = useMemo(() => getAllPhotos(), [])
 
   useEffect(() => { ensurePulseStyle() }, [])
 
@@ -84,7 +117,7 @@ export default function DemoPage({ lang = 'ja' }) {
     const dx = e.changedTouches[0].clientX - touchStartRef.current.x
     touchStartRef.current = null
     if (Math.abs(dx) < 40) return
-    if (dx < 0 && lightboxIndex < samplePhotos.length - 1) setLightboxIndex(lightboxIndex + 1)
+    if (dx < 0 && lightboxIndex < allPhotos.length - 1) setLightboxIndex(lightboxIndex + 1)
     else if (dx > 0 && lightboxIndex > 0) setLightboxIndex(lightboxIndex - 1)
   }
 
@@ -139,43 +172,32 @@ export default function DemoPage({ lang = 'ja' }) {
           </p>
         </section>
 
-        {/* (3) Sample photo gallery - hero + 2-col grid */}
+        {/* (3) Photo album grouped by date */}
         <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: '#7050C0', margin: '0 0 10px' }}>
-            📷 {lang === 'en' ? 'Photo Album' : 'フォトアルバム'}　<span style={{ fontWeight: 500, color: '#8070A0' }}>{samplePhotos.length}{lang === 'en' ? ' photos' : '枚'}</span>
+          <p style={{ fontSize: 13, fontWeight: 700, color: '#7050C0', margin: '0 0 14px' }}>
+            📷 {lang === 'en' ? 'Photo Album' : 'フォトアルバム'}　<span style={{ fontWeight: 500, color: '#8070A0' }}>{allPhotos.length}{lang === 'en' ? ' photos' : '枚'}</span>
           </p>
 
-          {/* Hero photo (first image full-width) */}
-          <button
-            type="button"
-            onClick={() => setLightboxIndex(0)}
-            style={{ padding: 0, border: 'none', background: '#E8E0FF', cursor: 'pointer', borderRadius: 12, overflow: 'hidden', display: 'block', width: '100%', marginBottom: 4 }}
-          >
-            <img
-              src={samplePhotos[0].url}
-              alt=""
-              style={{ width: '100%', height: 200, objectFit: 'cover', display: 'block' }}
-            />
-          </button>
-
-          {/* 2-col grid for the rest */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4 }}>
-            {samplePhotos.slice(1).map((photo, i) => (
-              <button
-                key={photo.id}
-                type="button"
-                onClick={() => setLightboxIndex(i + 1)}
-                style={{ padding: 0, border: 'none', background: '#E8E0FF', cursor: 'pointer', borderRadius: 8, overflow: 'hidden', aspectRatio: '1', display: 'block' }}
-              >
-                <img
-                  src={photo.url}
-                  alt=""
-                  loading="lazy"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                />
-              </button>
-            ))}
-          </div>
+          {albumDays.map((day) => (
+            <div key={day.date} style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: 12, fontWeight: 700, color: '#8070A0', margin: '0 0 6px' }}>{day.date}</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4 }}>
+                {day.photos.map((url, i) => {
+                  const globalIdx = allPhotos.indexOf(url)
+                  return (
+                    <button
+                      key={url + i}
+                      type="button"
+                      onClick={() => setLightboxIndex(globalIdx >= 0 ? globalIdx : 0)}
+                      style={{ padding: 0, border: 'none', background: '#E8E0FF', cursor: 'pointer', borderRadius: 8, overflow: 'hidden', aspectRatio: '1', display: 'block' }}
+                    >
+                      <img src={url} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </section>
 
         {errorLine && <p style={{ fontSize: 14, color: '#E04040', textAlign: 'center', margin: 0 }}>{errorLine}</p>}
@@ -195,7 +217,7 @@ export default function DemoPage({ lang = 'ja' }) {
       <audio ref={parentAudioRef} onEnded={() => setIsPlayingParent(false)} onPause={() => setIsPlayingParent(false)} style={{ display: 'none' }} />
 
       {/* Lightbox */}
-      {lightboxIndex != null && samplePhotos[lightboxIndex] && (
+      {lightboxIndex != null && allPhotos[lightboxIndex] && (
         <div
           role="dialog"
           aria-modal="true"
@@ -211,18 +233,18 @@ export default function DemoPage({ lang = 'ja' }) {
           )}
 
           <img
-            src={samplePhotos[lightboxIndex].url}
+            src={allPhotos[lightboxIndex]}
             alt=""
             onClick={(e) => e.stopPropagation()}
             style={{ maxWidth: 'calc(100vw - 80px)', maxHeight: 'calc(100vh - 80px)', objectFit: 'contain', borderRadius: 8, userSelect: 'none' }}
           />
 
-          {lightboxIndex < samplePhotos.length - 1 && (
+          {lightboxIndex < allPhotos.length - 1 && (
             <button type="button" onClick={(e) => { e.stopPropagation(); setLightboxIndex(lightboxIndex + 1) }} style={{ position: 'absolute', right: 8, background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', fontSize: 32, cursor: 'pointer', padding: '10px 14px', borderRadius: 8, lineHeight: 1 }}>›</button>
           )}
 
           <p style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', color: 'rgba(255,255,255,0.6)', fontSize: 13, margin: 0 }}>
-            {lightboxIndex + 1} / {samplePhotos.length}
+            {lightboxIndex + 1} / {allPhotos.length}
           </p>
         </div>
       )}
