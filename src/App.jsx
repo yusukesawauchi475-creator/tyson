@@ -29,7 +29,8 @@ function NumberResolver({ lang = 'ja', number }) {
         localStorage.removeItem(PAIR_ID_STORAGE_KEY)
         clearUserRole()
         setStatus('error')
-      } catch (_) {
+      } catch (err) {
+        console.error('[NumberResolver] error:', err?.message, err)
         localStorage.removeItem(PAIR_ID_STORAGE_KEY)
         clearUserRole()
         setStatus('error')
