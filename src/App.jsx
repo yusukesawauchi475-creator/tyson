@@ -12,7 +12,12 @@ import { db } from './lib/firebase'
 import { doc, getDoc } from 'firebase/firestore'
 
 function NumberResolver({ lang = 'ja', number }) {
-  const [status, setStatus] = useState('loading')
+  const [status, setStatus] = useState(() => {
+    // 即座にlocalStorageをクリア（古いpairIdでAPIを叩くのを防ぐ）
+    localStorage.removeItem(PAIR_ID_STORAGE_KEY)
+    clearUserRole()
+    return 'loading'
+  })
   useEffect(() => {
     ;(async () => {
       try {
