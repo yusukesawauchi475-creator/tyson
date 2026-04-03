@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { getPairId } from '../lib/pairDaily'
 import { fetchAlbum } from '../lib/journal'
-import VoiceLibrary from '../components/VoiceLibrary'
 
 const demoAlbumDays = [
   { date: '4月1日', photos: ['/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp','/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp','/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png'] },
@@ -30,7 +29,6 @@ export default function AlbumPage({ lang = 'ja' }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [lightboxIndex, setLightboxIndex] = useState(null) // index into allPhotos
-  const [activeTab, setActiveTab] = useState('photo') // 'photo' | 'voice'
   // URLの?pairId= or localStorageからpairIdを取得（NumberResolver完了後はlocalStorageに正しい値が入っている）
   const rawPairId = (() => {
     try {
@@ -43,15 +41,6 @@ export default function AlbumPage({ lang = 'ja' }) {
     return getPairId()
   })()
   const pairId = (BLOCKED_PAIR_IDS.includes(rawPairId) || rawPairId === 'PAIR-DEMOTEST') ? null : rawPairId
-  const showVoiceTab = rawPairId && rawPairId !== 'PAIR-DEMOTEST' && rawPairId !== 'demo' && rawPairId.length > 4
-  const [samplePlayed, setSamplePlayed] = useState({
-    '2026-03-25-parent': true, '2026-03-25-child': true,
-    '2026-03-28-parent': true, '2026-03-28-child': true,
-    '2026-03-30-parent': true, '2026-03-30-child': true,
-  })
-  const [voiceHasData, setVoiceHasData] = useState(false)
-  const sampleAudioRef = useRef(null)
-  const [samplePlayingKey, setSamplePlayingKey] = useState(null)
 
   useEffect(() => {
     if (!pairId) { setLoading(false); return }
@@ -193,25 +182,8 @@ export default function AlbumPage({ lang = 'ja' }) {
         </h1>
       </header>
 
-      {/* Pill Tabs — hide voice tab for PAIR-DEMOTEST */}
-      {showVoiceTab && (
-        <div style={{ display: 'flex', gap: 8, padding: '10px 16px', background: '#FFF8FF', position: 'sticky', top: 49, zIndex: 99 }}>
-          <button type="button" onClick={() => setActiveTab('photo')} style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700, color: activeTab === 'photo' ? '#fff' : '#999', background: activeTab === 'photo' ? 'linear-gradient(135deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
-            📷 {lang === 'en' ? 'Photos' : '写真'}
-          </button>
-          <button type="button" onClick={() => setActiveTab('voice')} style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700, color: activeTab === 'voice' ? '#fff' : '#999', background: activeTab === 'voice' ? 'linear-gradient(135deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
-            🎙 {lang === 'en' ? 'Voice' : '声'}
-          </button>
-        </div>
-      )}
-
       <main style={{ padding: '16px', maxWidth: 480, margin: '0 auto' }}>
-      {activeTab === 'voice' && showVoiceTab && (
-        <>
-          <VoiceLibrary lang={lang} pairId={pairId} onDataLoaded={(has) => setVoiceHasData(has)} />
-        </>
-      )}
-      {(activeTab === 'photo' || !showVoiceTab) && (<>
+      {(<>
 
         {loading && (
           <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
