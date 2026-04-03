@@ -101,7 +101,16 @@ async function calculateStreakFromUploads(pairId) {
     }
   });
 
-  if (bothDays.length === 0) return { count: 0, lastDateKey: null };
+  // 全日付（parent or childいずれかが存在する日）を収集してfirstDateKeyを算出
+  const anyDays = [];
+  daysSnap.forEach(doc => {
+    const data = doc.data();
+    if (data.parent || data.child) anyDays.push(doc.id);
+  });
+  anyDays.sort((a, b) => a.localeCompare(b));
+  const firstDateKey = anyDays.length > 0 ? anyDays[0] : null;
+
+  if (bothDays.length === 0) return { count: 0, lastDateKey: null, firstDateKey };
 
   // 日付降順ソート
   bothDays.sort((a, b) => b.localeCompare(a));
@@ -127,7 +136,7 @@ async function calculateStreakFromUploads(pairId) {
     checkDate = getPrevDateKey(checkDate);
   }
 
-  return { count, lastDateKey: bothDays[0] };
+  return { count, lastDateKey: bothDays[0], firstDateKey };
 }
 
 export default async function handler(req, res) {
@@ -156,6 +165,7 @@ export default async function handler(req, res) {
         success: true,
         count: streak.count,
         lastDateKey: streak.lastDateKey,
+        firstDateKey: streak.firstDateKey,
         requestId,
       });
     } catch (e) {
@@ -176,13 +186,14 @@ export default async function handler(req, res) {
       // Save to Firestore for caching
       initFirebaseAdmin();
       const ref = firestore.doc(`pairs/${pairId}/meta/streak`);
-      const data = { count: streak.count, lastDateKey: streak.lastDateKey, updatedAt: Date.now() };
+      const data = { count: streak.count, lastDateKey: streak.lastDateKey, firstDateKey: streak.firstDateKey, updatedAt: Date.now() };
       await ref.set(data);
 
       return res.status(200).json({
         success: true,
         count: streak.count,
         lastDateKey: streak.lastDateKey,
+        firstDateKey: streak.firstDateKey,
         requestId,
       });
     } catch (e) {

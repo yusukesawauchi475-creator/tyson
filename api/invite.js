@@ -111,8 +111,8 @@ export default async function handler(req, res) {
     } catch {}
 
     const pairId = (body.pairId || '').trim();
-    if (!pairId || !pairId.startsWith('TYSON-')) {
-      return res.status(400).json({ success: false, error: 'valid pairId (TYSON-XXXX) is required', requestId });
+    if (!pairId || !(pairId.startsWith('TYSON-') || pairId.startsWith('PAIR-'))) {
+      return res.status(400).json({ success: false, error: 'valid pairId (TYSON-XXXX or PAIR-XXXX) is required', requestId });
     }
 
     try {
