@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { HashRouter, Routes, Route } from 'react-router-dom'
 import PairDailyPage from './pages/PairDailyPage'
 import HomePage from './pages/HomePage'
@@ -7,51 +7,15 @@ import AlbumPage from './pages/AlbumPage'
 import DemoPage from './pages/DemoPage'
 import LandingPage from './pages/LandingPage'
 import RoleSelectPage from './pages/RoleSelectPage'
-import { getUserRole, clearUserRole, hasPairId, PAIR_ID_STORAGE_KEY } from './lib/pairDaily'
-import { db } from './lib/firebase'
-import { doc, getDoc } from 'firebase/firestore'
-
-function NumberResolver({ lang = 'ja', number }) {
-  const [status, setStatus] = useState('loading') // 'loading' | 'resolved' | 'error'
-  useEffect(() => {
-    ;(async () => {
-      try {
-        const snap = await getDoc(doc(db, 'pair_numbers', String(number)))
-        if (snap.exists()) {
-          const pairId = snap.data()?.pairId
-          if (pairId) {
-            localStorage.setItem(PAIR_ID_STORAGE_KEY, pairId)
-            setStatus('resolved')
-            return
-          }
-        }
-        // Document not found or no pairId
-        localStorage.removeItem(PAIR_ID_STORAGE_KEY)
-        clearUserRole()
-        setStatus('error')
-      } catch (err) {
-        console.error('[NumberResolver] error:', err?.message, err)
-        localStorage.removeItem(PAIR_ID_STORAGE_KEY)
-        clearUserRole()
-        setStatus('error')
-      }
-    })()
-  }, [number])
-  if (status === 'loading') return <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8070A0', fontFamily: 'var(--font-sans)' }}>{lang === 'en' ? 'Loading...' : '読み込み中...'}</div>
-  if (status === 'error') return <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#8070A0', fontFamily: 'var(--font-sans)', gap: 12 }}><p style={{ fontSize: 16, fontWeight: 600 }}>{lang === 'en' ? 'This link is invalid.' : 'このリンクは無効です。'}</p><a href="/#/landing" style={{ fontSize: 14, color: '#7050C0' }}>{lang === 'en' ? 'Go to Home' : 'ホームへ'}</a></div>
-  return <RootRoute lang={lang} />
-}
+import { getUserRole, clearUserRole } from './lib/pairDaily'
 
 function RootOrLanding({ lang = 'ja' }) {
   try {
     const hash = window.location.hash || ''
     const qIndex = hash.indexOf('?')
     const qs = qIndex >= 0 ? hash.slice(qIndex + 1) : ''
-    const params = new URLSearchParams(qs)
-    const pairIdFromUrl = params.get('pairId')?.trim()
+    const pairIdFromUrl = new URLSearchParams(qs).get('pairId')?.trim()
     if (pairIdFromUrl) return <RootRoute lang={lang} />
-    const numberFromUrl = params.get('number')?.trim()
-    if (numberFromUrl) return <NumberResolver number={numberFromUrl} lang={lang} />
   } catch (_) {}
   return <LandingPage lang={lang} />
 }
