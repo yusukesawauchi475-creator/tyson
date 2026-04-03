@@ -8,11 +8,13 @@ const STORAGE_KEY = 'tyson_admin_secret'
 
 function daysAgo(dateStr) {
   if (!dateStr) return '-'
-  const d = new Date(dateStr + 'T00:00:00')
+  const d = new Date(dateStr.length === 10 ? dateStr + 'T00:00:00' : dateStr)
+  if (isNaN(d.getTime())) return dateStr.slice(0, 10)
   const now = new Date()
   const diff = Math.floor((now - d) / 86400000)
   if (diff === 0) return '今日'
   if (diff === 1) return '昨日'
+  if (diff < 0) return dateStr.slice(0, 10)
   return `${diff}日前`
 }
 
@@ -155,6 +157,7 @@ export default function AdminPage({ lang = 'ja' }) {
   const [actionResult, setActionResult] = useState(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [numberMap, setNumberMap] = useState({}) // pairId → number
+  const [adminTab, setAdminTab] = useState('activity') // 'activity' | 'pairs' | 'stats'
 
   // Fetch pair_numbers mapping
   useEffect(() => {
@@ -302,22 +305,45 @@ export default function AdminPage({ lang = 'ja' }) {
         )}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--color-text)' }}>活動状況</h2>
-        <button type="button" onClick={fetchDashboard} disabled={dashLoading} style={{
-          padding: '4px 12px', fontSize: 12, color: 'var(--color-primary)',
-          background: 'transparent', border: '1px solid var(--color-primary)',
-          borderRadius: 'var(--radius-sm)', cursor: dashLoading ? 'wait' : 'pointer',
-        }}>更新</button>
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 6, margin: '8px 0' }}>
+        {[['activity', '活動'], ['pairs', '発行'], ['stats', 'Stats']].map(([key, label]) => (
+          <button key={key} type="button" onClick={() => setAdminTab(key)} style={{ flex: 1, padding: '8px 0', fontSize: 13, fontWeight: 700, color: adminTab === key ? '#fff' : '#999', background: adminTab === key ? 'linear-gradient(135deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 16, cursor: 'pointer' }}>
+            {label}
+          </button>
+        ))}
       </div>
 
-      {dashLoading && <p style={{ fontSize: 13, color: 'var(--color-text-muted)', textAlign: 'center' }}>読み込み中...</p>}
-      {dashError && <p style={{ fontSize: 13, color: 'var(--color-danger)', textAlign: 'center' }}>{dashError}</p>}
+      {/* Tab: 活動状況 */}
+      {adminTab === 'activity' && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--color-text)' }}>活動状況</h2>
+            <button type="button" onClick={fetchDashboard} disabled={dashLoading} style={{
+              padding: '4px 12px', fontSize: 12, color: 'var(--color-primary)',
+              background: 'transparent', border: '1px solid var(--color-primary)',
+              borderRadius: 'var(--radius-sm)', cursor: dashLoading ? 'wait' : 'pointer',
+            }}>更新</button>
+          </div>
+          {dashLoading && <p style={{ fontSize: 13, color: 'var(--color-text-muted)', textAlign: 'center' }}>読み込み中...</p>}
+          {dashError && <p style={{ fontSize: 13, color: 'var(--color-danger)', textAlign: 'center' }}>{dashError}</p>}
+          {pairs && pairs.map(pair => <PairCard key={pair.pairId} pair={pair} secret={secret} numberMap={numberMap} />)}
+          {pairs && pairs.length === 0 && <p style={{ fontSize: 13, color: 'var(--color-text-muted)', textAlign: 'center' }}>データなし</p>}
+        </>
+      )}
 
-      {pairs && pairs.map(pair => <PairCard key={pair.pairId} pair={pair} secret={secret} numberMap={numberMap} />)}
-      {pairs && pairs.length === 0 && <p style={{ fontSize: 13, color: 'var(--color-text-muted)', textAlign: 'center' }}>データなし</p>}
+      {/* Tab: 発行済み */}
+      {adminTab === 'pairs' && (
+        <PairNumberManager secret={secret} numberMap={numberMap} />
+      )}
 
-      <PairNumberManager secret={secret} numberMap={numberMap} />
+      {/* Tab: Stats */}
+      {adminTab === 'stats' && pairs && (
+        <StatsPanel pairs={pairs} numberMap={numberMap} />
+      )}
+      {adminTab === 'stats' && !pairs && (
+        <p style={{ fontSize: 13, color: 'var(--color-text-muted)', textAlign: 'center', marginTop: 20 }}>活動状況を先に読み込んでください</p>
+      )}
     </div>
   )
 }
@@ -431,6 +457,45 @@ function PairNumberManager({ secret, numberMap }) {
           </button>
         </div>
       ))}
+    </>
+  )
+}
+
+function StatsPanel({ pairs, numberMap }) {
+  const totalPairs = pairs.length
+  const today = new Date()
+  const sevenDaysAgo = new Date(today - 7 * 86400000)
+  const activePairs = pairs.filter(p => {
+    if (!p.lastActivity) return false
+    const d = new Date(p.lastActivity.length === 10 ? p.lastActivity + 'T00:00:00' : p.lastActivity)
+    return !isNaN(d.getTime()) && d >= sevenDaysAgo
+  }).length
+  const totalVoice = pairs.reduce((s, p) => s + (p.totals?.parentVoice || 0) + (p.totals?.childVoice || 0), 0)
+  const totalPhotos = pairs.reduce((s, p) => s + (p.totals?.parentGeneric || 0) + (p.totals?.childGeneric || 0) + (p.totals?.parentJournal || 0) + (p.totals?.childJournal || 0), 0)
+  const avgStreak = pairs.length > 0 ? (pairs.reduce((s, p) => s + (p.streak || 0), 0) / pairs.length).toFixed(1) : '0'
+  const numberedPairs = Object.keys(numberMap).length
+
+  const stats = [
+    { label: '総ペア数', value: totalPairs, icon: '👥' },
+    { label: '番号発行済み', value: numberedPairs, icon: '#️⃣' },
+    { label: 'アクティブ（7日以内）', value: activePairs, icon: '🟢' },
+    { label: '総音声回数', value: totalVoice, icon: '🎙' },
+    { label: '総写真枚数', value: totalPhotos, icon: '📷' },
+    { label: '平均連続日数', value: avgStreak, icon: '🔥' },
+  ]
+
+  return (
+    <>
+      <h2 style={{ margin: '8px 0', fontSize: 15, fontWeight: 700, color: 'var(--color-text)' }}>Stats</h2>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+        {stats.map(s => (
+          <div key={s.label} className="card" style={{ padding: '14px 12px', textAlign: 'center' }}>
+            <div style={{ fontSize: 24, marginBottom: 4 }}>{s.icon}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--color-text)' }}>{s.value}</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
     </>
   )
 }
