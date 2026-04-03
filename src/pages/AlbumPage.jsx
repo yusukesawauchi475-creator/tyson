@@ -192,68 +192,25 @@ export default function AlbumPage({ lang = 'ja' }) {
         </h1>
       </header>
 
-      {/* Pill Tabs */}
-      <div style={{ display: 'flex', gap: 8, padding: '10px 16px', background: '#FFF8FF', position: 'sticky', top: 49, zIndex: 99 }}>
-        <button type="button" onClick={() => setActiveTab('photo')} style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700, color: activeTab === 'photo' ? '#fff' : '#999', background: activeTab === 'photo' ? 'linear-gradient(135deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
-          📷 {lang === 'en' ? 'Photos' : '写真'}
-        </button>
-        <button type="button" onClick={() => setActiveTab('voice')} style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700, color: activeTab === 'voice' ? '#fff' : '#999', background: activeTab === 'voice' ? 'linear-gradient(135deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
-          🎙 {lang === 'en' ? 'Voice' : '声'}
-        </button>
-      </div>
+      {/* Pill Tabs — hide voice tab for PAIR-DEMOTEST */}
+      {rawPairId !== 'PAIR-DEMOTEST' && (
+        <div style={{ display: 'flex', gap: 8, padding: '10px 16px', background: '#FFF8FF', position: 'sticky', top: 49, zIndex: 99 }}>
+          <button type="button" onClick={() => setActiveTab('photo')} style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700, color: activeTab === 'photo' ? '#fff' : '#999', background: activeTab === 'photo' ? 'linear-gradient(135deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+            📷 {lang === 'en' ? 'Photos' : '写真'}
+          </button>
+          <button type="button" onClick={() => setActiveTab('voice')} style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700, color: activeTab === 'voice' ? '#fff' : '#999', background: activeTab === 'voice' ? 'linear-gradient(135deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+            🎙 {lang === 'en' ? 'Voice' : '声'}
+          </button>
+        </div>
+      )}
 
       <main style={{ padding: '16px', maxWidth: 480, margin: '0 auto' }}>
-      {activeTab === 'voice' && (
+      {activeTab === 'voice' && rawPairId !== 'PAIR-DEMOTEST' && (
         <>
           <VoiceLibrary lang={lang} pairId={pairId} onDataLoaded={(has) => setVoiceHasData(has)} />
-          {!voiceHasData && rawPairId === 'PAIR-DEMOTEST' && (
-            <section style={{ width: '100%', background: '#fff', borderRadius: 18, padding: 14, boxShadow: '0 2px 12px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
-              <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                {lang === 'en' ? '🎧 Sample Voice History' : '🎧 サンプル音声'}
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {['2026-04-03', '2026-04-01', '2026-03-30', '2026-03-28', '2026-03-25'].map((dk, di) => {
-                  const [, m, d] = dk.split('-').map(Number)
-                  const dateLabel = lang === 'en' ? `${m}/${d}` : `${m}月${d}日`
-                  const parentKey = `${dk}-parent`
-                  const childKey = `${dk}-child`
-                  const parentPlayed = !!samplePlayed[parentKey]
-                  const childPlayed = !!samplePlayed[childKey]
-                  const playSample = (key) => {
-                    const el = sampleAudioRef.current
-                    if (!el) return
-                    if (samplePlayingKey === key) { el.pause(); el.currentTime = 0; setSamplePlayingKey(null); return }
-                    el.pause()
-                    el.src = '/demo-audio.mp3'
-                    el.currentTime = 0
-                    el.play().then(() => { setSamplePlayingKey(key); setSamplePlayed(p => ({ ...p, [key]: true })) }).catch(() => {})
-                  }
-                  return (
-                    <div key={dk} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #EEE8FF' }}>
-                      <span style={{ fontSize: 12, color: '#8070A0', fontWeight: 600, minWidth: 50 }}>{dateLabel}</span>
-                      <button type="button" onClick={() => playSample(parentKey)} style={{ flex: 1, padding: '8px 10px', fontSize: 12, fontWeight: 600, color: '#555', background: samplePlayingKey === parentKey ? '#E8E0FF' : '#fff', border: parentPlayed ? '2px solid #30A870' : '2px solid #E04040', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <span style={{ fontSize: 13 }}>{parentPlayed ? '✅' : '🔴'}</span>
-                        <span>👴 {lang === 'en' ? 'Parent' : '親'}</span>
-                        {samplePlayingKey === parentKey && <span style={{ fontSize: 11, marginLeft: 'auto' }}>▶</span>}
-                      </button>
-                      <button type="button" onClick={() => playSample(childKey)} style={{ flex: 1, padding: '8px 10px', fontSize: 12, fontWeight: 600, color: '#555', background: samplePlayingKey === childKey ? '#E8E0FF' : '#fff', border: childPlayed ? '2px solid #30A870' : '2px solid #E04040', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <span style={{ fontSize: 13 }}>{childPlayed ? '✅' : '🔴'}</span>
-                        <span>🧑 {lang === 'en' ? 'Child' : '子'}</span>
-                        {samplePlayingKey === childKey && <span style={{ fontSize: 11, marginLeft: 'auto' }}>▶</span>}
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-              <audio ref={sampleAudioRef} onEnded={() => setSamplePlayingKey(null)} onPause={() => setSamplePlayingKey(null)} style={{ display: 'none' }} />
-              <p style={{ fontSize: 10, color: '#B0A0C0', textAlign: 'center', margin: '10px 0 0', fontStyle: 'italic' }}>
-                {lang === 'en' ? 'Sample — your voice history will appear here' : 'サンプル — あなたの音声履歴がここに表示されます'}
-              </p>
-            </section>
-          )}
         </>
       )}
-      {activeTab === 'photo' && (<>
+      {(activeTab === 'photo' || rawPairId === 'PAIR-DEMOTEST') && (<>
 
         {loading && (
           <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
