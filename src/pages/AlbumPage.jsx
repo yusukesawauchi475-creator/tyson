@@ -30,7 +30,11 @@ export default function AlbumPage({ lang = 'ja' }) {
   const [lightboxIndex, setLightboxIndex] = useState(null) // index into allPhotos
   const [activeTab, setActiveTab] = useState('photo') // 'photo' | 'voice'
   const pairId = getPairId()
-  const [samplePlayed, setSamplePlayed] = useState({}) // track played sample voices
+  const [samplePlayed, setSamplePlayed] = useState({
+    '2026-03-25-parent': true, '2026-03-25-child': true,
+    '2026-03-28-parent': true, '2026-03-28-child': true,
+    '2026-03-30-parent': true, '2026-03-30-child': true,
+  })
   const [voiceHasData, setVoiceHasData] = useState(false)
   const sampleAudioRef = useRef(null)
   const [samplePlayingKey, setSamplePlayingKey] = useState(null)
