@@ -2,11 +2,13 @@ import { useState, useEffect, useRef } from 'react'
 import { getPairId } from '../lib/pairDaily'
 import { getIdTokenForApi } from '../lib/firebase'
 
-export default function VoiceLibrary({ lang = 'ja', role = 'parent' }) {
+export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pairIdProp }) {
   const [days, setDays] = useState([])
   const [loading, setLoading] = useState(true)
   const [playingKey, setPlayingKey] = useState(null) // "dateKey-role"
   const audioRef = useRef(null)
+
+  const effectivePairId = pairIdProp || getPairId()
 
   useEffect(() => {
     let cancelled = false
@@ -14,7 +16,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent' }) {
       const idToken = await getIdTokenForApi()
       if (!idToken || cancelled) { setLoading(false); return }
       try {
-        const res = await fetch(`/api/pair-media?action=voice-history&pairId=${encodeURIComponent(getPairId())}&limit=7`, {
+        const res = await fetch(`/api/pair-media?action=voice-history&pairId=${encodeURIComponent(effectivePairId)}&limit=7`, {
           headers: { Authorization: `Bearer ${idToken}` },
           cache: 'no-store',
         })
@@ -25,7 +27,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent' }) {
       if (!cancelled) setLoading(false)
     })()
     return () => { cancelled = true }
-  }, [])
+  }, [effectivePairId])
 
   const handlePlay = (dateKey, r, url) => {
     const key = `${dateKey}-${r}`
@@ -50,7 +52,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent' }) {
   const formatDate = (dateKey) => {
     if (!dateKey) return ''
     const [, m, d] = dateKey.split('-').map(Number)
-    return lang === 'en' ? `${m}/${d}` : `${m}/${d}`
+    return lang === 'en' ? `${m}/${d}` : `${m}月${d}日`
   }
 
   if (loading) return null
@@ -62,10 +64,10 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent' }) {
         {lang === 'en' ? '🎧 Voice History' : '🎧 過去の声'}
       </p>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {days.map(({ dateKey, parent, child }) => (
-          <div key={dateKey} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid #EEE8FF' }}>
-            <span style={{ fontSize: 12, color: '#8070A0', fontWeight: 600, minWidth: 36 }}>{formatDate(dateKey)}</span>
+          <div key={dateKey} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #EEE8FF' }}>
+            <span style={{ fontSize: 12, color: '#8070A0', fontWeight: 600, minWidth: 50 }}>{formatDate(dateKey)}</span>
 
             {/* Parent voice */}
             <button
@@ -74,24 +76,24 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent' }) {
               onClick={() => parent?.url && handlePlay(dateKey, 'parent', parent.url)}
               style={{
                 flex: 1,
-                padding: '6px 8px',
+                padding: '8px 10px',
                 fontSize: 12,
                 fontWeight: 600,
                 color: parent?.url ? '#555' : '#CCC',
                 background: playingKey === `${dateKey}-parent` ? '#E8E0FF' : '#fff',
-                border: '1px solid #E8E0FF',
-                borderRadius: 8,
+                border: parent?.hasAudio ? (parent.isUnseen ? '2px solid #E04040' : '2px solid #30A870') : '1px solid #E8E0FF',
+                borderRadius: 10,
                 cursor: parent?.url ? 'pointer' : 'default',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 4,
+                gap: 5,
               }}
             >
-              <span style={{ fontSize: 10 }}>
+              <span style={{ fontSize: 13 }}>
                 {!parent?.hasAudio ? '—' : parent.isUnseen ? '🔴' : '✅'}
               </span>
               <span>{lang === 'en' ? 'Parent' : '親'}</span>
-              {playingKey === `${dateKey}-parent` && <span style={{ fontSize: 10 }}>▶</span>}
+              {playingKey === `${dateKey}-parent` && <span style={{ fontSize: 11, marginLeft: 'auto' }}>▶</span>}
             </button>
 
             {/* Child voice */}
@@ -101,24 +103,24 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent' }) {
               onClick={() => child?.url && handlePlay(dateKey, 'child', child.url)}
               style={{
                 flex: 1,
-                padding: '6px 8px',
+                padding: '8px 10px',
                 fontSize: 12,
                 fontWeight: 600,
                 color: child?.url ? '#555' : '#CCC',
                 background: playingKey === `${dateKey}-child` ? '#E8E0FF' : '#fff',
-                border: '1px solid #E8E0FF',
-                borderRadius: 8,
+                border: child?.hasAudio ? (child.isUnseen ? '2px solid #E04040' : '2px solid #30A870') : '1px solid #E8E0FF',
+                borderRadius: 10,
                 cursor: child?.url ? 'pointer' : 'default',
                 display: 'flex',
                 alignItems: 'center',
-                gap: 4,
+                gap: 5,
               }}
             >
-              <span style={{ fontSize: 10 }}>
+              <span style={{ fontSize: 13 }}>
                 {!child?.hasAudio ? '—' : child.isUnseen ? '🔴' : '✅'}
               </span>
               <span>{lang === 'en' ? 'Child' : '子'}</span>
-              {playingKey === `${dateKey}-child` && <span style={{ fontSize: 10 }}>▶</span>}
+              {playingKey === `${dateKey}-child` && <span style={{ fontSize: 11, marginLeft: 'auto' }}>▶</span>}
             </button>
           </div>
         ))}
