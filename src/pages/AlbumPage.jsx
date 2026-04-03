@@ -76,8 +76,9 @@ export default function AlbumPage({ lang = 'ja' }) {
       }
       return flat
     }
-    // Fallback: demo photos
-    return getDemoAllPhotos().map((url) => ({ url, dateKey: '', storagePath: url }))
+    // Fallback: demo photos only for PAIR-DEMOTEST
+    if (rawPairId === 'PAIR-DEMOTEST') return getDemoAllPhotos().map((url) => ({ url, dateKey: '', storagePath: url }))
+    return []
   }, [days])
 
   const openLightbox = useCallback((photo) => {
@@ -262,7 +263,12 @@ export default function AlbumPage({ lang = 'ja' }) {
         {error && (
           <p style={{ textAlign: 'center', color: '#c00', fontSize: 14, marginTop: 32 }}>{error}</p>
         )}
-        {!loading && !error && days.length === 0 && (
+        {!loading && !error && days.length === 0 && rawPairId !== 'PAIR-DEMOTEST' && (
+          <p style={{ textAlign: 'center', color: '#888', fontSize: 14, marginTop: 32 }}>
+            {lang === 'en' ? 'No photos yet.' : 'まだ写真がありません。'}
+          </p>
+        )}
+        {!loading && !error && days.length === 0 && rawPairId === 'PAIR-DEMOTEST' && (
           <>
             <p style={{ textAlign: 'center', color: '#999', fontSize: 12, margin: '16px 0 20px', fontStyle: 'italic' }}>
               {lang === 'en' ? 'Sample photos — your photos will appear here' : 'サンプル写真 — あなたの写真がここに表示されます'}
