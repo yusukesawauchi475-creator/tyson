@@ -6,7 +6,17 @@ import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore'
 
 const STORAGE_KEY = 'tyson_admin_secret'
 
-function PairCard({ pair, secret }) {
+function daysAgo(dateStr) {
+  if (!dateStr) return '-'
+  const d = new Date(dateStr + 'T00:00:00')
+  const now = new Date()
+  const diff = Math.floor((now - d) / 86400000)
+  if (diff === 0) return '今日'
+  if (diff === 1) return '昨日'
+  return `${diff}日前`
+}
+
+function PairCard({ pair, secret, numberMap }) {
   const [open, setOpen] = useState(false)
   const [ocrLoading, setOcrLoading] = useState(null)
   const [ocrResult, setOcrResult] = useState(null)
@@ -14,6 +24,7 @@ function PairCard({ pair, secret }) {
   const todayParent = today?.parent
   const todayChild = today?.child
   const t = pair.totals || {}
+  const num = numberMap[pair.pairId]
 
   const handleOcr = async (dateKey) => {
     setOcrLoading(dateKey)
@@ -40,15 +51,15 @@ function PairCard({ pair, secret }) {
 
   return (
     <div className="card" style={{ padding: '14px 16px' }}>
-      {/* Header: pairId + streak — tappable */}
       <div
         onClick={() => setOpen(!open)}
         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, cursor: 'pointer' }}
       >
         <div>
+          {num && <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-primary)', marginRight: 6 }}>#{num}</span>}
           <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)' }}>{pair.pairId}</span>
           <span style={{ fontSize: 12, color: 'var(--color-text-muted)', marginLeft: 8 }}>
-            {pair.lastActivity ? pair.lastActivity.slice(5, 10) : '-'}
+            {daysAgo(pair.lastActivity)}
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -59,23 +70,21 @@ function PairCard({ pair, secret }) {
         </div>
       </div>
 
-      {/* Today's status + totals */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 10, fontSize: 13 }}>
         <div>
-          <span>👴 </span>
-          <span style={{ color: todayParent?.voice ? 'var(--color-success)' : 'var(--color-text-muted)' }}>V{todayParent?.voice ? '○' : '×'}</span>
-          <span style={{ color: todayParent?.photo ? 'var(--color-success)' : 'var(--color-text-muted)' }}> P{todayParent?.photo ? '○' : '×'}</span>
-          <span style={{ fontSize: 11, color: 'var(--color-text-muted)', marginLeft: 6 }}>計V{t.parentVoice||0} 📷{t.parentGeneric||0} 📔{t.parentJournal||0}</span>
+          <span>👴親 </span>
+          <span style={{ color: todayParent?.voice ? 'var(--color-success)' : 'var(--color-text-muted)' }}>声{todayParent?.voice ? '○' : '×'}</span>
+          <span style={{ color: todayParent?.photo ? 'var(--color-success)' : 'var(--color-text-muted)' }}> 写真{todayParent?.photo ? '○' : '×'}</span>
+          <span style={{ fontSize: 11, color: 'var(--color-text-muted)', marginLeft: 6 }}>計 声{t.parentVoice||0} 📷{t.parentGeneric||0}</span>
         </div>
         <div>
-          <span>👶 </span>
-          <span style={{ color: todayChild?.voice ? 'var(--color-success)' : 'var(--color-text-muted)' }}>V{todayChild?.voice ? '○' : '×'}</span>
-          <span style={{ color: todayChild?.photo ? 'var(--color-success)' : 'var(--color-text-muted)' }}> P{todayChild?.photo ? '○' : '×'}</span>
-          <span style={{ fontSize: 11, color: 'var(--color-text-muted)', marginLeft: 6 }}>計V{t.childVoice||0} 📷{t.childGeneric||0} 📔{t.childJournal||0}</span>
+          <span>🧑子 </span>
+          <span style={{ color: todayChild?.voice ? 'var(--color-success)' : 'var(--color-text-muted)' }}>声{todayChild?.voice ? '○' : '×'}</span>
+          <span style={{ color: todayChild?.photo ? 'var(--color-success)' : 'var(--color-text-muted)' }}> 写真{todayChild?.photo ? '○' : '×'}</span>
+          <span style={{ fontSize: 11, color: 'var(--color-text-muted)', marginLeft: 6 }}>計 声{t.childVoice||0} 📷{t.childGeneric||0}</span>
         </div>
       </div>
 
-      {/* 14-day dots */}
       <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
         {pair.calendar.map(day => {
           const hasP = !!day.parent
@@ -95,7 +104,6 @@ function PairCard({ pair, secret }) {
         })}
       </div>
 
-      {/* Expandable detail list */}
       {open && (
         <div style={{ marginTop: 12, borderTop: '1px solid var(--color-border)', paddingTop: 10 }}>
           {[...pair.calendar].reverse().map(day => {
@@ -105,8 +113,8 @@ function PairCard({ pair, secret }) {
             return (
               <div key={day.date} style={{ display: 'flex', gap: 12, fontSize: 12, padding: '3px 0', color: 'var(--color-text-sub)' }}>
                 <span style={{ fontWeight: 600, minWidth: 42 }}>{day.date.slice(5)}</span>
-                <span>👴{p ? ` V${p.voice?'○':'×'} 📷${p.genericImage||0} 📔${p.journalImage||0}` : ' -'}</span>
-                <span>👶{c ? ` V${c.voice?'○':'×'} 📷${c.genericImage||0} 📔${c.journalImage||0}` : ' -'}</span>
+                <span>👴{p ? ` 声${p.voice?'○':'×'} 📷${p.genericImage||0}` : ' -'}</span>
+                <span>🧑{c ? ` 声${c.voice?'○':'×'} 📷${c.genericImage||0}` : ' -'}</span>
                 {p?.voice && c?.voice && <span style={{ color: 'var(--color-success)' }}>✓</span>}
                 {(p?.journalImage > 0 || c?.journalImage > 0) && (
                   <button
@@ -146,6 +154,22 @@ export default function AdminPage({ lang = 'ja' }) {
   const [dashLoading, setDashLoading] = useState(false)
   const [actionResult, setActionResult] = useState(null)
   const [actionLoading, setActionLoading] = useState(false)
+  const [numberMap, setNumberMap] = useState({}) // pairId → number
+
+  // Fetch pair_numbers mapping
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const snap = await getDocs(collection(db, 'pair_numbers'))
+        const map = {}
+        snap.forEach(doc => {
+          const pid = doc.data()?.pairId
+          if (pid) map[pid] = doc.id
+        })
+        setNumberMap(map)
+      } catch (_) {}
+    })()
+  }, [])
 
   useEffect(() => {
     try {
@@ -290,15 +314,15 @@ export default function AdminPage({ lang = 'ja' }) {
       {dashLoading && <p style={{ fontSize: 13, color: 'var(--color-text-muted)', textAlign: 'center' }}>読み込み中...</p>}
       {dashError && <p style={{ fontSize: 13, color: 'var(--color-danger)', textAlign: 'center' }}>{dashError}</p>}
 
-      {pairs && pairs.map(pair => <PairCard key={pair.pairId} pair={pair} secret={secret} />)}
+      {pairs && pairs.map(pair => <PairCard key={pair.pairId} pair={pair} secret={secret} numberMap={numberMap} />)}
       {pairs && pairs.length === 0 && <p style={{ fontSize: 13, color: 'var(--color-text-muted)', textAlign: 'center' }}>データなし</p>}
 
-      <PairNumberManager secret={secret} />
+      <PairNumberManager secret={secret} numberMap={numberMap} />
     </div>
   )
 }
 
-function PairNumberManager({ secret }) {
+function PairNumberManager({ secret, numberMap }) {
   const [memo, setMemo] = useState('')
   const [creating, setCreating] = useState(false)
   const [created, setCreated] = useState(null)
@@ -316,6 +340,8 @@ function PairNumberManager({ secret }) {
         const d = doc.data()
         list.push({ number: doc.id, pairId: d.pairId, memo: d.memo || '', createdAt: d.createdAt?.toDate?.()?.toLocaleDateString('ja-JP') || '' })
       })
+      // Sort by number ascending
+      list.sort((a, b) => parseInt(a.number) - parseInt(b.number))
       setNumbers(list)
     } catch (e) {
       console.error('[PairNumberManager] fetch error:', e)
@@ -353,7 +379,7 @@ function PairNumberManager({ secret }) {
   }
 
   const copyUrl = (num) => {
-    const url = `https://humfamily.com/pair/${num}`
+    const url = `https://www.humfamily.com/pair/${num}`
     navigator.clipboard.writeText(url).then(() => {
       setCopied(num)
       setTimeout(() => setCopied(null), 1500)
@@ -370,7 +396,7 @@ function PairNumberManager({ secret }) {
             type="text"
             value={memo}
             onChange={(e) => setMemo(e.target.value)}
-            placeholder="メモ（誰に渡すか）"
+            placeholder="メモ（例: 田中家）"
             style={{ flex: 1, padding: '8px 10px', fontSize: 13, border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', outline: 'none', fontFamily: 'var(--font-sans)' }}
           />
           <button type="button" onClick={handleCreate} disabled={creating} style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, background: creating ? 'var(--color-border)' : 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 'var(--radius-sm)', cursor: creating ? 'wait' : 'pointer' }}>
@@ -379,7 +405,7 @@ function PairNumberManager({ secret }) {
         </div>
         {created && (
           <div style={{ padding: '8px 10px', background: 'var(--color-success-bg, #f0fff0)', borderRadius: 6, fontSize: 12 }}>
-            <div><strong>/pair/{created.number}</strong> → {created.pairId}</div>
+            <div><strong>#{created.number}</strong> {created.pairId}</div>
             <div style={{ marginTop: 4 }}>
               <button type="button" onClick={() => copyUrl(created.number)} style={{ padding: '2px 8px', fontSize: 11, background: 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 3, cursor: 'pointer' }}>URLコピー</button>
               <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--color-text-muted)' }}>{created.url}</span>
@@ -395,11 +421,12 @@ function PairNumberManager({ secret }) {
       {!listLoading && numbers.length === 0 && <p style={{ fontSize: 13, color: 'var(--color-text-muted)', textAlign: 'center' }}>まだ発行されていません</p>}
 
       {!listLoading && numbers.map(n => (
-        <div key={n.number} className="card" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-primary)', minWidth: 50 }}>/pair/{n.number}</span>
-          <span style={{ fontSize: 12, color: 'var(--color-text-sub)', flex: 1 }}>{n.memo || '-'}</span>
+        <div key={n.number} className="card" style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-primary)', minWidth: 30 }}>#{n.number}</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', flex: 1 }}>{n.memo || '-'}</span>
+          <span style={{ fontSize: 11, color: 'var(--color-text-muted)', minWidth: 70 }}>{n.pairId}</span>
           <span style={{ fontSize: 10, color: 'var(--color-text-muted)', minWidth: 60 }}>{n.createdAt}</span>
-          <button type="button" onClick={() => copyUrl(n.number)} style={{ padding: '2px 8px', fontSize: 11, background: copied === n.number ? 'var(--color-success)' : 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 3, cursor: 'pointer' }}>
+          <button type="button" onClick={() => copyUrl(n.number)} style={{ padding: '3px 10px', fontSize: 11, background: copied === n.number ? 'var(--color-success)' : 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 600 }}>
             {copied === n.number ? '✓' : 'コピー'}
           </button>
         </div>
