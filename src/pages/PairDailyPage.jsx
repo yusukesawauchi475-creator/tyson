@@ -893,10 +893,17 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
       </main>
 
       {/* Bottom nav */}
-      <nav className="bottom-nav">
-        <button type="button" className="active"><span style={{ fontSize: 20 }}>🏠</span><span>{lang === 'en' ? 'Home' : 'ホーム'}</span></button>
-        <button type="button" onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album')}><span style={{ fontSize: 20 }}>🖼</span><span>{lang === 'en' ? 'Album' : 'アルバム'}</span></button>
-        <button type="button" onClick={handleShare}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : '招待'}</span></button>
+      <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9000, display: 'flex', background: '#fff', borderTop: '2px solid #F0E8FF', boxShadow: '0 -4px 20px rgba(180,120,255,0.15)', paddingBottom: 'max(4px, env(safe-area-inset-bottom))' }}>
+        {[
+          { icon: '🏠', label: lang === 'en' ? 'Home' : 'ホーム', bg: '#FFE8F4', bgActive: '#FFD0E8', active: true, onClick: null },
+          { icon: '🖼', label: lang === 'en' ? 'Album' : 'アルバム', bg: '#F0E8FF', bgActive: '#E0D0FF', active: false, onClick: () => navigate(lang === 'en' ? '/album/eng' : '/album') },
+          { icon: '👋', label: lang === 'en' ? 'Invite' : '招待', bg: '#FFF0E8', bgActive: '#FFE0D0', active: false, onClick: handleShare },
+        ].map((item) => (
+          <button key={item.label} type="button" onClick={item.onClick} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 0 4px', border: 'none', background: 'none', cursor: 'pointer' }}>
+            <span style={{ width: item.active ? 40 : 36, height: item.active ? 40 : 36, borderRadius: 20, background: item.active ? item.bgActive : item.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: item.active ? 22 : 18, transition: 'all 0.2s' }}>{item.icon}</span>
+            <span style={{ fontSize: 10, fontWeight: item.active ? 800 : 600, color: item.active ? '#7050C0' : '#999', background: item.active ? 'linear-gradient(135deg,#FF60B0,#A060FF)' : 'none', WebkitBackgroundClip: item.active ? 'text' : 'unset', WebkitTextFillColor: item.active ? 'transparent' : 'unset' }}>{item.label}</span>
+          </button>
+        ))}
       </nav>
 
       <audio ref={audioRef} onEnded={handleEnded} onPause={() => setIsPlaying(false)} style={{ display: 'none' }} />
