@@ -43,6 +43,7 @@ export default function AlbumPage({ lang = 'ja' }) {
     return getPairId()
   })()
   const pairId = (BLOCKED_PAIR_IDS.includes(rawPairId) || rawPairId === 'PAIR-DEMOTEST') ? null : rawPairId
+  const showVoiceTab = rawPairId && rawPairId !== 'PAIR-DEMOTEST' && rawPairId !== 'demo' && rawPairId.length > 4
   const [samplePlayed, setSamplePlayed] = useState({
     '2026-03-25-parent': true, '2026-03-25-child': true,
     '2026-03-28-parent': true, '2026-03-28-child': true,
@@ -193,7 +194,7 @@ export default function AlbumPage({ lang = 'ja' }) {
       </header>
 
       {/* Pill Tabs — hide voice tab for PAIR-DEMOTEST */}
-      {rawPairId !== 'PAIR-DEMOTEST' && (
+      {showVoiceTab && (
         <div style={{ display: 'flex', gap: 8, padding: '10px 16px', background: '#FFF8FF', position: 'sticky', top: 49, zIndex: 99 }}>
           <button type="button" onClick={() => setActiveTab('photo')} style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700, color: activeTab === 'photo' ? '#fff' : '#999', background: activeTab === 'photo' ? 'linear-gradient(135deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
             📷 {lang === 'en' ? 'Photos' : '写真'}
@@ -205,12 +206,12 @@ export default function AlbumPage({ lang = 'ja' }) {
       )}
 
       <main style={{ padding: '16px', maxWidth: 480, margin: '0 auto' }}>
-      {activeTab === 'voice' && rawPairId !== 'PAIR-DEMOTEST' && (
+      {activeTab === 'voice' && showVoiceTab && (
         <>
           <VoiceLibrary lang={lang} pairId={pairId} onDataLoaded={(has) => setVoiceHasData(has)} />
         </>
       )}
-      {(activeTab === 'photo' || rawPairId === 'PAIR-DEMOTEST') && (<>
+      {(activeTab === 'photo' || !showVoiceTab) && (<>
 
         {loading && (
           <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
