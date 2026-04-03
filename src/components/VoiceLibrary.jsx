@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { getPairId } from '../lib/pairDaily'
 import { getIdTokenForApi } from '../lib/firebase'
 
-export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pairIdProp }) {
+export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pairIdProp, onDataLoaded }) {
   const [days, setDays] = useState([])
   const [loading, setLoading] = useState(true)
   const [playingKey, setPlayingKey] = useState(null) // "dateKey-role"
@@ -22,9 +22,12 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
         })
         if (!res.ok) { setLoading(false); return }
         const data = await res.json()
-        if (!cancelled && data.days) setDays(data.days)
+        if (!cancelled && data.days) {
+          setDays(data.days)
+          if (onDataLoaded) onDataLoaded(data.days.length > 0)
+        }
       } catch (_) {}
-      if (!cancelled) setLoading(false)
+      if (!cancelled) { setLoading(false); if (onDataLoaded) onDataLoaded(false) }
     })()
     return () => { cancelled = true }
   }, [effectivePairId])
