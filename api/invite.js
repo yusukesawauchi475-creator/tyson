@@ -72,41 +72,39 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
+  // GET ?action=resolve&number=N → no auth required, redirect only
+  if (req.method === 'GET' && req.query?.action === 'resolve' && req.query?.number) {
+    try {
+      initFirebaseAdmin();
+      const numDoc = await firestore.collection('pair_numbers').doc(String(req.query.number)).get();
+      if (!numDoc.exists) {
+        return res.status(404).json({ success: false, error: 'Number not found', requestId });
+      }
+      const resolvedPairId = numDoc.data()?.pairId;
+      if (!resolvedPairId) {
+        return res.status(404).json({ success: false, error: 'pairId not found for number', requestId });
+      }
+      return res.redirect(302, `https://humfamily.com/#/?pairId=${encodeURIComponent(resolvedPairId)}`);
+    } catch (e) {
+      return res.status(500).json({ success: false, error: e.message, requestId });
+    }
+  }
+
+  // All other actions require auth
   const idToken = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
   if (!idToken) {
     return res.status(401).json({ success: false, error: 'Unauthorized', requestId });
   }
-
   try {
     await verifyIdToken(idToken);
   } catch {
     return res.status(401).json({ success: false, error: 'Invalid token', requestId });
   }
-
   initFirebaseAdmin();
 
-  // GET: validate pairId or resolve number
+  // GET: validate pairId
   if (req.method === 'GET') {
-    const { action, number, pairId } = req.query;
-
-    // GET ?action=resolve&number=N → redirect to /#/?pairId={pairId}
-    if (action === 'resolve' && number) {
-      try {
-        const numDoc = await firestore.collection('pair_numbers').doc(String(number)).get();
-        if (!numDoc.exists) {
-          return res.status(404).json({ success: false, error: 'Number not found', requestId });
-        }
-        const resolvedPairId = numDoc.data()?.pairId;
-        if (!resolvedPairId) {
-          return res.status(404).json({ success: false, error: 'pairId not found for number', requestId });
-        }
-        return res.redirect(302, `https://humfamily.com/#/?pairId=${encodeURIComponent(resolvedPairId)}`);
-      } catch (e) {
-        return res.status(500).json({ success: false, error: e.message, requestId });
-      }
-    }
-
-    // GET ?pairId=XXX → validate
+    const { pairId } = req.query;
     if (!pairId) {
       return res.status(400).json({ success: false, error: 'pairId is required', requestId });
     }
