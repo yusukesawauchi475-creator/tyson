@@ -206,7 +206,7 @@ export default function AlbumPage({ lang = 'ja' }) {
       {activeTab === 'voice' && (
         <>
           <VoiceLibrary lang={lang} pairId={pairId} onDataLoaded={(has) => setVoiceHasData(has)} />
-          {!voiceHasData && (
+          {!voiceHasData && rawPairId === 'PAIR-DEMOTEST' && (
             <section style={{ width: '100%', background: '#fff', borderRadius: 18, padding: 14, boxShadow: '0 2px 12px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
               <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 {lang === 'en' ? '🎧 Sample Voice History' : '🎧 サンプル音声'}
