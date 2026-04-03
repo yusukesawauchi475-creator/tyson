@@ -108,8 +108,8 @@ export default function DemoPage({ lang = 'ja' }) {
   const handleShareDemo = async () => {
     const url = 'https://tyson-two.vercel.app/#/demo'
     const text = lang === 'en'
-      ? 'Check out Hum — a family voice app. Try the demo!'
-      : 'Humを見てみて！家族の声アプリのデモです'
+      ? "Let's exchange voices every day on Hum. Listen to today's message 👋"
+      : 'Humで毎日声を交換しよう。今日のメッセージを聞いてね 👋'
     if (navigator.share) {
       try { await navigator.share({ text, url }) } catch (_) {}
     } else {
