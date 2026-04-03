@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { t } from '../lib/i18n'
-
+import VoiceLibrary from '../components/VoiceLibrary'
 
 const DEMO_PAIR_ID = 'PAIR-DEMOTEST'
 const DEMO_AUDIO_URL = '/demo-audio.mp3'
@@ -223,33 +223,8 @@ export default function DemoPage({ lang = 'ja' }) {
           ))}
         </section>
 
-        {/* (4) Voice Library - demo with local audio */}
-        <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            {lang === 'en' ? '🎧 Voice History' : '🎧 過去の声'}
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {[
-              { date: '4月3日', parentUnseen: true, childUnseen: false },
-              { date: '4月2日', parentUnseen: false, childUnseen: false },
-              { date: '4月1日', parentUnseen: false, childUnseen: true },
-              { date: '3月31日', parentUnseen: false, childUnseen: false },
-              { date: '3月30日', parentUnseen: false, childUnseen: false },
-            ].map((day) => (
-              <div key={day.date} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #EEE8FF' }}>
-                <span style={{ fontSize: 12, color: '#8070A0', fontWeight: 600, minWidth: 50 }}>{day.date}</span>
-                <button type="button" onClick={() => { const el = parentAudioRef.current; if (el) { el.src = DEMO_AUDIO_URL; el.currentTime = 0; el.play().then(() => setIsPlayingParent(true)).catch(() => {}) } }} style={{ flex: 1, padding: '8px 10px', fontSize: 12, fontWeight: 600, color: '#555', background: '#fff', border: day.parentUnseen ? '2px solid #E04040' : '2px solid #30A870', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ fontSize: 13 }}>{day.parentUnseen ? '🔴' : '✅'}</span>
-                  <span>{lang === 'en' ? 'Parent' : '親'}</span>
-                </button>
-                <button type="button" onClick={() => { const el = parentAudioRef.current; if (el) { el.src = DEMO_AUDIO_URL; el.currentTime = 0; el.play().then(() => setIsPlayingParent(true)).catch(() => {}) } }} style={{ flex: 1, padding: '8px 10px', fontSize: 12, fontWeight: 600, color: '#555', background: '#fff', border: day.childUnseen ? '2px solid #E04040' : '2px solid #30A870', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ fontSize: 13 }}>{day.childUnseen ? '🔴' : '✅'}</span>
-                  <span>{lang === 'en' ? 'Child' : '子'}</span>
-                </button>
-              </div>
-            ))}
-          </div>
-        </section>
+        {/* (4) Voice Library - real data from PAIR-DEMOTEST */}
+        <VoiceLibrary lang={lang} role="parent" pairId={DEMO_PAIR_ID} />
 
         {errorLine && <p style={{ fontSize: 14, color: '#E04040', textAlign: 'center', margin: 0 }}>{errorLine}</p>}
       </main>
