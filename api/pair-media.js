@@ -50,6 +50,7 @@ function initFirebaseAdmin() {
     storageBucket = admin.storage().bucket(storageBucketName);
   } catch (e) {
     adminInitError = e;
+    console.error('[INIT ERROR]', e.message, e.stack);
     throw e;
   }
 }
