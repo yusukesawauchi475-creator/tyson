@@ -5,8 +5,18 @@ import HomePage from './pages/HomePage'
 import AdminPage from './pages/AdminPage'
 import AlbumPage from './pages/AlbumPage'
 import DemoPage from './pages/DemoPage'
+import LandingPage from './pages/LandingPage'
 import RoleSelectPage from './pages/RoleSelectPage'
-import { getUserRole, clearUserRole } from './lib/pairDaily'
+import { getUserRole, clearUserRole, hasPairId } from './lib/pairDaily'
+
+function RootOrLanding({ lang = 'ja' }) {
+  // pairIdがURL or localStorageにある → 既存ユーザー → RootRoute
+  // なければランディングページ
+  if (hasPairId()) return <RootRoute lang={lang} />
+  const stored = getUserRole()
+  if (stored) return <RootRoute lang={lang} />
+  return <LandingPage lang={lang} />
+}
 
 function RootRoute({ lang = 'ja' }) {
   const [role, setRole] = useState(() => {
@@ -41,8 +51,10 @@ function App() {
       <div className="app-foreground app-root">
         <HashRouter>
           <Routes>
-            <Route path="/" element={<RootRoute />} />
-            <Route path="/eng" element={<RootRoute lang="en" />} />
+            <Route path="/" element={<RootOrLanding />} />
+            <Route path="/eng" element={<RootOrLanding lang="en" />} />
+            <Route path="/home" element={<RootRoute />} />
+            <Route path="/home/eng" element={<RootRoute lang="en" />} />
             <Route path="/tyson/eng" element={<PairDailyPage lang="en" />} />
             <Route path="/tyson" element={<PairDailyPage />} />
             <Route path="/admin/eng" element={<AdminPage lang="en" />} />
