@@ -78,8 +78,6 @@ export default function DemoPage({ lang = 'ja' }) {
   const [isPlayingParent, setIsPlayingParent] = useState(false)
   const [errorLine, setErrorLine] = useState(null)
   const [lightboxIndex, setLightboxIndex] = useState(null)
-  const [activeTab, setActiveTab] = useState('home') // 'home' | 'album'
-  const [albumTab, setAlbumTab] = useState('photo') // 'photo' | 'voice'
   const parentAudioRef = useRef(null)
   const touchStartRef = useRef(null)
 
@@ -108,7 +106,7 @@ export default function DemoPage({ lang = 'ja' }) {
   }
 
   const handleShareDemo = async () => {
-    const url = 'https://tyson-two.vercel.app/#/?pairId=PAIR-DEMOTEST'
+    const url = 'https://www.humfamily.com/#/?pairId=PAIR-DEMOTEST'
     const text = lang === 'en'
       ? "Let's exchange voices every day on Hum. Listen to today's message 👋"
       : 'Humで毎日声を交換しよう。今日のメッセージを聞いてね 👋'
@@ -169,47 +167,6 @@ export default function DemoPage({ lang = 'ja' }) {
       </div>
 
       <main className="page-content page" style={{ flex: 1, maxWidth: 480, margin: '0 auto', width: '100%', paddingTop: 14 }}>
-        {/* Album tab */}
-        {activeTab === 'album' && (
-          <>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-              <button type="button" onClick={() => setAlbumTab('photo')} style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700, color: albumTab === 'photo' ? '#fff' : '#999', background: albumTab === 'photo' ? 'linear-gradient(135deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer' }}>
-                📷 {lang === 'en' ? 'Photos' : '写真'}
-              </button>
-              <button type="button" onClick={() => setAlbumTab('voice')} style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700, color: albumTab === 'voice' ? '#fff' : '#999', background: albumTab === 'voice' ? 'linear-gradient(135deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer' }}>
-                🎙 {lang === 'en' ? 'Voice' : '声'}
-              </button>
-            </div>
-            {albumTab === 'photo' && (
-              <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: '#7050C0', margin: '0 0 14px' }}>
-                  📷 {lang === 'en' ? 'Photo Album' : 'フォトアルバム'}
-                </p>
-                {albumDays.map((day) => (
-                  <div key={day.date} style={{ marginBottom: 16 }}>
-                    <p style={{ fontSize: 12, fontWeight: 700, color: '#8070A0', margin: '0 0 6px' }}>{day.date}</p>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 4 }}>
-                      {day.photos.map((url, i) => {
-                        const globalIdx = allPhotos.indexOf(url)
-                        return (
-                          <button key={url + i} type="button" onClick={() => setLightboxIndex(globalIdx >= 0 ? globalIdx : 0)} style={{ padding: 0, border: 'none', background: '#E8E0FF', cursor: 'pointer', borderRadius: 8, overflow: 'hidden', aspectRatio: '1', display: 'block' }}>
-                            <img src={url} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </section>
-            )}
-            {albumTab === 'voice' && (
-              <VoiceLibrary lang={lang} role="parent" pairId={DEMO_PAIR_ID} />
-            )}
-          </>
-        )}
-
-        {/* Home tab */}
-        {activeTab === 'home' && (<>
         {/* (1) Receive card - local audio */}
         <section style={{ width: '100%', background: '#E8FFF4', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(48,168,112,0.06)', overflow: 'hidden' }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: '#30A870', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t(lang, 'partnerRecordingListen')}</p>
@@ -270,14 +227,11 @@ export default function DemoPage({ lang = 'ja' }) {
         <VoiceLibrary lang={lang} role="parent" pairId={DEMO_PAIR_ID} />
 
         {errorLine && <p style={{ fontSize: 14, color: '#E04040', textAlign: 'center', margin: 0 }}>{errorLine}</p>}
-        </>)}
       </main>
 
-      {/* Bottom nav */}
-      <nav className="bottom-nav" style={{ bottom: 72 }}>
-        <button type="button" className={activeTab === 'home' ? 'active' : ''} onClick={() => setActiveTab('home')}><span style={{ fontSize: 20 }}>🏠</span><span>{lang === 'en' ? 'Home' : 'ホーム'}</span></button>
-        <button type="button" className={activeTab === 'album' ? 'active' : ''} onClick={() => setActiveTab('album')}><span style={{ fontSize: 20 }}>🖼</span><span>{lang === 'en' ? 'Album' : 'アルバム'}</span></button>
-        <button type="button" onClick={handleShareDemo}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Share' : '共有'}</span></button>
+      {/* Bottom nav - invite only */}
+      <nav className="bottom-nav" style={{ bottom: 72, justifyContent: 'center' }}>
+        <button type="button" onClick={handleShareDemo}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : '招待'}</span></button>
       </nav>
 
       {/* CTA button - fixed bottom with pulse */}

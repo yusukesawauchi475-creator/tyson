@@ -1,6 +1,7 @@
 {
   "redirects": [
     { "source": "/demo", "destination": "/#/demo", "permanent": false },
+    { "source": "/landing", "destination": "/#/landing", "permanent": false },
     { "source": "/pair/:number", "destination": "/api/invite?action=resolve&number=:number", "permanent": false }
   ],
   "headers": [

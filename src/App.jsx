@@ -63,6 +63,8 @@ function App() {
             <Route path="/album" element={<AlbumPage />} />
             <Route path="/demo/eng" element={<DemoPage lang="en" />} />
             <Route path="/demo" element={<DemoPage />} />
+            <Route path="/landing" element={<LandingPage />} />
+            <Route path="/landing/eng" element={<LandingPage lang="en" />} />
           </Routes>
         </HashRouter>
       </div>
