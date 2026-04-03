@@ -85,9 +85,28 @@ export default async function handler(req, res) {
 
   initFirebaseAdmin();
 
-  // GET: validate that pairId exists
+  // GET: validate pairId or resolve number
   if (req.method === 'GET') {
-    const { pairId } = req.query;
+    const { action, number, pairId } = req.query;
+
+    // GET ?action=resolve&number=N → redirect to /#/?pairId={pairId}
+    if (action === 'resolve' && number) {
+      try {
+        const numDoc = await firestore.collection('pair_numbers').doc(String(number)).get();
+        if (!numDoc.exists) {
+          return res.status(404).json({ success: false, error: 'Number not found', requestId });
+        }
+        const resolvedPairId = numDoc.data()?.pairId;
+        if (!resolvedPairId) {
+          return res.status(404).json({ success: false, error: 'pairId not found for number', requestId });
+        }
+        return res.redirect(302, `https://humfamily.com/#/?pairId=${encodeURIComponent(resolvedPairId)}`);
+      } catch (e) {
+        return res.status(500).json({ success: false, error: e.message, requestId });
+      }
+    }
+
+    // GET ?pairId=XXX → validate
     if (!pairId) {
       return res.status(400).json({ success: false, error: 'pairId is required', requestId });
     }
@@ -99,8 +118,67 @@ export default async function handler(req, res) {
     }
   }
 
-  // POST: register pairId in Firestore (idempotent)
+  // POST: create-numbered or register pairId
   if (req.method === 'POST') {
+    const action = req.query?.action || req.body?.action;
+
+    // POST ?action=create-numbered
+    if (action === 'create-numbered') {
+      let body = {};
+      try {
+        if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) {
+          body = req.body;
+        } else {
+          body = await readJsonBody(req);
+        }
+      } catch {}
+      const memo = (body.memo || '').trim();
+
+      // Generate PAIR-XXXXXX
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let pairId = 'PAIR-';
+      for (let i = 0; i < 6; i++) pairId += chars[Math.floor(Math.random() * chars.length)];
+
+      try {
+        // Get next number: query pair_numbers ordered by docId desc, limit 1
+        const lastSnap = await firestore.collection('pair_numbers')
+          .orderBy(admin.firestore.FieldPath.documentId(), 'desc')
+          .limit(1)
+          .get();
+        let nextNum = 1;
+        if (!lastSnap.empty) {
+          const lastId = parseInt(lastSnap.docs[0].id, 10);
+          if (!isNaN(lastId)) nextNum = lastId + 1;
+        }
+
+        // Write pair_numbers/{N}
+        await firestore.collection('pair_numbers').doc(String(nextNum)).set({
+          pairId,
+          memo,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        // Write pairs/{pairId}
+        await firestore.collection('pairs').doc(pairId).set({
+          pairId,
+          number: nextNum,
+          memo,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        return res.status(200).json({
+          success: true,
+          number: nextNum,
+          pairId,
+          url: `https://humfamily.com/pair/${nextNum}`,
+          requestId,
+        });
+      } catch (e) {
+        return res.status(500).json({ success: false, error: e.message, requestId });
+      }
+    }
+
+    // POST: register pairId (existing logic)
     let body = {};
     try {
       if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) {
