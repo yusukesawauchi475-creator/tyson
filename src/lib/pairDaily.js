@@ -87,27 +87,24 @@ export function initPairId() {
 
 /**
  * pairId を取得（同期）。
- * 優先順位: localStorage > URLクエリ(初回のみ) > 'demo'。
- * localStorageに既存のpairIdがある場合、URLパラメータでは上書きしない。
- * 初回アクセス（localStorage未設定）の場合のみURLのpairIdを保存して使う。
+ * 優先順位: URLクエリ > localStorage > 'demo'。
+ * URLに ?pairId=XXXX があれば常に優先し、localStorageに上書き保存する。
  */
 export function getPairId() {
   if (typeof window === 'undefined') return PAIR_ID_DEMO;
   try {
-    // まずlocalStorageを優先チェック（既存pairIdがあればそれを使う）
-    const fromStorage = localStorage.getItem(PAIR_ID_STORAGE_KEY)?.trim?.();
-    if (fromStorage) return fromStorage;
-
-    // localStorageが空の場合のみ、URLクエリからpairIdを取得して保存
+    // URLクエリを最優先（新規リンクで別pairIdに切り替わる）
     const hash = window.location.hash || '';
     const qIndex = hash.indexOf('?');
     const queryString = qIndex >= 0 ? hash.slice(qIndex + 1) : '';
-    const params = new URLSearchParams(queryString);
-    const fromQuery = params.get('pairId')?.trim?.();
+    const fromQuery = new URLSearchParams(queryString).get('pairId')?.trim?.();
     if (fromQuery) {
       try { localStorage.setItem(PAIR_ID_STORAGE_KEY, fromQuery); } catch (_) {}
       return fromQuery;
     }
+    // URLになければlocalStorageを使う
+    const fromStorage = localStorage.getItem(PAIR_ID_STORAGE_KEY)?.trim?.();
+    if (fromStorage) return fromStorage;
   } catch (_) {}
   return PAIR_ID_DEMO;
 }
@@ -207,10 +204,11 @@ export async function uploadAudio(blob, role, pairId = getPairId(), _dateKey, re
  * @param {string} dateKey
  */
 export async function fetchAudioForPlayback(listenRole, pairId = getPairId(), _dateKey, requestId = genRequestId()) {
-  // 呼び出し側が dateKey を指定した場合はそれを使う（昨日分再生対応）
   const dateKey = _dateKey || getDateKeyNY();
+  console.log('[fetchAudio] start', { listenRole, pairId, dateKey, requestId });
   const idToken = await getIdTokenForApi();
   if (!idToken) {
+    console.error('[fetchAudio] no idToken');
     return { error: '認証できません', requestId: requestId || 'NO-TOKEN', errorCode: 'auth', hasAudio: false };
   }
 
@@ -221,63 +219,80 @@ export async function fetchAudioForPlayback(listenRole, pairId = getPairId(), _d
   const cacheBuster = Date.now();
   const base = `/api/pair-media?pairId=${encodeURIComponent(pairId)}&dateKey=${encodeURIComponent(dateKey)}&type=audio&listenRole=${encodeURIComponent(listenRole)}&v=${cacheBuster}`;
 
+  // Step 1: まずメタデータ取得（mode=signed）で hasAudio を確認
   try {
-    const resBlob = await fetch(base, {
-      headers: {
-        Authorization: `Bearer ${idToken}`,
-        'X-Request-Id': requestId,
-      },
+    console.log('[fetchAudio] checking metadata...');
+    const metaRes = await fetch(base + '&mode=signed', {
+      headers: { Authorization: `Bearer ${idToken}`, 'X-Request-Id': requestId },
       cache: 'no-store',
     });
-
-    if (!resBlob.ok) {
-      const errData = await resBlob.json().catch(() => ({}));
-      const hasAudio = errData?.hasAudio === false ? false : null;
+    console.log('[fetchAudio] meta status:', metaRes.status);
+    if (!metaRes.ok) {
+      const errData = await metaRes.json().catch(() => ({}));
+      console.error('[fetchAudio] meta error:', metaRes.status, errData);
       return {
-        error: errData?.error || `HTTP ${resBlob.status}`,
+        error: errData?.error || `HTTP ${metaRes.status}`,
         requestId: errData?.requestId || requestId,
-        errorCode: errData?.errorCode || String(resBlob.status),
-        hasAudio,
+        errorCode: errData?.errorCode || String(metaRes.status),
+        hasAudio: errData?.hasAudio === false ? false : null,
       };
     }
-
-    const blob = await resBlob.blob();
-    if (!blob || blob.size < 10) {
-      return { error: '音声データが空です', requestId: requestId, errorCode: 'empty', hasAudio: false };
-    }
-
-    const version = resBlob.headers.get('X-Audio-Version') || resBlob.headers.get('X-Audio-UpdatedAt') || Date.now();
-    const objectUrl = URL.createObjectURL(blob);
-    return { url: objectUrl, mode: 'blob', requestId: resBlob.headers.get('X-Request-Id') || requestId, version, hasAudio: true };
-  } catch (_) {
-    try {
-      const resSigned = await fetch(base + '&mode=signed', {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-          'X-Request-Id': requestId,
-        },
-        cache: 'no-store',
-      });
-      const data = await resSigned.json().catch(() => ({}));
-      if (data?.url) {
-        const version = data?.version || data?.updatedAt || Date.now();
-        const urlWithVersion = `${data.url}${data.url.includes('?') ? '&' : '?'}v=${version}`;
-        return { url: urlWithVersion, mode: 'signed', requestId: data?.requestId || requestId, version, hasAudio: true };
-      }
+    const meta = await metaRes.json().catch(() => ({}));
+    console.log('[fetchAudio] meta:', { hasAudio: meta?.hasAudio, hasUrl: !!meta?.url });
+    if (meta?.hasAudio === false || !meta?.url) {
       return {
-        error: data?.error || '署名URLの取得に失敗しました',
-        requestId: data?.requestId || requestId,
-        errorCode: data?.errorCode || 'signed-failed',
-        hasAudio: data?.hasAudio === false ? false : null,
-      };
-    } catch (e2) {
-      return {
-        error: e2?.message || '再生に失敗しました',
-        requestId: requestId,
-        errorCode: 'fallback-failed',
+        error: null,
+        requestId: meta?.requestId || requestId,
         hasAudio: false,
       };
     }
+  } catch (metaErr) {
+    console.error('[fetchAudio] meta fetch error:', metaErr);
+  }
+
+  // Step 2: 音声バイナリを直接取得（blob endpoint、same-origin なので CORS 問題なし）
+  try {
+    console.log('[fetchAudio] fetching audio blob...');
+    const res = await fetch(base, {
+      headers: { Authorization: `Bearer ${idToken}`, 'X-Request-Id': requestId },
+      cache: 'no-store',
+    });
+    console.log('[fetchAudio] blob status:', res.status, 'content-type:', res.headers.get('Content-Type'));
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      console.error('[fetchAudio] blob error:', res.status, errData);
+      return {
+        error: errData?.error || `HTTP ${res.status}`,
+        requestId: errData?.requestId || requestId,
+        errorCode: errData?.errorCode || String(res.status),
+        hasAudio: errData?.hasAudio === false ? false : null,
+      };
+    }
+
+    const contentType = res.headers.get('Content-Type') || 'audio/mp4';
+    const rawBlob = await res.blob();
+    console.log('[fetchAudio] blob size:', rawBlob.size, 'type:', rawBlob.type);
+
+    if (!rawBlob || rawBlob.size < 10) {
+      return { error: '音声データが空です', requestId, errorCode: 'empty', hasAudio: false };
+    }
+
+    // Blob の MIME type を強制設定（ブラウザがContent-Typeを無視する場合の対策）
+    const blob = new Blob([rawBlob], { type: contentType });
+    const objectUrl = URL.createObjectURL(blob);
+    const version = res.headers.get('X-Audio-Version') || Date.now();
+    console.log('[fetchAudio] objectUrl created, type:', contentType);
+
+    return { url: objectUrl, mode: 'blob', requestId: res.headers.get('X-Request-Id') || requestId, version, hasAudio: true };
+  } catch (e) {
+    console.error('[fetchAudio] blob fetch error:', e);
+    return {
+      error: e?.message || '再生に失敗しました',
+      requestId,
+      errorCode: 'network',
+      hasAudio: false,
+    };
   }
 }
 
@@ -328,20 +343,20 @@ export async function hasTodayAudio(listenRole, pairId = getPairId()) {
   }
 }
 
-/** streakを取得。戻り値 { count, lastDateKey } */
+/** streakを取得。戻り値 { count, lastDateKey, firstDateKey } */
 export async function getStreak(pairId = getPairId()) {
   const idToken = await getIdTokenForApi();
-  if (!idToken) return { count: 0, lastDateKey: null };
+  if (!idToken) return { count: 0, lastDateKey: null, firstDateKey: null };
   try {
     const res = await fetch(`/api/streak?pairId=${encodeURIComponent(pairId)}`, {
       headers: { Authorization: `Bearer ${idToken}` },
       cache: 'no-store',
     });
-    if (!res.ok) return { count: 0, lastDateKey: null };
+    if (!res.ok) return { count: 0, lastDateKey: null, firstDateKey: null };
     const data = await res.json();
-    return { count: data.count ?? 0, lastDateKey: data.lastDateKey ?? null };
+    return { count: data.count ?? 0, lastDateKey: data.lastDateKey ?? null, firstDateKey: data.firstDateKey ?? null };
   } catch {
-    return { count: 0, lastDateKey: null };
+    return { count: 0, lastDateKey: null, firstDateKey: null };
   }
 }
 
