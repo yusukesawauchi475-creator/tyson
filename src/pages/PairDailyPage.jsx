@@ -870,34 +870,9 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
           <p style={{ fontSize: 9, fontWeight: 700, color: '#C04080', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.09em' }}>
             {lang === 'en' ? '📔 TODAY\'S NOTE' : '📔 今日の記録'}
           </p>
-          <p style={{ fontSize: 11, color: '#A06080', margin: '0 0 10px' }}>
-            {lang === 'en' ? 'A private memo just for you' : '自分だけに残す、今日のメモ'}
+          <p style={{ fontSize: 13, color: '#C080A0', margin: '8px 0 0', textAlign: 'center', fontWeight: 600 }}>
+            {lang === 'en' ? '🔜 Coming Soon' : '🔜 Coming Soon'}
           </p>
-
-          <input ref={journalGalleryInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'journal_image'); e.target.value = '' }} />
-          <input ref={journalCameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'journal_image'); e.target.value = '' }} />
-
-          {myJournalUrl ? (
-            <>
-              <button type="button" onClick={() => setPreviewOpen(true)} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 10, overflow: 'hidden', marginBottom: 6 }}>
-                <img src={myJournalUrl} alt="" width={52} height={52} style={{ width: 52, height: 52, objectFit: 'cover', display: 'block', borderRadius: 10 }} />
-              </button>
-              <button type="button" onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album')} style={{ display: 'block', padding: 0, fontSize: 11, color: '#C04080', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}>
-                {lang === 'en' ? '📔 View note' : '📔 記録を見る'}
-              </button>
-            </>
-          ) : (
-            <>
-              <button type="button" disabled={journalUploading} onClick={() => { if (journalCameraInputRef.current) { journalCameraInputRef.current.value = ''; journalCameraInputRef.current.click() } }} style={{ width: '100%', padding: 13, fontSize: 14, fontWeight: 700, color: '#fff', background: 'linear-gradient(160deg,#E870A0,#C04080)', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 0 #A02860' }}>
-                {lang === 'en' ? '📸 Record today' : '📸 今日の記録を残す'}
-              </button>
-              <button type="button" disabled={journalUploading} onClick={() => { if (journalGalleryInputRef.current) { journalGalleryInputRef.current.value = ''; journalGalleryInputRef.current.click() } }} style={{ display: 'block', width: '100%', marginTop: 8, padding: 0, fontSize: 11, color: '#C04080', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, textAlign: 'center' }}>
-                {lang === 'en' ? '📁 Choose from library' : '📁 ライブラリから選ぶ'}
-              </button>
-            </>
-          )}
-          {journalUploading && <p style={{ fontSize: 11, color: '#A06080', margin: '6px 0 0' }}>{t(lang, 'sending')}</p>}
-          {journalError && <p style={{ fontSize: 11, color: '#E04040', margin: '4px 0 0' }}>{journalError}</p>}
         </section>
 
         {errorLine && <p style={{ fontSize: 14, color: '#E04040', textAlign: 'center', margin: 0 }}>{errorLine}</p>}
