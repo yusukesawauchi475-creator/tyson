@@ -106,7 +106,7 @@ export default function DemoPage({ lang = 'ja' }) {
   }
 
   const handleShareDemo = async () => {
-    const url = 'https://tyson-two.vercel.app/#/demo'
+    const url = 'https://tyson-two.vercel.app/#/?pairId=PAIR-DEMOTEST'
     const text = lang === 'en'
       ? "Let's exchange voices every day on Hum. Listen to today's message 👋"
       : 'Humで毎日声を交換しよう。今日のメッセージを聞いてね 👋'
