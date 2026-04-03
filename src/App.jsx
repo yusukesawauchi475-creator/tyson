@@ -4,6 +4,7 @@ import PairDailyPage from './pages/PairDailyPage'
 import HomePage from './pages/HomePage'
 import AdminPage from './pages/AdminPage'
 import AlbumPage from './pages/AlbumPage'
+import DemoPage from './pages/DemoPage'
 import RoleSelectPage from './pages/RoleSelectPage'
 import { getUserRole, clearUserRole } from './lib/pairDaily'
 
@@ -48,6 +49,8 @@ function App() {
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/album/eng" element={<AlbumPage lang="en" />} />
             <Route path="/album" element={<AlbumPage />} />
+            <Route path="/demo/eng" element={<DemoPage lang="en" />} />
+            <Route path="/demo" element={<DemoPage />} />
           </Routes>
         </HashRouter>
       </div>
