@@ -93,6 +93,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   }
 
   const refreshComment = useCallback(async () => {
+    if (isDemoTest) return
     const idToken = await getIdTokenForApi()
     if (!idToken) return
     
