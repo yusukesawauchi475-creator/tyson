@@ -863,7 +863,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
 
         <OneYearAgoBanner lang={lang} />
 
-        <VoiceLibrary lang={lang} role="child" pairId={currentPairId} />
+        {!isDemoTest && <VoiceLibrary lang={lang} role="child" pairId={currentPairId} />}
 
         {/* (4) Journal card */}
         <section style={{ width: '100%', background: '#FFF4F8', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
