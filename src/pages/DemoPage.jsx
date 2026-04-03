@@ -4,17 +4,29 @@ import { t } from '../lib/i18n'
 const DEMO_PAIR_ID = 'PAIR-FSEAN5'
 const DEMO_AUDIO_URL = '/demo-audio.mp3'
 
-// Generate 100 sample photo URLs
+const demoPhotos = [
+  '/demo-photos/Family%20fun%20in%20winter%20wonderland.png',
+  '/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png',
+  '/demo-photos/Gemini_Generated_Image_7if52r7if52r7if5.png',
+  '/demo-photos/Gemini_Generated_Image_9jztwk9jztwk9jzt.png',
+  '/demo-photos/Gemini_Generated_Image_a8fon3a8fon3a8fo.png',
+  '/demo-photos/Gemini_Generated_Image_bnqbafbnqbafbnqb.png',
+  '/demo-photos/Gemini_Generated_Image_dkjiz0dkjiz0dkji.png',
+  '/demo-photos/Gemini_Generated_Image_dm6kcmdm6kcmdm6k.png',
+  '/demo-photos/Gemini_Generated_Image_ejq9x3ejq9x3ejq9.png',
+  '/demo-photos/Gemini_Generated_Image_jq19t9jq19t9jq19.png',
+  '/demo-photos/Gemini_Generated_Image_oth8wvoth8wvoth8.png',
+  '/demo-photos/Gemini_Generated_Image_s0fbejs0fbejs0fb.png',
+  '/demo-photos/Gemini_Generated_Image_v6ips5v6ips5v6ip.png',
+]
+
 function generateSamplePhotos() {
-  const photos = []
-  let id = 0
-  for (let i = 0; i < 15; i++) photos.push({ url: `https://place.dog/300/300?sig=${i}`, id: id++ })
-  for (let i = 0; i < 10; i++) photos.push({ url: `https://cataas.com/cat?width=300&height=300&sig=${i}`, id: id++ })
-  for (let i = 0; i < 15; i++) photos.push({ url: `https://picsum.photos/seed/flower${i}/300/300`, id: id++ })
-  for (let i = 0; i < 15; i++) photos.push({ url: `https://picsum.photos/seed/fruit${i}/300/300`, id: id++ })
-  for (let i = 0; i < 15; i++) photos.push({ url: `https://picsum.photos/seed/nature${i}/300/300`, id: id++ })
-  for (let i = 0; i < 15; i++) photos.push({ url: `https://picsum.photos/seed/family${i}/300/300`, id: id++ })
-  for (let i = 85; i < 100; i++) photos.push({ url: `https://picsum.photos/300/300?random=${i}`, id: id++ })
+  const photos = demoPhotos.map((url, i) => ({ url, id: i }))
+  // Fisher-Yates shuffle
+  for (let i = photos.length - 1; i > 0; i--) {
+    const j = (i * 7 + 3) % (i + 1) // deterministic shuffle
+    ;[photos[i], photos[j]] = [photos[j], photos[i]]
+  }
   return photos
 }
 
@@ -130,7 +142,7 @@ export default function DemoPage({ lang = 'ja' }) {
         {/* (3) Sample photo gallery - hero + 2-col grid */}
         <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: '#7050C0', margin: '0 0 10px' }}>
-            📷 {lang === 'en' ? 'Photo Album' : 'フォトアルバム'}　<span style={{ fontWeight: 500, color: '#8070A0' }}>100{lang === 'en' ? ' photos' : '枚'}</span>
+            📷 {lang === 'en' ? 'Photo Album' : 'フォトアルバム'}　<span style={{ fontWeight: 500, color: '#8070A0' }}>{samplePhotos.length}{lang === 'en' ? ' photos' : '枚'}</span>
           </p>
 
           {/* Hero photo (first image full-width) */}
