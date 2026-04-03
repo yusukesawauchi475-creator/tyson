@@ -185,7 +185,7 @@ export default function DemoPage({ lang = 'ja' }) {
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9000, background: 'linear-gradient(0deg, #FFF8FF 80%, transparent)', padding: '16px 18px max(16px, env(safe-area-inset-bottom))' }}>
         <button
           type="button"
-          onClick={() => { window.location.href = '/#/?pairId=PAIR-FSEAN5' }}
+          onClick={() => { window.location.href = '/#/?pairId=PAIR-DEMO01' }}
           style={{ width: '100%', maxWidth: 480, margin: '0 auto', display: 'block', padding: 20, fontSize: 18, fontWeight: 800, color: '#fff', background: 'linear-gradient(135deg, #FF60B0 0%, #A060FF 50%, #60B0FF 100%)', border: 'none', borderRadius: 18, cursor: 'pointer', boxShadow: '0 4px 16px rgba(192,128,255,0.4)', animation: 'demoPulse 2s ease-in-out infinite', letterSpacing: '0.02em' }}
         >
           {lang === 'en' ? '✨ Try this app' : '✨ このアプリを使ってみる'}
