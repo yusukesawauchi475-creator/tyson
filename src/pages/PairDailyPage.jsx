@@ -866,14 +866,27 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
         {!isDemoTest && <VoiceLibrary lang={lang} role="child" pairId={currentPairId} />}
 
         {/* (4) Journal card */}
-        {!isDemoTest && <section style={{ width: '100%', background: '#FFF4F8', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
-          <p style={{ fontSize: 9, fontWeight: 700, color: '#C04080', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.09em' }}>
-            {lang === 'en' ? '📔 TODAY\'S NOTE' : '📔 今日の記録'}
-          </p>
-          <p style={{ fontSize: 13, color: '#C080A0', margin: '8px 0 0', textAlign: 'center', fontWeight: 600 }}>
-            {lang === 'en' ? '🔜 Coming Soon' : '🔜 Coming Soon'}
-          </p>
-        </section>}
+        {!isDemoTest ? (
+          <section style={{ width: '100%', background: '#FFF4F8', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
+            <p style={{ fontSize: 9, fontWeight: 700, color: '#C04080', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.09em' }}>
+              {lang === 'en' ? '📔 TODAY\'S NOTE' : '📔 今日の記録'}
+            </p>
+            <p style={{ fontSize: 13, color: '#C080A0', margin: '8px 0 0', textAlign: 'center', fontWeight: 600 }}>
+              {lang === 'en' ? '🔜 Coming Soon' : '🔜 Coming Soon'}
+            </p>
+          </section>
+        ) : (
+          <section style={{ width: '100%', background: 'linear-gradient(135deg, #F0EEFF, #E8F4FF)', borderRadius: 22, padding: 28, overflow: 'hidden', textAlign: 'center' }}>
+            <style>{`@keyframes bounceDown { 0%,100% { transform: translateY(0); } 50% { transform: translateY(10px); } }`}</style>
+            <p style={{ fontSize: 18, fontWeight: 800, color: '#5040A0', margin: '0 0 8px' }}>
+              {lang === 'en' ? '📷 Record photos & voice' : '📷 写真・声を記録しよう'}
+            </p>
+            <div style={{ fontSize: 32, animation: 'bounceDown 1.5s ease-in-out infinite', background: 'linear-gradient(135deg, #A060FF, #60B0FF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: '12px 0' }}>↓</div>
+            <button type="button" onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album')} style={{ padding: '14px 32px', fontSize: 16, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg, #FF60B0, #A060FF)', border: 'none', borderRadius: 16, cursor: 'pointer', boxShadow: '0 4px 16px rgba(160,96,255,.3)' }}>
+              {lang === 'en' ? 'View Album →' : 'アルバムを見る →'}
+            </button>
+          </section>
+        )}
 
         {errorLine && <p style={{ fontSize: 14, color: '#E04040', textAlign: 'center', margin: 0 }}>{errorLine}</p>}
       </main>
