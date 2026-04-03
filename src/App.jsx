@@ -51,7 +51,7 @@ function RootOrLanding({ lang = 'ja' }) {
     const pairIdFromUrl = params.get('pairId')?.trim()
     if (pairIdFromUrl) return <RootRoute lang={lang} />
     const numberFromUrl = params.get('number')?.trim()
-    if (numberFromUrl) return <NumberResolver lang={lang} />
+    if (numberFromUrl) return <NumberResolver number={numberFromUrl} lang={lang} />
   } catch (_) {}
   return <LandingPage lang={lang} />
 }
