@@ -119,6 +119,8 @@ function isPairAllowed(uid, pairId) {
   return true; // 暫定: 全許可
 }
 
+const READ_ONLY_PAIR_IDS = ['PAIR-DEMOTEST'];
+
 /**
  * Parse multipart form-data (Vercel serverless compatible)
  */
@@ -507,6 +509,11 @@ async function handlePost(req, res) {
     }
 
     const pairId = fields.pairId || fields.pair_id || 'demo';
+
+    if (READ_ONLY_PAIR_IDS.includes(pairId)) {
+      return res.status(403).json({ success: false, error: 'This pair is read-only', requestId: reqId });
+    }
+
     const clientDateKey = fields.dateKey || fields.date_key || null;
     const serverDateKey = getDateKeyNY();
     const dateKey = serverDateKey;
@@ -630,6 +637,9 @@ async function handlePatch(req, res) {
   const role = req.query?.listenRole || req.query?.listen_role || req.query?.role;
   const firestoreDocPath = pairId && dateKey ? `pair_media/${pairId}/days/${dateKey}` : null;
 
+  if (READ_ONLY_PAIR_IDS.includes(pairId)) {
+    return res.status(403).json({ success: false, error: 'This pair is read-only', requestId: reqId });
+  }
   if (action !== 'markSeen') {
     return res.status(400).json({ success: false, error: 'action must be markSeen', requestId: reqId });
   }

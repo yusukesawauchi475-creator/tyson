@@ -402,6 +402,9 @@ async function handlePost(req, res) {
     }
 
     const pairId = body.pairId || body.pair_id || 'demo';
+    if (pairId === 'PAIR-DEMOTEST') {
+      return res.status(403).json({ success: false, error: 'This pair is read-only', requestId: reqId });
+    }
     const role = body.role || 'parent';
     logPairId = pairId;
     logRole = role;
