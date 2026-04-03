@@ -235,32 +235,20 @@ export default function DemoPage({ lang = 'ja' }) {
           ))}
         </section>
 
-        {/* (4) Voice History - static demo */}
-        <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            {lang === 'en' ? '🎧 Voice History' : '🎧 過去の声'}
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {[
-              { date: '4月3日', pSeen: false, cSeen: true },
-              { date: '4月2日', pSeen: false, cSeen: true },
-              { date: '4月1日', pSeen: true, cSeen: true },
-              { date: '3月31日', pSeen: true, cSeen: true },
-              { date: '3月30日', pSeen: true, cSeen: true },
-            ].map((day) => (
-              <div key={day.date} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #EEE8FF' }}>
-                <span style={{ fontSize: 12, color: '#8070A0', fontWeight: 600, minWidth: 50 }}>{day.date}</span>
-                <button type="button" onClick={() => { const el = parentAudioRef.current; if (el) { el.src = DEMO_AUDIO_URL; el.currentTime = 0; el.play().catch(() => {}) } }} style={{ flex: 1, padding: '8px 10px', fontSize: 12, fontWeight: 600, color: '#555', background: '#fff', border: day.pSeen ? '2px solid #30A870' : '2px solid #E04040', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ fontSize: 13 }}>{day.pSeen ? '✅' : '🔴'}</span>
-                  <span>{lang === 'en' ? 'Parent' : '親'}</span>
-                </button>
-                <button type="button" onClick={() => { const el = parentAudioRef.current; if (el) { el.src = DEMO_AUDIO_URL; el.currentTime = 0; el.play().catch(() => {}) } }} style={{ flex: 1, padding: '8px 10px', fontSize: 12, fontWeight: 600, color: '#555', background: '#fff', border: day.cSeen ? '2px solid #30A870' : '2px solid #E04040', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
-                  <span style={{ fontSize: 13 }}>{day.cSeen ? '✅' : '🔴'}</span>
-                  <span>{lang === 'en' ? 'Child' : '子'}</span>
-                </button>
-              </div>
-            ))}
-          </div>
+        {/* Photo upload button (demo disabled) */}
+        <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 18, padding: 18, overflow: 'hidden' }}>
+          <button type="button" onClick={() => { setErrorLine(lang === 'en' ? 'Photo upload is disabled in demo mode' : 'デモモードでは写真を追加できません'); setTimeout(() => setErrorLine(null), 3000) }} style={{ width: '100%', padding: 16, fontSize: 15, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg, #7050C0, #A060FF)', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 16px rgba(112,80,192,0.3)' }}>
+            📷 {lang === 'en' ? 'Add Photos' : '写真を追加する'}
+          </button>
+        </section>
+
+        {/* Album link with animated badge */}
+        <section style={{ width: '100%', textAlign: 'center', padding: '8px 0' }}>
+          <style>{`@keyframes badgeBounce { 0%,100% { transform: perspective(400px) rotateY(0deg) scale(1); } 50% { transform: perspective(400px) rotateY(180deg) scale(1.1); } }`}</style>
+          <button type="button" onClick={() => { window.location.href = '/#/album?pairId=PAIR-DEMOTEST' }} style={{ padding: '12px 28px', fontSize: 14, fontWeight: 700, color: '#7050C0', background: '#fff', border: '2px solid #E0D8FF', borderRadius: 16, cursor: 'pointer', position: 'relative' }}>
+            📷 {lang === 'en' ? 'View Album' : 'アルバムを見る'}
+            <span style={{ position: 'absolute', top: -8, right: -8, background: 'linear-gradient(135deg, #FF6090, #FF8C00)', color: '#fff', fontSize: 9, fontWeight: 800, padding: '3px 7px', borderRadius: 10, boxShadow: '0 2px 8px rgba(255,96,144,.4)', animation: 'badgeBounce 3s ease-in-out infinite', display: 'inline-block' }}>NEW</span>
+          </button>
         </section>
 
         {errorLine && <p style={{ fontSize: 14, color: '#E04040', textAlign: 'center', margin: 0 }}>{errorLine}</p>}
