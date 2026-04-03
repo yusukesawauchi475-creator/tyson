@@ -190,6 +190,24 @@ export default function DemoPage({ lang = 'ja' }) {
           </p>
         </section>
 
+        {/* Today's Photos */}
+        <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: '#7050C0', margin: '0 0 10px' }}>
+            📷 {lang === 'en' ? "Today's Photos" : '今日の写真'}　<span style={{ fontWeight: 500, color: '#8070A0' }}>3{lang === 'en' ? '' : '枚'}</span>
+          </p>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[
+              '/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp',
+              '/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png',
+              '/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp',
+            ].map((url, i) => (
+              <button key={i} type="button" onClick={() => setLightboxIndex(allPhotos.indexOf(url) >= 0 ? allPhotos.indexOf(url) : 0)} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 11, overflow: 'hidden', flexShrink: 0 }}>
+                <img src={url} alt="" width={88} height={88} style={{ width: 88, height: 88, objectFit: 'cover', display: 'block', borderRadius: 11 }} />
+              </button>
+            ))}
+          </div>
+        </section>
+
         {/* (3) Photo album grouped by date */}
         <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: '#7050C0', margin: '0 0 14px' }}>
