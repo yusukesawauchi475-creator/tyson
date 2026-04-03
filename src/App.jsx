@@ -12,7 +12,7 @@ import { db } from './lib/firebase'
 import { doc, getDoc } from 'firebase/firestore'
 
 function NumberResolver({ lang = 'ja', number }) {
-  const [resolved, setResolved] = useState(false)
+  const [status, setStatus] = useState('loading') // 'loading' | 'resolved' | 'error'
   useEffect(() => {
     ;(async () => {
       try {
@@ -21,13 +21,23 @@ function NumberResolver({ lang = 'ja', number }) {
           const pairId = snap.data()?.pairId
           if (pairId) {
             localStorage.setItem(PAIR_ID_STORAGE_KEY, pairId)
+            setStatus('resolved')
+            return
           }
         }
-      } catch (_) {}
-      setResolved(true)
+        // Document not found or no pairId
+        localStorage.removeItem(PAIR_ID_STORAGE_KEY)
+        clearUserRole()
+        setStatus('error')
+      } catch (_) {
+        localStorage.removeItem(PAIR_ID_STORAGE_KEY)
+        clearUserRole()
+        setStatus('error')
+      }
     })()
   }, [number])
-  if (!resolved) return <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8070A0', fontFamily: 'var(--font-sans)' }}>...</div>
+  if (status === 'loading') return <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8070A0', fontFamily: 'var(--font-sans)' }}>{lang === 'en' ? 'Loading...' : '読み込み中...'}</div>
+  if (status === 'error') return <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#8070A0', fontFamily: 'var(--font-sans)', gap: 12 }}><p style={{ fontSize: 16, fontWeight: 600 }}>{lang === 'en' ? 'This link is invalid.' : 'このリンクは無効です。'}</p><a href="/#/landing" style={{ fontSize: 14, color: '#7050C0' }}>{lang === 'en' ? 'Go to Home' : 'ホームへ'}</a></div>
   return <RootRoute lang={lang} />
 }
 

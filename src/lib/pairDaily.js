@@ -102,9 +102,9 @@ export function getPairId() {
       try { localStorage.setItem(PAIR_ID_STORAGE_KEY, fromQuery); } catch (_) {}
       return fromQuery;
     }
-    // URLになければlocalStorageを使う
+    // URLになければlocalStorageを使う（PAIR-DEMOTESTはスキップ）
     const fromStorage = localStorage.getItem(PAIR_ID_STORAGE_KEY)?.trim?.();
-    if (fromStorage) return fromStorage;
+    if (fromStorage && fromStorage !== 'PAIR-DEMOTEST') return fromStorage;
   } catch (_) {}
   return PAIR_ID_DEMO;
 }

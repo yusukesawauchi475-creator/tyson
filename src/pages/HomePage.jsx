@@ -666,7 +666,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
 
         <OneYearAgoBanner lang={lang} />
 
-        <VoiceLibrary lang={lang} role="parent" />
+        <VoiceLibrary lang={lang} role="parent" pairId={currentPairId} />
 
         {/* (4) Journal card */}
         <section style={{ width: '100%', background: '#FFF4F8', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
