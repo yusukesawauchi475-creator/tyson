@@ -3,6 +3,22 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { getPairId } from '../lib/pairDaily'
 import { fetchAlbum } from '../lib/journal'
 
+const demoAlbumDays = [
+  { date: '4月1日', photos: ['/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp','/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp','/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png'] },
+  { date: '3月31日', photos: ['/demo-photos/nekocyanPAKE5233-481_TP_V.webp','/demo-photos/Gemini_Generated_Image_dm6kcmdm6kcmdm6k.png'] },
+  { date: '3月30日', photos: ['/demo-photos/08redsugar720_TP_V.webp','/demo-photos/susipakuKYPKPAR52703_TP_V.webp','/demo-photos/Gemini_Generated_Image_9jztwk9jztwk9jzt.png','/demo-photos/CCIMG_8140_TP_V4.webp'] },
+  { date: '3月28日', photos: ['/demo-photos/pakutaso_go33036_TP_V.jpg','/demo-photos/Gemini_Generated_Image_ejq9x3ejq9x3ejq9.png'] },
+  { date: '3月25日', photos: ['/demo-photos/TKLA__7DA5611_TP_V.jpg','/demo-photos/Family%20fun%20in%20winter%20wonderland.png'] },
+]
+
+function getDemoAllPhotos() {
+  const all = []
+  for (const day of demoAlbumDays) {
+    for (const url of day.photos) all.push(url)
+  }
+  return all
+}
+
 export default function AlbumPage({ lang = 'ja' }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -26,13 +42,17 @@ export default function AlbumPage({ lang = 'ja' }) {
 
   // Flat array of all photos across all days (newest first, matching days order)
   const allPhotos = useMemo(() => {
-    const flat = []
-    for (const day of days) {
-      for (const photo of day.photos) {
-        flat.push({ ...photo, dateKey: day.dateKey })
+    if (days.length > 0) {
+      const flat = []
+      for (const day of days) {
+        for (const photo of day.photos) {
+          flat.push({ ...photo, dateKey: day.dateKey })
+        }
       }
+      return flat
     }
-    return flat
+    // Fallback: demo photos
+    return getDemoAllPhotos().map((url) => ({ url, dateKey: '', storagePath: url }))
   }, [days])
 
   const openLightbox = useCallback((photo) => {
@@ -143,9 +163,29 @@ export default function AlbumPage({ lang = 'ja' }) {
           <p style={{ textAlign: 'center', color: '#c00', fontSize: 14, marginTop: 32 }}>{error}</p>
         )}
         {!loading && !error && days.length === 0 && (
-          <p style={{ textAlign: 'center', color: '#888', fontSize: 14, marginTop: 32 }}>
-            {lang === 'en' ? 'No photos yet.' : 'まだ写真がありません。'}
-          </p>
+          <>
+            <p style={{ textAlign: 'center', color: '#999', fontSize: 12, margin: '16px 0 20px', fontStyle: 'italic' }}>
+              {lang === 'en' ? 'Sample photos — your photos will appear here' : 'サンプル写真 — あなたの写真がここに表示されます'}
+            </p>
+            {demoAlbumDays.map((day) => {
+              const demoAll = getDemoAllPhotos()
+              return (
+                <section key={day.date} style={{ marginBottom: 28 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: '#7a6a55', margin: '0 0 10px', letterSpacing: '0.03em' }}>{day.date}</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {day.photos.map((url, i) => {
+                      const globalIdx = demoAll.indexOf(url)
+                      return (
+                        <button key={url + i} type="button" onClick={() => setLightboxIndex(globalIdx >= 0 ? globalIdx : 0)} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 8, overflow: 'hidden', display: 'block' }}>
+                          <img src={url} alt="" width={88} height={88} style={{ width: 88, height: 88, objectFit: 'cover', display: 'block', borderRadius: 8 }} loading="lazy" />
+                        </button>
+                      )
+                    })}
+                  </div>
+                </section>
+              )
+            })}
+          </>
         )}
         {!loading && days.map(({ dateKey, photos }) => {
           const parentPhotos = photos.filter((p) => p.role === 'parent')
