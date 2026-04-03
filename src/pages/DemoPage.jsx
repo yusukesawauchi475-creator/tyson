@@ -196,11 +196,6 @@ export default function DemoPage({ lang = 'ja' }) {
             📷 {lang === 'en' ? 'Photo Album' : 'フォトアルバム'}　<span style={{ fontWeight: 500, color: '#8070A0' }}>{allPhotos.length}{lang === 'en' ? ' photos' : '枚'}</span>
           </p>
 
-          {/* Disabled add button */}
-          <button type="button" disabled style={{ width: '100%', padding: 13, fontSize: 14, fontWeight: 700, color: '#fff', background: '#B0A0C8', border: 'none', borderRadius: 14, cursor: 'not-allowed', boxShadow: 'none', opacity: 0.4, marginBottom: 14 }}>
-            {lang === 'en' ? '📷 Add Photo' : '📷 写真を追加する'}
-          </button>
-
           {albumDays.map((day) => (
             <div key={day.date} style={{ marginBottom: 16 }}>
               <p style={{ fontSize: 12, fontWeight: 700, color: '#8070A0', margin: '0 0 6px' }}>{day.date}</p>
