@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { getPairId } from '../lib/pairDaily'
 import { fetchAlbum } from '../lib/journal'
+import VoiceLibrary from '../components/VoiceLibrary'
 
 const demoAlbumDays = [
   { date: '4月1日', photos: ['/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp','/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp','/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png'] },
@@ -27,6 +28,8 @@ export default function AlbumPage({ lang = 'ja' }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [lightboxIndex, setLightboxIndex] = useState(null) // index into allPhotos
+  const [activeTab, setActiveTab] = useState('photo') // 'photo' | 'voice'
+  const pairId = getPairId()
 
   useEffect(() => {
     fetchAlbum(getPairId())
@@ -153,7 +156,22 @@ export default function AlbumPage({ lang = 'ja' }) {
         </h1>
       </header>
 
+      {/* Tabs */}
+      <div style={{ display: 'flex', borderBottom: '1px solid #e8e0d4', background: '#fff', position: 'sticky', top: 49, zIndex: 99 }}>
+        <button type="button" onClick={() => setActiveTab('photo')} style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 600, color: activeTab === 'photo' ? '#7050C0' : '#999', background: 'none', border: 'none', borderBottom: activeTab === 'photo' ? '2px solid #7050C0' : '2px solid transparent', cursor: 'pointer' }}>
+          📷 {lang === 'en' ? 'Photos' : '写真'}
+        </button>
+        <button type="button" onClick={() => setActiveTab('voice')} style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 600, color: activeTab === 'voice' ? '#7050C0' : '#999', background: 'none', border: 'none', borderBottom: activeTab === 'voice' ? '2px solid #7050C0' : '2px solid transparent', cursor: 'pointer' }}>
+          🎙 {lang === 'en' ? 'Voice' : '声'}
+        </button>
+      </div>
+
       <main style={{ padding: '16px', maxWidth: 480, margin: '0 auto' }}>
+      {activeTab === 'voice' && (
+        <VoiceLibrary lang={lang} pairId={pairId} />
+      )}
+      {activeTab === 'photo' && (<>
+
         {loading && (
           <p style={{ textAlign: 'center', color: '#888', fontSize: 14, marginTop: 32 }}>
             {lang === 'en' ? 'Loading...' : '読み込み中…'}
@@ -238,6 +256,7 @@ export default function AlbumPage({ lang = 'ja' }) {
             </section>
           )
         })}
+      </>)}
       </main>
 
       {currentPhoto && (
