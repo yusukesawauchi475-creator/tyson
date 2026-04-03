@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, getPairId, getDateKey, genRequestId, getStreak, updateStreak } from '../lib/pairDaily'
+import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, getPairId, getDateKey, genRequestId, getStreak, updateStreak, generatePairId } from '../lib/pairDaily'
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import { t } from '../lib/i18n'
@@ -13,11 +13,13 @@ import { useAudioLevel } from '../lib/useAudioLevel'
 import UploadErrorModal from '../components/UploadErrorModal'
 import WeeklySummary from '../components/WeeklySummary'
 import OneYearAgoBanner from '../components/OneYearAgoBanner'
-import FamilyInsightCard from '../components/FamilyInsightCard'
+import VoiceLibrary from '../components/VoiceLibrary'
 
 export default function HomePage({ lang = 'ja', onChangeRole }) {
   const navigate = useNavigate()
   const [streakCount, setStreakCount] = useState(null)
+  const [daysSinceStart, setDaysSinceStart] = useState(null)
+  const [showNotConnected, setShowNotConnected] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [sentAt, setSentAt] = useState(null)
@@ -321,7 +323,8 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
 
   const handleShare = async () => {
     const pairId = getPairId()
-    const url = `https://tyson-two.vercel.app/#/?pairId=${encodeURIComponent(pairId)}`
+    const shareId = generatePairId()
+    const url = `https://tyson-two.vercel.app/#/?pairId=${encodeURIComponent(shareId)}`
     const text = lang === 'en'
       ? "Let's exchange voices every day on Hum. Listen to today's message 👋"
       : 'Humで毎日声を交換しよう。今日のメッセージを聞いてね 👋'
@@ -334,6 +337,11 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
       } catch (_) {
         alert(lang === 'en' ? 'Copy failed' : 'コピーに失敗しました')
       }
+    }
+    // demo の場合、生成した新しい pairId を自分にもセット
+    if (pairId === 'demo') {
+      localStorage.setItem('tyson_pairId', shareId)
+      window.location.reload()
     }
   }
 
@@ -379,12 +387,35 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   useEffect(() => { fetchMyJournal() }, [fetchMyJournal])
 
   useEffect(() => {
-    getStreak(getPairId()).then(({ count }) => setStreakCount(count))
+    getStreak(getPairId()).then(({ count, firstDateKey }) => {
+      setStreakCount(count)
+      if (firstDateKey) {
+        const first = new Date(firstDateKey + 'T00:00:00')
+        const now = new Date()
+        const days = Math.floor((now - first) / 86400000) + 1
+        setDaysSinceStart(days)
+      }
+    })
   }, [])
 
   useEffect(() => {
     const timer = setTimeout(() => setShowReloadButton(true), 10000)
     return () => clearTimeout(timer)
+  }, [])
+
+  // 未接続バナー: 相手が一度もaudioを送っていない場合に表示
+  useEffect(() => {
+    const pairId = getPairId()
+    if (pairId === 'demo') return
+    const dismissKey = `hum_connected_${pairId}`
+    if (localStorage.getItem(dismissKey)) return
+    getListenRoleMeta(LISTEN_ROLE_CHILD).then(({ hasAudio }) => {
+      if (hasAudio === false) setShowNotConnected(true)
+      else if (hasAudio === true) {
+        localStorage.setItem(dismissKey, '1')
+        setShowNotConnected(false)
+      }
+    }).catch(() => {})
   }, [])
 
   // デバッグ用: getIdTokenForApi の結果を UI に表示
@@ -421,18 +452,24 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
     return () => { stop(); document.removeEventListener('visibilitychange', onVisibility) }
   }, [])
 
+  const handleStopParent = () => {
+    const el = parentAudioRef.current
+    if (el) { el.pause(); el.currentTime = 0 }
+    setIsPlayingParent(false)
+  }
+
   const handlePlayParent = async () => {
+    if (isPlayingParent) { handleStopParent(); return }
     if (hasParentAudio === false) return
     setIsLoadingParent(true)
     setErrorLine(null)
     const el = parentAudioRef.current
     if (el) { el.pause(); el.src = ''; el.load() }
-    if (parentAudioUrl && parentAudioUrl.startsWith('blob:')) URL.revokeObjectURL(parentAudioUrl)
     setParentAudioUrl(null)
     const result = await fetchAudioForPlayback(LISTEN_ROLE_CHILD)
     if (result.error) {
-      const reqId = result.requestId || 'REQ-XXXX'
-      setErrorLine(t(lang, 'uploadFailed', { id: reqId }))
+      console.error('[handlePlayParent] fetchAudio error:', result.errorCode, result.error)
+      setErrorLine(`再生エラー: ${result.errorCode} - ${result.error}`)
       setIsLoadingParent(false)
       if (result.hasAudio === false) { setHasParentAudio(false); setIsParentUnseen(false) }
       return
@@ -442,14 +479,20 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
     if (result.hasAudio !== undefined) setHasParentAudio(result.hasAudio)
     try {
       const el = parentAudioRef.current
+      console.log('[handlePlayParent] setting src:', result.url?.substring(0, 80), 'mode:', result.mode)
       if (el) {
         el.src = result.url
         el.currentTime = 0
+        console.log('[handlePlayParent] calling play()...')
         await el.play()
+        console.log('[handlePlayParent] play() succeeded')
         setIsPlayingParent(true)
         markSeen(LISTEN_ROLE_CHILD).then(() => setIsParentUnseen(false))
       }
-    } catch (_) { setErrorLine(t(lang, 'playFailed')) }
+    } catch (playErr) {
+      console.error('[handlePlayParent] play() FAILED:', playErr?.name, playErr?.message, playErr)
+      setErrorLine(`${t(lang, 'playFailed')} (${playErr?.name}: ${playErr?.message})`)
+    }
   }
 
   const handleParentEnded = () => setIsPlayingParent(false)
@@ -480,17 +523,14 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           <span style={{ fontSize: 24, fontWeight: 800, color: '#fff' }}>Hum</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {onChangeRole && (
-            <button type="button" onClick={onChangeRole} style={{ padding: '4px 10px', fontSize: 11, color: '#fff', background: 'rgba(255,255,255,0.25)', border: 'none', borderRadius: 20, cursor: 'pointer', fontWeight: 600 }}>
-              {lang === 'en' ? 'Switch' : '変更'}
-            </button>
+          {daysSinceStart > 0 && (
+            <span style={{ padding: '4px 12px', fontSize: 13, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,0.25)', borderRadius: 20 }}>
+              {daysSinceStart}{lang === 'en' ? 'd' : '日目'}
+            </span>
           )}
-          <button type="button" onClick={() => { cycleCountry(); window.location.reload() }} style={{ padding: '4px 10px', fontSize: 11, color: '#fff', background: 'rgba(255,255,255,0.25)', border: 'none', borderRadius: 20, cursor: 'pointer', fontWeight: 600 }}>
-            {getCountry().toUpperCase()}
-          </button>
           {streakCount > 0 && (
             <span style={{ padding: '4px 12px', fontSize: 13, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,0.25)', borderRadius: 20 }}>
-              {streakCount}
+              🔥{streakCount}{lang === 'en' ? 'd' : '日連続'}
             </span>
           )}
         </div>
@@ -498,11 +538,28 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
 
       {/* Date bar */}
       <div style={{ background: '#F8F0FF', borderBottom: '1px solid #EEE8FF', padding: '8px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', overflow: 'hidden' }}>
-        <time style={{ fontSize: 11, color: '#8070A0', fontWeight: 600 }}>{today}</time>
-        <FamilyInsightCard lang={lang} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <time style={{ fontSize: 11, color: '#8070A0', fontWeight: 600 }}>{today}</time>
+          <span style={{ fontSize: 11, fontStyle: 'italic', color: '#9080B0' }}>{lang === 'en' ? '1 min a day, connected by voice' : '毎日1分、声でつながる'}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {onChangeRole && (
+            <button type="button" onClick={onChangeRole} style={{ padding: '2px 6px', fontSize: 10, color: '#8070A0', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+              {lang === 'en' ? 'Switch' : '変更'}
+            </button>
+          )}
+          <button type="button" onClick={() => { cycleCountry(); window.location.reload() }} style={{ padding: '2px 6px', fontSize: 10, color: '#8070A0', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+            {getCountry().toUpperCase()}
+          </button>
+        </div>
       </div>
 
       <main className="page-content page" style={{ flex: 1, maxWidth: 480, margin: '0 auto', width: '100%', paddingTop: 14 }}>
+        {showNotConnected && (
+          <button type="button" onClick={() => { handleShare(); setShowNotConnected(false) }} style={{ width: '100%', padding: '12px 16px', fontSize: 14, fontWeight: 600, color: '#805020', background: '#FFF3E0', border: '1.5px solid #FFB74D', borderRadius: 14, cursor: 'pointer', textAlign: 'center', marginBottom: 12 }}>
+            {lang === 'en' ? '👋 Not connected yet. Did you send the link?' : '👋 まだ繋がっていません。リンクを送りましたか？'}
+          </button>
+        )}
         <WeeklySummary lang={lang} />
 
         {/* (1) Receive card */}
@@ -514,8 +571,8 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
                 {t(lang, 'received')}
                 {isParentUnseen && <span style={{ marginLeft: 6, color: '#E04040' }} title={lang === 'en' ? 'Unplayed' : '未再生'}>●</span>}
               </p>
-              <button type="button" onClick={handlePlayParent} disabled={isLoadingParent} style={{ width: '100%', padding: 14, fontSize: 15, fontWeight: 700, color: '#fff', background: isLoadingParent ? '#B0A0C8' : 'linear-gradient(160deg,#40D890,#18B868)', border: 'none', borderRadius: 14, cursor: isLoadingParent ? 'wait' : 'pointer', boxShadow: isLoadingParent ? 'none' : '0 5px 0 #109848', marginBottom: 10 }}>
-                {isLoadingParent ? t(lang, 'loading') : isPlayingParent ? t(lang, 'playing') : t(lang, 'play')}
+              <button type="button" onClick={handlePlayParent} disabled={isLoadingParent} style={{ width: '100%', padding: 14, fontSize: 15, fontWeight: 700, color: '#fff', background: isLoadingParent ? '#B0A0C8' : isPlayingParent ? 'linear-gradient(160deg,#E04040,#C02020)' : 'linear-gradient(160deg,#40D890,#18B868)', border: 'none', borderRadius: 14, cursor: isLoadingParent ? 'wait' : 'pointer', boxShadow: isLoadingParent ? 'none' : isPlayingParent ? '0 5px 0 #901010' : '0 5px 0 #109848', marginBottom: 10 }}>
+                {isLoadingParent ? t(lang, 'loading') : isPlayingParent ? (lang === 'en' ? '⏹ Stop' : '⏹ 停止') : (lang === 'en' ? '▶ Play' : '▶ 再生')}
               </button>
             </>
           ) : hasParentAudio === false ? (
@@ -598,12 +655,11 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
             {lang === 'en' ? '📷 Add Photo' : '📷 写真を追加する'}
           </button>
 
-          <button type="button" onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album', { state: { scrollToDate: dateKey } })} style={{ width: '100%', marginTop: 10, padding: 11, fontSize: 13, fontWeight: 600, color: '#7050C0', background: 'rgba(112,80,208,0.1)', border: '1.5px solid #9070C8', borderRadius: 12, cursor: 'pointer', textAlign: 'center' }}>
-            {lang === 'en' ? '🖼 View past photos' : '🖼 過去の写真を見る'}
-          </button>
         </section>
 
         <OneYearAgoBanner lang={lang} />
+
+        <VoiceLibrary lang={lang} role="parent" />
 
         {/* (4) Journal card */}
         <section style={{ width: '100%', background: '#FFF4F8', borderRadius: 18, padding: 14, overflow: 'hidden' }}>

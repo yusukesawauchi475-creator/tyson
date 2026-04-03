@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { getPairId } from '../lib/pairDaily'
 import { fetchAlbum } from '../lib/journal'
@@ -10,7 +10,7 @@ export default function AlbumPage({ lang = 'ja' }) {
   const [days, setDays] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [lightbox, setLightbox] = useState(null) // { photos: [], index: number }
+  const [lightboxIndex, setLightboxIndex] = useState(null) // index into allPhotos
 
   useEffect(() => {
     fetchAlbum(getPairId())
@@ -24,19 +24,31 @@ export default function AlbumPage({ lang = 'ja' }) {
       })
   }, [])
 
-  const openLightbox = useCallback((photos, index) => {
-    setLightbox({ photos, index })
-  }, [])
+  // Flat array of all photos across all days (newest first, matching days order)
+  const allPhotos = useMemo(() => {
+    const flat = []
+    for (const day of days) {
+      for (const photo of day.photos) {
+        flat.push({ ...photo, dateKey: day.dateKey })
+      }
+    }
+    return flat
+  }, [days])
 
-  const closeLightbox = useCallback(() => setLightbox(null), [])
+  const openLightbox = useCallback((photo) => {
+    const idx = allPhotos.findIndex((p) => p.storagePath === photo.storagePath)
+    setLightboxIndex(idx >= 0 ? idx : 0)
+  }, [allPhotos])
+
+  const closeLightbox = useCallback(() => setLightboxIndex(null), [])
 
   const prevPhoto = useCallback(() => {
-    setLightbox((prev) => prev ? { ...prev, index: Math.max(0, prev.index - 1) } : null)
+    setLightboxIndex((prev) => prev != null ? Math.max(0, prev - 1) : null)
   }, [])
 
   const nextPhoto = useCallback(() => {
-    setLightbox((prev) => prev ? { ...prev, index: Math.min(prev.photos.length - 1, prev.index + 1) } : null)
-  }, [])
+    setLightboxIndex((prev) => prev != null ? Math.min(allPhotos.length - 1, prev + 1) : null)
+  }, [allPhotos.length])
 
   useEffect(() => {
     if (loading || !scrollToDate) return
@@ -45,7 +57,7 @@ export default function AlbumPage({ lang = 'ja' }) {
   }, [loading, scrollToDate])
 
   useEffect(() => {
-    if (!lightbox) return
+    if (lightboxIndex == null) return
     const onKey = (e) => {
       if (e.key === 'ArrowLeft') prevPhoto()
       else if (e.key === 'ArrowRight') nextPhoto()
@@ -53,7 +65,24 @@ export default function AlbumPage({ lang = 'ja' }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [lightbox, prevPhoto, nextPhoto, closeLightbox])
+  }, [lightboxIndex, prevPhoto, nextPhoto, closeLightbox])
+
+  // Touch swipe support
+  const touchStartRef = useRef(null)
+
+  const handleTouchStart = useCallback((e) => {
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+  }, [])
+
+  const handleTouchEnd = useCallback((e) => {
+    if (!touchStartRef.current) return
+    const dx = e.changedTouches[0].clientX - touchStartRef.current.x
+    const dy = e.changedTouches[0].clientY - touchStartRef.current.y
+    touchStartRef.current = null
+    if (Math.abs(dx) < 40 || Math.abs(dy) > Math.abs(dx)) return
+    if (dx < 0) nextPhoto()
+    else prevPhoto()
+  }, [nextPhoto, prevPhoto])
 
   const formatDate = (dateKey) => {
     if (!dateKey) return dateKey
@@ -63,6 +92,14 @@ export default function AlbumPage({ lang = 'ja' }) {
       { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' }
     )
   }
+
+  const formatDateShort = (dateKey) => {
+    if (!dateKey) return ''
+    const [, m, d] = dateKey.split('-').map(Number)
+    return lang === 'en' ? `${new Date(2000, m - 1).toLocaleString('en', { month: 'short' })} ${d}` : `${m}月${d}日`
+  }
+
+  const currentPhoto = lightboxIndex != null ? allPhotos[lightboxIndex] : null
 
   return (
     <div style={{
@@ -128,7 +165,7 @@ export default function AlbumPage({ lang = 'ja' }) {
                       <button
                         key={photo.storagePath + String(i)}
                         type="button"
-                        onClick={() => openLightbox(photos, photos.indexOf(photo))}
+                        onClick={() => openLightbox(photo)}
                         style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 8, overflow: 'hidden', display: 'block' }}
                         aria-label={lang === 'en' ? 'Enlarge photo' : '写真を拡大'}
                       >
@@ -148,7 +185,7 @@ export default function AlbumPage({ lang = 'ja' }) {
                       <button
                         key={photo.storagePath + String(i)}
                         type="button"
-                        onClick={() => openLightbox(photos, photos.indexOf(photo))}
+                        onClick={() => openLightbox(photo)}
                         style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 8, overflow: 'hidden', display: 'block' }}
                         aria-label={lang === 'en' ? 'Enlarge photo' : '写真を拡大'}
                       >
@@ -163,7 +200,7 @@ export default function AlbumPage({ lang = 'ja' }) {
         })}
       </main>
 
-      {lightbox && (
+      {currentPhoto && (
         <div
           role="dialog"
           aria-modal="true"
@@ -177,7 +214,24 @@ export default function AlbumPage({ lang = 'ja' }) {
             justifyContent: 'center',
           }}
           onClick={closeLightbox}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
         >
+          {/* Date label */}
+          <p style={{
+            position: 'absolute',
+            top: 16,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            color: 'rgba(255,255,255,0.6)',
+            fontSize: 13,
+            margin: 0,
+            whiteSpace: 'nowrap',
+            zIndex: 1,
+          }}>
+            {formatDateShort(currentPhoto.dateKey)}
+          </p>
+
           <button
             type="button"
             onClick={closeLightbox}
@@ -187,7 +241,7 @@ export default function AlbumPage({ lang = 'ja' }) {
             ×
           </button>
 
-          {lightbox.index > 0 && (
+          {lightboxIndex > 0 && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); prevPhoto() }}
@@ -199,7 +253,7 @@ export default function AlbumPage({ lang = 'ja' }) {
           )}
 
           <img
-            src={lightbox.photos[lightbox.index]?.url}
+            src={currentPhoto.url}
             alt=""
             onClick={(e) => e.stopPropagation()}
             style={{
@@ -211,7 +265,7 @@ export default function AlbumPage({ lang = 'ja' }) {
             }}
           />
 
-          {lightbox.index < lightbox.photos.length - 1 && (
+          {lightboxIndex < allPhotos.length - 1 && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); nextPhoto() }}
@@ -222,17 +276,18 @@ export default function AlbumPage({ lang = 'ja' }) {
             </button>
           )}
 
+          {/* Counter */}
           <p style={{
             position: 'absolute',
             bottom: 16,
             left: '50%',
             transform: 'translateX(-50%)',
-            color: 'rgba(255,255,255,0.65)',
+            color: 'rgba(255,255,255,0.6)',
             fontSize: 13,
             margin: 0,
             whiteSpace: 'nowrap',
           }}>
-            {lightbox.index + 1} / {lightbox.photos.length}
+            {lightboxIndex + 1} / {allPhotos.length}
           </p>
         </div>
       )}
