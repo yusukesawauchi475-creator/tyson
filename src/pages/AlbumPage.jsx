@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { getPairId } from '../lib/pairDaily'
 import { fetchAlbum } from '../lib/journal'
 
 const demoAlbumDays = [
@@ -40,19 +39,16 @@ export default function AlbumPage({ lang = 'ja' }) {
   const [playingKey, setPlayingKey] = useState(null)
   const [playedKeys, setPlayedKeys] = useState({})
   const voiceAudioRef = useRef(null)
-  // URLの?pairId= or localStorageからpairIdを取得（NumberResolver完了後はlocalStorageに正しい値が入っている）
+  // URL-only pairId extraction (no localStorage fallback)
   const rawPairId = (() => {
     try {
       const hash = window.location.hash || ''
       const qi = hash.indexOf('?')
-      const qs = qi >= 0 ? hash.slice(qi + 1) : ''
-      const fromUrl = new URLSearchParams(qs).get('pairId')?.trim()
-      if (fromUrl) return fromUrl
-    } catch (_) {}
-    return getPairId()
+      if (qi < 0) return null
+      return new URLSearchParams(hash.slice(qi + 1)).get('pairId')?.trim() || null
+    } catch (_) { return null }
   })()
   const isDemo = !rawPairId || rawPairId === 'PAIR-DEMOTEST' || rawPairId === 'demo'
-  console.log('[AlbumPage] rawPairId:', rawPairId, 'isDemo:', isDemo, 'hash:', window.location.hash)
   const pairId = (BLOCKED_PAIR_IDS.includes(rawPairId) || isDemo) ? null : rawPairId
 
   useEffect(() => {

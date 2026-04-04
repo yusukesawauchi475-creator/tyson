@@ -857,7 +857,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
 
               <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
                 {photos.slice(0, 6).map((ph, i) => (
-                  <button key={ph.storagePath + String(i)} type="button" onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album', { state: { scrollToDate: dateKey } })} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 11, overflow: 'hidden', flexShrink: 0 }} aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}>
+                  <button key={ph.storagePath + String(i)} type="button" onClick={() => navigate(lang === 'en' ? `/album/eng?pairId=${currentPairId}` : `/album?pairId=${currentPairId}`, { state: { scrollToDate: dateKey } })} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 11, overflow: 'hidden', flexShrink: 0 }} aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}>
                     <img src={ph.url || ''} alt="" width={52} height={52} style={{ width: 52, height: 52, objectFit: 'cover', display: 'block', borderRadius: 11 }} />
                   </button>
                 ))}
@@ -899,7 +899,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
               {lang === 'en' ? '📷 Record photos & voice' : '📷 写真・声を記録しよう'}
             </p>
             <div style={{ fontSize: 32, animation: 'bounceDown 1.5s ease-in-out infinite', background: 'linear-gradient(135deg, #A060FF, #60B0FF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: '12px 0' }}>↓</div>
-            <button type="button" onClick={() => navigate(lang === 'en' ? '/album/eng' : '/album')} style={{ padding: '14px 32px', fontSize: 16, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg, #FF60B0, #A060FF)', border: 'none', borderRadius: 16, cursor: 'pointer', boxShadow: '0 4px 16px rgba(160,96,255,.3)' }}>
+            <button type="button" onClick={() => navigate(lang === 'en' ? `/album/eng?pairId=${currentPairId}` : `/album?pairId=${currentPairId}`)} style={{ padding: '14px 32px', fontSize: 16, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg, #FF60B0, #A060FF)', border: 'none', borderRadius: 16, cursor: 'pointer', boxShadow: '0 4px 16px rgba(160,96,255,.3)' }}>
               {lang === 'en' ? 'View Album →' : 'アルバムを見る →'}
             </button>
           </section>
@@ -912,7 +912,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
       <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9000, display: 'flex', background: '#fff', borderTop: '2px solid #F0E8FF', boxShadow: '0 -4px 20px rgba(180,120,255,0.15)', paddingBottom: 'max(4px, env(safe-area-inset-bottom))' }}>
         {[
           { icon: '🏠', label: lang === 'en' ? 'Home' : 'ホーム', bg: '#FFE8F4', bgActive: '#FFD0E8', active: true, onClick: null },
-          { icon: '🖼', label: lang === 'en' ? 'Album' : 'アルバム', bg: '#F0E8FF', bgActive: '#E0D0FF', active: false, onClick: () => navigate(lang === 'en' ? '/album/eng' : '/album') },
+          { icon: '🖼', label: lang === 'en' ? 'Album' : 'アルバム', bg: '#F0E8FF', bgActive: '#E0D0FF', active: false, onClick: () => navigate(lang === 'en' ? `/album/eng?pairId=${currentPairId}` : `/album?pairId=${currentPairId}`) },
           { icon: '👋', label: lang === 'en' ? 'Invite' : '招待', bg: '#FFF0E8', bgActive: '#FFE0D0', active: false, onClick: handleShare },
         ].map((item) => (
           <button key={item.label} type="button" onClick={item.onClick} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 0 4px', border: 'none', background: 'none', cursor: 'pointer' }}>
