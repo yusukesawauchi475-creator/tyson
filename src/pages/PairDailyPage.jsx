@@ -14,7 +14,6 @@ import { useAudioLevel } from '../lib/useAudioLevel'
 import UploadErrorModal from '../components/UploadErrorModal'
 import WeeklySummary from '../components/WeeklySummary'
 import OneYearAgoBanner from '../components/OneYearAgoBanner'
-import VoiceLibrary from '../components/VoiceLibrary'
 
 export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child' }) {
   const [today, setToday] = useState('')
@@ -882,7 +881,6 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
 
         {!isDemoTest && <OneYearAgoBanner lang={lang} />}
 
-        {!isDemoTest && <VoiceLibrary lang={lang} role="child" pairId={currentPairId} />}
 
         {/* (4) Journal card */}
         {!isDemoTest ? (
