@@ -39,13 +39,20 @@ export default function AlbumPage({ lang = 'ja' }) {
   const [playingKey, setPlayingKey] = useState(null)
   const [playedKeys, setPlayedKeys] = useState({})
   const voiceAudioRef = useRef(null)
-  // URL-only pairId extraction (no localStorage fallback)
+  // URL pairId extraction: try react-router search, then hash fallback
   const rawPairId = (() => {
     try {
+      // react-router useLocation().search (works with navigate())
+      const fromRouter = new URLSearchParams(location.search).get('pairId')?.trim()
+      if (fromRouter) return fromRouter
+      // fallback: parse hash directly (works with window.location.href)
       const hash = window.location.hash || ''
       const qi = hash.indexOf('?')
-      if (qi < 0) return null
-      return new URLSearchParams(hash.slice(qi + 1)).get('pairId')?.trim() || null
+      if (qi >= 0) {
+        const fromHash = new URLSearchParams(hash.slice(qi + 1)).get('pairId')?.trim()
+        if (fromHash) return fromHash
+      }
+      return null
     } catch (_) { return null }
   })()
   const isDemo = rawPairId === 'PAIR-DEMOTEST'
