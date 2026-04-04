@@ -20,7 +20,7 @@ function getDemoAllPhotos() {
 const BLOCKED_PAIR_IDS = ['TYSON-ZH90']
 
 const demoVoiceDays = [
-  { dateKey: '2026-04-03', label: '4月3日', parent: { dur: '0:42', seen: false }, child: { dur: '1:05', seen: false } },
+  { dateKey: '2026-04-03', label: '今日 · 4月3日', parent: { dur: '0:42', seen: false }, child: { dur: '1:05', seen: false } },
   { dateKey: '2026-04-02', label: '4月2日', parent: { dur: '1:12', seen: true }, child: { dur: '0:58', seen: true } },
   { dateKey: '2026-04-01', label: '4月1日', parent: { dur: '0:33', seen: true }, child: null },
   { dateKey: '2026-03-31', label: '3月31日', parent: null, child: { dur: '0:27', seen: true } },
@@ -194,10 +194,10 @@ export default function AlbumPage({ lang = 'ja' }) {
       {/* Pill Tabs — demo only */}
       {isDemo && (
         <div style={{ display: 'flex', gap: 8, padding: '10px 16px', background: '#FFF8FF', position: 'sticky', top: 49, zIndex: 99 }}>
-          <button type="button" onClick={() => setActiveTab('photo')} style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700, color: activeTab === 'photo' ? '#fff' : '#999', background: activeTab === 'photo' ? 'linear-gradient(135deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+          <button type="button" onClick={() => setActiveTab('photo')} style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700, color: activeTab === 'photo' ? '#fff' : '#999', background: activeTab === 'photo' ? 'linear-gradient(90deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
             📷 {lang === 'en' ? 'Photos' : '写真'}
           </button>
-          <button type="button" onClick={() => setActiveTab('voice')} style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700, color: activeTab === 'voice' ? '#fff' : '#999', background: activeTab === 'voice' ? 'linear-gradient(135deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+          <button type="button" onClick={() => setActiveTab('voice')} style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700, color: activeTab === 'voice' ? '#fff' : '#999', background: activeTab === 'voice' ? 'linear-gradient(90deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
             🎙 {lang === 'en' ? 'Voice' : '声'}
           </button>
         </div>
