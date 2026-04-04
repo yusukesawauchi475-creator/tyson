@@ -52,6 +52,7 @@ export default function AlbumPage({ lang = 'ja' }) {
     return getPairId()
   })()
   const isDemo = !rawPairId || rawPairId === 'PAIR-DEMOTEST' || rawPairId === 'demo'
+  console.log('[AlbumPage] rawPairId:', rawPairId, 'isDemo:', isDemo, 'hash:', window.location.hash)
   const pairId = (BLOCKED_PAIR_IDS.includes(rawPairId) || isDemo) ? null : rawPairId
 
   useEffect(() => {
