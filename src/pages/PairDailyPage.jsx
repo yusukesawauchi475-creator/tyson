@@ -78,12 +78,20 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   const [currentPairId] = useState(() => getPairId())
   const isDemoTest = currentPairId === 'PAIR-DEMOTEST'
 
+  useEffect(() => {
+    if (isDemoTest) {
+      setHasAudio(true)
+      setAudioUrl('/demo-audio.mp3')
+    }
+  }, [isDemoTest])
+
   const handleTopicChange = useCallback((topic) => {
     setDailyTopic(topic)
     topicRef.current = topic
   }, [])
 
   const refreshStatus = () => {
+    if (isDemoTest) { setHasAudio(true); return }
     setHasAudio(null)
     setIsChildUnseen(false)
     getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio, isUnseen }) => {
@@ -251,12 +259,14 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
     const currentDateKey = getDateKey()
     setDateKey(currentDateKey)
     let cancelled = false
-    getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio, isUnseen }) => {
-      if (!cancelled) {
-        setHasAudio(hasAudio)
-        setIsChildUnseen(!!isUnseen)
-      }
-    })
+    if (!isDemoTest) {
+      getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio, isUnseen }) => {
+        if (!cancelled) {
+          setHasAudio(hasAudio)
+          setIsChildUnseen(!!isUnseen)
+        }
+      })
+    }
     return () => { cancelled = true }
   }, [lang])
 
@@ -323,6 +333,14 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
       el.load()
     }
     setAudioUrl(null)
+
+    if (isDemoTest) {
+      setAudioUrl('/demo-audio.mp3')
+      setIsLoading(false)
+      const el2 = audioRef.current
+      if (el2) { el2.src = '/demo-audio.mp3'; el2.currentTime = 0; await el2.play(); setIsPlaying(true) }
+      return
+    }
 
     const result = await fetchAudioForPlayback(LISTEN_ROLE_PARENT)
 
