@@ -110,7 +110,7 @@ export default function LandingPage({ lang = 'ja' }) {
         {/* CTA */}
         <button
           type="button"
-          onClick={() => navigate('/demo')}
+          onClick={() => navigate('/demo?pairId=PAIR-DEMOTEST')}
           style={{
             width: '100%',
             padding: 20,
