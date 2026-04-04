@@ -48,8 +48,8 @@ export default function AlbumPage({ lang = 'ja' }) {
       return new URLSearchParams(hash.slice(qi + 1)).get('pairId')?.trim() || null
     } catch (_) { return null }
   })()
-  const isDemo = !rawPairId || rawPairId === 'PAIR-DEMOTEST' || rawPairId === 'demo'
-  const pairId = (BLOCKED_PAIR_IDS.includes(rawPairId) || isDemo) ? null : rawPairId
+  const isDemo = rawPairId === 'PAIR-DEMOTEST'
+  const pairId = (!rawPairId || BLOCKED_PAIR_IDS.includes(rawPairId) || isDemo) ? null : rawPairId
 
   useEffect(() => {
     if (!pairId) { setLoading(false); return }
