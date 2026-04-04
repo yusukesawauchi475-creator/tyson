@@ -20,6 +20,14 @@ function getDemoAllPhotos() {
 
 const BLOCKED_PAIR_IDS = ['TYSON-ZH90']
 
+const demoVoiceDays = [
+  { dateKey: '2026-04-03', label: '4月3日', parent: { dur: '0:42', seen: false }, child: { dur: '1:05', seen: false } },
+  { dateKey: '2026-04-02', label: '4月2日', parent: { dur: '1:12', seen: true }, child: { dur: '0:58', seen: true } },
+  { dateKey: '2026-04-01', label: '4月1日', parent: { dur: '0:33', seen: true }, child: null },
+  { dateKey: '2026-03-31', label: '3月31日', parent: null, child: { dur: '0:27', seen: true } },
+  { dateKey: '2026-03-30', label: '3月30日', parent: { dur: '0:45', seen: true }, child: { dur: '1:10', seen: true } },
+]
+
 export default function AlbumPage({ lang = 'ja' }) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -27,7 +35,11 @@ export default function AlbumPage({ lang = 'ja' }) {
   const [days, setDays] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [lightboxIndex, setLightboxIndex] = useState(null) // index into allPhotos
+  const [lightboxIndex, setLightboxIndex] = useState(null)
+  const [activeTab, setActiveTab] = useState('photo')
+  const [playingKey, setPlayingKey] = useState(null)
+  const [playedKeys, setPlayedKeys] = useState({})
+  const voiceAudioRef = useRef(null)
   // URLの?pairId= or localStorageからpairIdを取得（NumberResolver完了後はlocalStorageに正しい値が入っている）
   const rawPairId = (() => {
     try {
@@ -182,8 +194,72 @@ export default function AlbumPage({ lang = 'ja' }) {
         </h1>
       </header>
 
+      {/* Pill Tabs — demo only */}
+      {isDemo && (
+        <div style={{ display: 'flex', gap: 8, padding: '10px 16px', background: '#FFF8FF', position: 'sticky', top: 49, zIndex: 99 }}>
+          <button type="button" onClick={() => setActiveTab('photo')} style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700, color: activeTab === 'photo' ? '#fff' : '#999', background: activeTab === 'photo' ? 'linear-gradient(135deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+            📷 {lang === 'en' ? 'Photos' : '写真'}
+          </button>
+          <button type="button" onClick={() => setActiveTab('voice')} style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700, color: activeTab === 'voice' ? '#fff' : '#999', background: activeTab === 'voice' ? 'linear-gradient(135deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+            🎙 {lang === 'en' ? 'Voice' : '声'}
+          </button>
+        </div>
+      )}
+
       <main style={{ padding: '16px', maxWidth: 480, margin: '0 auto' }}>
-      {(<>
+
+      {/* Voice tab (demo only) */}
+      {isDemo && activeTab === 'voice' && (
+        <section style={{ width: '100%' }}>
+          <style>{`@keyframes vwave { 0%,100% { transform: scaleY(0.4); } 50% { transform: scaleY(1); } }`}</style>
+          <p style={{ textAlign: 'center', color: '#999', fontSize: 12, margin: '8px 0 16px', fontStyle: 'italic' }}>
+            {lang === 'en' ? 'Sample — your voice history will appear here' : 'サンプル — 声の履歴がここに表示されます'}
+          </p>
+          {demoVoiceDays.map((day) => {
+            const playVoice = (key) => {
+              const el = voiceAudioRef.current
+              if (!el) return
+              if (playingKey === key) { el.pause(); el.currentTime = 0; setPlayingKey(null); return }
+              el.pause(); el.src = '/demo-audio.mp3'; el.currentTime = 0
+              el.play().then(() => { setPlayingKey(key); setPlayedKeys(p => ({ ...p, [key]: true })) }).catch(() => {})
+            }
+            const renderBtn = (role, data, emoji, label) => {
+              if (!data) return <div key={role} style={{ flex: 1, padding: '10px', fontSize: 12, color: '#ccc', textAlign: 'center' }}>—</div>
+              const key = `${day.dateKey}-${role}`
+              const isPlaying = playingKey === key
+              const hasPlayed = data.seen || !!playedKeys[key]
+              return (
+                <button key={role} type="button" onClick={() => playVoice(key)} style={{
+                  flex: 1, padding: '10px 8px', fontSize: 12, fontWeight: 600, color: '#555',
+                  background: isPlaying ? '#E8E0FF' : '#fff',
+                  border: isPlaying ? '2px solid #A060FF' : hasPlayed ? '2px solid #30A870' : '2px solid #E04040',
+                  borderRadius: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, position: 'relative',
+                }}>
+                  <span style={{ fontSize: 13 }}>{hasPlayed ? '✅' : '🔴'}</span>
+                  <span>{emoji} {label}</span>
+                  <span style={{ marginLeft: 'auto', fontSize: 11, color: '#999' }}>{data.dur}</span>
+                  {isPlaying && (
+                    <span style={{ display: 'flex', gap: 2, marginLeft: 4 }}>
+                      {[0,1,2].map(i => <span key={i} style={{ width: 3, height: 12, background: '#A060FF', borderRadius: 2, animation: `vwave 0.6s ease-in-out ${i*0.15}s infinite` }} />)}
+                    </span>
+                  )}
+                </button>
+              )
+            }
+            return (
+              <div key={day.dateKey} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #EEE8FF' }}>
+                <span style={{ fontSize: 12, color: '#8070A0', fontWeight: 600, minWidth: 50 }}>{day.label}</span>
+                {renderBtn('parent', day.parent, '👴', lang === 'en' ? 'Parent' : '親')}
+                {renderBtn('child', day.child, '🧑', lang === 'en' ? 'Child' : '子')}
+              </div>
+            )
+          })}
+          <audio ref={voiceAudioRef} onEnded={() => setPlayingKey(null)} onPause={() => setPlayingKey(null)} style={{ display: 'none' }} />
+        </section>
+      )}
+
+      {/* Photo tab */}
+      {(!isDemo || activeTab === 'photo') && (<>
 
         {loading && (
           <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
