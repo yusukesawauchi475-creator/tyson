@@ -227,26 +227,30 @@ export default function AlbumPage({ lang = 'ja' }) {
               el.pause(); el.src = '/demo-audio.mp3'; el.currentTime = 0
               el.play().then(() => { setPlayingKey(key); setPlayedKeys(p => ({ ...p, [key]: true })) }).catch(() => {})
             }
+            const btnBase = { flex: 1, padding: '10px 8px', fontSize: 12, fontWeight: 600, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 5, minHeight: 42 }
             const renderBtn = (role, data, emoji, label) => {
-              if (!data) return <div key={role} style={{ flex: 1, padding: '10px', fontSize: 12, color: '#ccc', textAlign: 'center' }}>—</div>
+              if (!data) return <div key={role} style={{ ...btnBase, background: '#FAFAFA', border: '2px solid #EEE', color: '#ccc', justifyContent: 'center' }}>—</div>
               const key = `${day.dateKey}-${role}`
               const isPlaying = playingKey === key
               const hasPlayed = data.seen || !!playedKeys[key]
               return (
                 <button key={role} type="button" onClick={() => playVoice(key)} style={{
-                  flex: 1, padding: '10px 8px', fontSize: 12, fontWeight: 600, color: '#555',
+                  ...btnBase, color: '#555', cursor: 'pointer',
                   background: isPlaying ? '#E8E0FF' : '#fff',
                   border: isPlaying ? '2px solid #A060FF' : hasPlayed ? '2px solid #30A870' : '2px solid #E04040',
-                  borderRadius: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, position: 'relative',
                 }}>
-                  <span style={{ fontSize: 13 }}>{hasPlayed ? '✅' : '🔴'}</span>
-                  <span>{emoji} {label}</span>
-                  <span style={{ marginLeft: 'auto', fontSize: 11, color: '#999' }}>{data.dur}</span>
-                  {isPlaying && (
-                    <span style={{ display: 'flex', gap: 2, marginLeft: 4 }}>
-                      {[0,1,2].map(i => <span key={i} style={{ width: 3, height: 12, background: '#A060FF', borderRadius: 2, animation: `vwave 0.6s ease-in-out ${i*0.15}s infinite` }} />)}
-                    </span>
-                  )}
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ fontSize: 13 }}>{hasPlayed ? '✅' : '🔴'}</span>
+                    <span>{emoji} {label}</span>
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 11, color: '#999' }}>{data.dur}</span>
+                    {isPlaying && (
+                      <span style={{ display: 'flex', gap: 2 }}>
+                        {[0,1,2].map(i => <span key={i} style={{ width: 3, height: 12, background: '#A060FF', borderRadius: 2, animation: `vwave 0.6s ease-in-out ${i*0.15}s infinite` }} />)}
+                      </span>
+                    )}
+                  </span>
                 </button>
               )
             }
