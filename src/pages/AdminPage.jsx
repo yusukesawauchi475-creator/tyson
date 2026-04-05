@@ -6,6 +6,9 @@ import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore'
 
 const STORAGE_KEY = 'tyson_admin_secret'
 
+/** pairIds hidden from admin dashboard (isolated to tyson-two.vercel.app) */
+const HIDDEN_PAIR_IDS = ['TYSON-ZH90']
+
 function daysAgo(dateStr) {
   if (!dateStr) return '-'
   const d = new Date(dateStr.length === 10 ? dateStr + 'T00:00:00' : dateStr)
@@ -327,7 +330,7 @@ export default function AdminPage({ lang = 'ja' }) {
           </div>
           {dashLoading && <p style={{ fontSize: 13, color: 'var(--color-text-muted)', textAlign: 'center' }}>読み込み中...</p>}
           {dashError && <p style={{ fontSize: 13, color: 'var(--color-danger)', textAlign: 'center' }}>{dashError}</p>}
-          {pairs && pairs.map(pair => <PairCard key={pair.pairId} pair={pair} secret={secret} numberMap={numberMap} />)}
+          {pairs && pairs.filter(pair => !HIDDEN_PAIR_IDS.includes(pair.pairId)).map(pair => <PairCard key={pair.pairId} pair={pair} secret={secret} numberMap={numberMap} />)}
           {pairs && pairs.length === 0 && <p style={{ fontSize: 13, color: 'var(--color-text-muted)', textAlign: 'center' }}>データなし</p>}
         </>
       )}
@@ -446,7 +449,7 @@ function PairNumberManager({ secret, numberMap }) {
 
       {!listLoading && numbers.length === 0 && <p style={{ fontSize: 13, color: 'var(--color-text-muted)', textAlign: 'center' }}>まだ発行されていません</p>}
 
-      {!listLoading && numbers.map(n => (
+      {!listLoading && numbers.filter(n => !HIDDEN_PAIR_IDS.includes(n.pairId)).map(n => (
         <div key={n.number} className="card" style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-primary)', minWidth: 30 }}>#{n.number}</span>
           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', flex: 1 }}>{n.memo || '-'}</span>

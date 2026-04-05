@@ -121,6 +121,15 @@ function isPairAllowed(uid, pairId) {
 
 const READ_ONLY_PAIR_IDS = ['PAIR-DEMOTEST'];
 
+/** pairIds isolated to tyson-two.vercel.app — block access from humfamily.com */
+const TYSON_ONLY_PAIR_IDS = ['TYSON-ZH90'];
+
+function isTysonOnlyBlocked(req, pairId) {
+  if (!TYSON_ONLY_PAIR_IDS.includes(pairId)) return false;
+  const origin = (req.headers.origin || req.headers.referer || '').toLowerCase();
+  return origin.includes('humfamily.com');
+}
+
 /**
  * Parse multipart form-data (Vercel serverless compatible)
  */
@@ -261,6 +270,7 @@ async function handleVoiceHistory(req, res) {
 
   const pairId = req.query?.pairId;
   if (!pairId) return res.status(400).json({ error: 'pairId is required' });
+  if (isTysonOnlyBlocked(req, pairId)) return res.status(403).json({ error: 'Access denied' });
   const limit = Math.min(parseInt(req.query?.limit) || 7, 30);
 
   try {
@@ -330,6 +340,10 @@ async function handleGet(req, res) {
       error: 'pairId is required',
       requestId: reqId,
     });
+  }
+
+  if (isTysonOnlyBlocked(req, pairId)) {
+    return res.status(403).json({ success: false, error: 'Access denied', requestId: reqId });
   }
 
   if (!listenRole || (listenRole !== 'parent' && listenRole !== 'child')) {
@@ -518,6 +532,9 @@ async function handlePost(req, res) {
 
     const pairId = fields.pairId || fields.pair_id || 'demo';
 
+    if (isTysonOnlyBlocked(req, pairId)) {
+      return res.status(403).json({ success: false, error: 'Access denied', requestId: reqId });
+    }
     if (READ_ONLY_PAIR_IDS.includes(pairId)) {
       return res.status(403).json({ success: false, error: 'This pair is read-only', requestId: reqId });
     }
@@ -645,6 +662,9 @@ async function handlePatch(req, res) {
   const role = req.query?.listenRole || req.query?.listen_role || req.query?.role;
   const firestoreDocPath = pairId && dateKey ? `pair_media/${pairId}/days/${dateKey}` : null;
 
+  if (isTysonOnlyBlocked(req, pairId)) {
+    return res.status(403).json({ success: false, error: 'Access denied', requestId: reqId });
+  }
   if (READ_ONLY_PAIR_IDS.includes(pairId)) {
     return res.status(403).json({ success: false, error: 'This pair is read-only', requestId: reqId });
   }

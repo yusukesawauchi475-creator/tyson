@@ -110,6 +110,15 @@ export default async function handler(req, res) {
     return res.status(400).json({ success: false, error: 'pairId is required', requestId });
   }
 
+  // Block TYSON-ZH90 access from humfamily.com
+  const TYSON_ONLY_PAIR_IDS = ['TYSON-ZH90'];
+  if (TYSON_ONLY_PAIR_IDS.includes(pairId)) {
+    const origin = (req.headers.origin || req.headers.referer || '').toLowerCase();
+    if (origin.includes('humfamily.com')) {
+      return res.status(403).json({ success: false, error: 'Access denied', requestId });
+    }
+  }
+
   console.log('[album] request', { pairId, requestId });
 
   try {
