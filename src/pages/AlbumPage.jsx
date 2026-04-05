@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { fetchAlbum } from '../lib/journal'
+import VoiceLibrary from '../components/VoiceLibrary'
 
 const demoAlbumDays = [
   { date: '2026-04-01', label: '4月1日', photos: ['/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp','/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp','/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png'] },
@@ -17,7 +18,7 @@ function getDemoAllPhotos() {
   return all
 }
 
-const BLOCKED_PAIR_IDS = ['TYSON-ZH90']
+const BLOCKED_PAIR_IDS = []
 
 const demoVoiceDays = [
   { dateKey: '2026-04-03', label: '今日 · 4月3日', parent: { dur: '0:42', seen: false }, child: { dur: '1:05', seen: false } },
@@ -198,8 +199,8 @@ export default function AlbumPage({ lang = 'ja' }) {
         </h1>
       </header>
 
-      {/* Pill Tabs — demo only */}
-      {isDemo && (
+      {/* Pill Tabs */}
+      {(pairId || isDemo) && (
         <div style={{ display: 'flex', gap: 8, padding: '10px 16px', background: '#FFF8FF', position: 'sticky', top: 49, zIndex: 99 }}>
           <button type="button" onClick={() => setActiveTab('photo')} style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700, color: activeTab === 'photo' ? '#fff' : '#999', background: activeTab === 'photo' ? 'linear-gradient(90deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
             📷 {lang === 'en' ? 'Photos' : '写真'}
@@ -212,7 +213,10 @@ export default function AlbumPage({ lang = 'ja' }) {
 
       <main style={{ padding: '16px', maxWidth: 480, margin: '0 auto' }}>
 
-      {/* Voice tab (demo only) */}
+      {/* Voice tab */}
+      {pairId && !isDemo && activeTab === 'voice' && (
+        <VoiceLibrary lang={lang} pairId={pairId} />
+      )}
       {isDemo && activeTab === 'voice' && (
         <section style={{ width: '100%' }}>
           <style>{`@keyframes vwave { 0%,100% { transform: scaleY(0.4); } 50% { transform: scaleY(1); } }`}</style>
@@ -267,7 +271,7 @@ export default function AlbumPage({ lang = 'ja' }) {
       )}
 
       {/* Photo tab */}
-      {(!isDemo || activeTab === 'photo') && (<>
+      {(activeTab === 'photo') && (<>
 
         {loading && (
           <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
