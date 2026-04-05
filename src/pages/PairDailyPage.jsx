@@ -19,7 +19,6 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   const [today, setToday] = useState('')
   const [streakCount, setStreakCount] = useState(null)
   const [daysSinceStart, setDaysSinceStart] = useState(null)
-  const [showNotConnected, setShowNotConnected] = useState(false)
   const [dateKey, setDateKey] = useState(getDateKey())
   const [hasAudio, setHasAudio] = useState(null)
   const [debugAuthInfo, setDebugAuthInfo] = useState('...')
@@ -113,7 +112,8 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
         },
       })
       
-      if (res.ok) {
+      const ct = res.headers.get('content-type') || ''
+      if (res.ok && ct.includes('application/json')) {
         const data = await res.json()
         if (data.success && data.aiText) {
           setCommentText(data.aiText)
@@ -125,7 +125,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
           setCommentText('')
           setCommentStatus('done')
         }
-      } else if (res.status === 404 || res.status === 401) {
+      } else if (!res.ok && (res.status === 404 || res.status === 401)) {
         // 404/401は静かにfail
         setCommentText('')
         setCommentStatus('done')
@@ -291,21 +291,6 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   useEffect(() => {
     const t = setTimeout(() => setShowReloadButton(true), 10000)
     return () => clearTimeout(t)
-  }, [])
-
-  // 未接続バナー: 相手が一度もaudioを送っていない場合に表示
-  useEffect(() => {
-    const pairId = getPairId()
-    if (pairId === 'demo') return
-    const dismissKey = `hum_connected_${pairId}`
-    if (localStorage.getItem(dismissKey)) return
-    getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio }) => {
-      if (hasAudio === false) setShowNotConnected(true)
-      else if (hasAudio === true) {
-        localStorage.setItem(dismissKey, '1')
-        setShowNotConnected(false)
-      }
-    }).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -768,11 +753,6 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
       </div>
 
       <main className="page-content page" style={{ flex: 1, maxWidth: 480, margin: '0 auto', width: '100%', paddingTop: 14 }}>
-        {showNotConnected && (
-          <button type="button" onClick={() => { handleShare(); setShowNotConnected(false) }} style={{ width: '100%', padding: '12px 16px', fontSize: 14, fontWeight: 600, color: '#805020', background: '#FFF3E0', border: '1.5px solid #FFB74D', borderRadius: 14, cursor: 'pointer', textAlign: 'center', marginBottom: 12 }}>
-            {lang === 'en' ? '👋 Not connected yet. Did you send the link?' : '👋 まだ繋がっていません。リンクを送りましたか？'}
-          </button>
-        )}
         <WeeklySummary lang={lang} />
 
         {/* (1) Receive card */}

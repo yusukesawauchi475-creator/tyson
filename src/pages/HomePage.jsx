@@ -192,7 +192,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
                     headers: { Authorization: `Bearer ${idToken}` },
                   })
                   if (analysisReqSeqRef.current !== seq) return false
-                  if (res.ok) {
+                  if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) {
                     const data = await res.json()
                     if (data.success) {
                       if (data.aiStatus === 'done' && data.aiText) {
