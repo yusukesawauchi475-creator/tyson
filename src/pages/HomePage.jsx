@@ -18,7 +18,6 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   const navigate = useNavigate()
   const [streakCount, setStreakCount] = useState(null)
   const [daysSinceStart, setDaysSinceStart] = useState(null)
-  const [showNotConnected, setShowNotConnected] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [sentAt, setSentAt] = useState(null)
@@ -405,21 +404,6 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
     return () => clearTimeout(timer)
   }, [])
 
-  // 未接続バナー: 相手が一度もaudioを送っていない場合に表示
-  useEffect(() => {
-    const pairId = getPairId()
-    if (pairId === 'demo') return
-    const dismissKey = `hum_connected_${pairId}`
-    if (localStorage.getItem(dismissKey)) return
-    getListenRoleMeta(LISTEN_ROLE_CHILD).then(({ hasAudio }) => {
-      if (hasAudio === false) setShowNotConnected(true)
-      else if (hasAudio === true) {
-        localStorage.setItem(dismissKey, '1')
-        setShowNotConnected(false)
-      }
-    }).catch(() => {})
-  }, [])
-
   // デバッグ用: getIdTokenForApi の結果を UI に表示
   useEffect(() => {
     getIdTokenForApi().then(token => {
@@ -557,11 +541,6 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
       </div>
 
       <main className="page-content page" style={{ flex: 1, maxWidth: 480, margin: '0 auto', width: '100%', paddingTop: 14 }}>
-        {showNotConnected && (
-          <button type="button" onClick={() => { handleShare(); setShowNotConnected(false) }} style={{ width: '100%', padding: '12px 16px', fontSize: 14, fontWeight: 600, color: '#805020', background: '#FFF3E0', border: '1.5px solid #FFB74D', borderRadius: 14, cursor: 'pointer', textAlign: 'center', marginBottom: 12 }}>
-            {lang === 'en' ? '👋 Not connected yet. Did you send the link?' : '👋 まだ繋がっていません。リンクを送りましたか？'}
-          </button>
-        )}
         <WeeklySummary lang={lang} />
 
         {/* (1) Receive card */}
