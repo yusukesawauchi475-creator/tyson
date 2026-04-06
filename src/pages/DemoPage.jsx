@@ -167,7 +167,7 @@ export default function DemoPage({ lang = 'ja' }) {
 
       <main className="page-content page" style={{ flex: 1, maxWidth: 480, margin: '0 auto', width: '100%', paddingTop: 14 }}>
         {/* (1) Receive card - local audio */}
-        <section style={{ width: '100%', background: '#E8FFF4', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(48,168,112,0.06)', overflow: 'hidden' }}>
+        <section style={{ width: '100%', minHeight: 120, background: '#E8FFF4', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(48,168,112,0.06)', overflow: 'hidden' }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: '#30A870', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t(lang, 'partnerRecordingListen')}</p>
           <p style={{ fontSize: 14, color: '#1A6040', fontWeight: 700, margin: '0 0 10px' }}>
             {t(lang, 'received')}
@@ -179,7 +179,7 @@ export default function DemoPage({ lang = 'ja' }) {
         </section>
 
         {/* (2) Send card - disabled */}
-        <section style={{ width: '100%', background: '#FFF4E8', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(208,112,48,0.06)', overflow: 'hidden', opacity: 0.6 }}>
+        <section style={{ width: '100%', minHeight: 120, background: '#FFF4E8', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(208,112,48,0.06)', overflow: 'hidden', opacity: 0.6 }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: '#D07030', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t(lang, 'myRecordingRecordSend')}</p>
           <button type="button" disabled style={{ width: '100%', padding: 14, fontSize: 15, fontWeight: 700, color: '#fff', background: '#B0A0C8', border: 'none', borderRadius: 14, cursor: 'not-allowed', boxShadow: 'none' }}>
             {t(lang, 'record')}
@@ -190,7 +190,7 @@ export default function DemoPage({ lang = 'ja' }) {
         </section>
 
         {/* Today's Photos */}
-        <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
+        <section style={{ width: '100%', minHeight: 120, background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: '#7050C0', margin: '0 0 10px' }}>
             📷 {lang === 'en' ? "Today's Photos" : '今日の写真'}　<span style={{ fontWeight: 500, color: '#8070A0' }}>3{lang === 'en' ? '' : '枚'}</span>
           </p>

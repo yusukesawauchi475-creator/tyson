@@ -756,7 +756,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
         <WeeklySummary lang={lang} />
 
         {/* (1) Receive card */}
-        <section style={{ width: '100%', background: '#E8FFF4', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(48,168,112,0.06)', overflow: 'hidden' }}>
+        <section style={{ width: '100%', minHeight: 120, background: '#E8FFF4', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(48,168,112,0.06)', overflow: 'hidden' }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: '#30A870', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t(lang, 'partnerRecordingListen')}</p>
           {hasAudio === true ? (
             <>
@@ -784,7 +784,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
         </section>
 
         {/* (2) Send card */}
-        <section style={{ width: '100%', background: '#FFF4E8', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(208,112,48,0.06)', overflow: 'hidden' }}>
+        <section style={{ width: '100%', minHeight: 120, background: '#FFF4E8', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(208,112,48,0.06)', overflow: 'hidden' }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: '#D07030', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t(lang, 'myRecordingRecordSend')}</p>
           <button type="button" onClick={handleRecordClick} disabled={isUploading} style={{ width: '100%', padding: 14, fontSize: 15, fontWeight: 700, color: '#fff', background: isUploading ? '#B0A0C8' : isRecording ? 'linear-gradient(160deg,#FF4040,#C02020)' : 'linear-gradient(160deg,#FF8848,#F04818)', border: 'none', borderRadius: 14, cursor: isUploading ? 'wait' : 'pointer', boxShadow: isUploading ? 'none' : isRecording ? '0 5px 0 #901010' : '0 5px 0 #C03010' }}>
             {isUploading ? t(lang, 'sending') : isRecording ? t(lang, 'recording') : t(lang, 'record')}
@@ -819,7 +819,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
         </section>
 
         {/* (3) Photos card */}
-        {!isDemoTest && <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
+        {!isDemoTest && <section style={{ width: '100%', minHeight: 120, background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: '#7050C0', margin: '0 0 10px' }}>
             📷 {lang === 'en' ? "Today's Photos" : '今日の写真'}　<span style={{ fontWeight: 500, color: '#8070A0' }}>{isDemoTest ? 3 : photos.filter((p) => p.role === ROLE_CHILD).length}/3{lang === 'en' ? '' : '枚'}</span>
           </p>
@@ -864,12 +864,13 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
 
         {/* (4) Journal card */}
         {!isDemoTest ? (
-          <section style={{ width: '100%', background: '#FFF4F8', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
-            <p style={{ fontSize: 9, fontWeight: 700, color: '#C04080', margin: '0 0 2px', textTransform: 'uppercase', letterSpacing: '0.09em' }}>
+          <section style={{ width: '100%', minHeight: 120, background: '#FFF4F8', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(192,64,128,0.06)', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: '#C04080', margin: '0 0 6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {lang === 'en' ? '📔 TODAY\'S NOTE' : '📔 今日の記録'}
             </p>
-            <p style={{ fontSize: 13, color: '#C080A0', margin: '8px 0 0', textAlign: 'center', fontWeight: 600 }}>
-              {lang === 'en' ? '🔜 Coming Soon' : '🔜 Coming Soon'}
+            <span style={{ fontSize: 32, lineHeight: 1, margin: '4px 0' }}>🔜</span>
+            <p style={{ fontSize: 16, color: '#C080A0', margin: '6px 0 0', textAlign: 'center', fontWeight: 700 }}>
+              Coming Soon
             </p>
           </section>
         ) : (
