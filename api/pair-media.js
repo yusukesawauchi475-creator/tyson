@@ -658,7 +658,7 @@ async function handlePatch(req, res) {
   const pairId = req.query?.pairId || req.query?.pair_id;
   const clientDateKey = req.query?.dateKey || req.query?.date_key;
   const serverDateKey = getDateKeyNY();
-  const dateKey = serverDateKey;
+  const dateKey = clientDateKey || serverDateKey;
   const role = req.query?.listenRole || req.query?.listen_role || req.query?.role;
   const firestoreDocPath = pairId && dateKey ? `pair_media/${pairId}/days/${dateKey}` : null;
 

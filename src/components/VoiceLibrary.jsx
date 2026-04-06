@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { getPairId } from '../lib/pairDaily'
+import { getPairId, markSeen } from '../lib/pairDaily'
 import { getIdTokenForApi } from '../lib/firebase'
 
 export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pairIdProp, onDataLoaded }) {
@@ -47,7 +47,18 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
     el.pause()
     el.src = url
     el.currentTime = 0
-    el.play().then(() => setPlayingKey(key)).catch(() => setPlayingKey(null))
+    el.play().then(() => {
+      setPlayingKey(key)
+      // Mark as seen when playing partner's recording
+      const partnerRole = role === 'parent' ? 'child' : 'parent'
+      if (r === partnerRole) {
+        markSeen(r, effectivePairId, dateKey)
+        setDays(prev => prev.map(d => {
+          if (d.dateKey !== dateKey) return d
+          return { ...d, [r]: d[r] ? { ...d[r], isUnseen: false } : d[r] }
+        }))
+      }
+    }).catch(() => setPlayingKey(null))
   }
 
   const handleEnded = () => setPlayingKey(null)
@@ -93,7 +104,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
                 fontWeight: 600,
                 color: parent?.url ? '#555' : '#CCC',
                 background: playingKey === `${dateKey}-parent` ? '#E8E0FF' : '#fff',
-                border: parent?.hasAudio ? (parent.isUnseen ? '2px solid #E04040' : '2px solid #30A870') : '1px solid #E8E0FF',
+                border: parent?.hasAudio ? ((role !== 'parent' && parent.isUnseen) ? '2px solid #E04040' : '2px solid #30A870') : '1px solid #E8E0FF',
                 borderRadius: 10,
                 cursor: parent?.url ? 'pointer' : 'default',
                 display: 'flex',
@@ -102,7 +113,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
               }}
             >
               <span style={{ fontSize: 13 }}>
-                {!parent?.hasAudio ? '—' : parent.isUnseen ? '🔴' : '✅'}
+                {!parent?.hasAudio ? '—' : (role === 'parent' || !parent.isUnseen) ? '✅' : '🔴'}
               </span>
               <span>{lang === 'en' ? 'Parent' : '親'}</span>
               {playingKey === `${dateKey}-parent` && <span style={{ fontSize: 11, marginLeft: 'auto' }}>▶</span>}
@@ -120,7 +131,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
                 fontWeight: 600,
                 color: child?.url ? '#555' : '#CCC',
                 background: playingKey === `${dateKey}-child` ? '#E8E0FF' : '#fff',
-                border: child?.hasAudio ? (child.isUnseen ? '2px solid #E04040' : '2px solid #30A870') : '1px solid #E8E0FF',
+                border: child?.hasAudio ? ((role !== 'child' && child.isUnseen) ? '2px solid #E04040' : '2px solid #30A870') : '1px solid #E8E0FF',
                 borderRadius: 10,
                 cursor: child?.url ? 'pointer' : 'default',
                 display: 'flex',
@@ -129,7 +140,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
               }}
             >
               <span style={{ fontSize: 13 }}>
-                {!child?.hasAudio ? '—' : child.isUnseen ? '🔴' : '✅'}
+                {!child?.hasAudio ? '—' : (role === 'child' || !child.isUnseen) ? '✅' : '🔴'}
               </span>
               <span>{lang === 'en' ? 'Child' : '子'}</span>
               {playingKey === `${dateKey}-child` && <span style={{ fontSize: 11, marginLeft: 'auto' }}>▶</span>}
