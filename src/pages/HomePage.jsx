@@ -648,13 +648,13 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
         </section>
 
         {/* (4) Journal card */}
-        <section style={{ width: '100%', minHeight: 160, background: '#FFF4F8', borderRadius: 18, padding: '28px 18px', boxShadow: '0 2px 16px rgba(192,64,128,0.06)', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: '#C04080', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            {lang === 'en' ? '📔 TODAY\'S NOTE' : '📔 今日の記録'}
+        <section style={{ width: '100%', minHeight: 180, background: '#FFF4F8', borderRadius: 22, padding: '36px 24px', boxShadow: '0 2px 16px rgba(192,64,128,0.06)', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <span style={{ fontSize: 48, lineHeight: 1 }}>📖</span>
+          <p style={{ fontSize: 18, fontWeight: 800, color: '#C04080', margin: 0, letterSpacing: '0.04em' }}>
+            {lang === 'en' ? 'Today\'s Note' : '今日の記録'}
           </p>
-          <span style={{ fontSize: 32, lineHeight: 1, margin: '6px 0' }}>🔜</span>
-          <p style={{ fontSize: 16, color: '#C080A0', margin: '8px 0 0', textAlign: 'center', fontWeight: 700 }}>
-            Coming Soon
+          <p style={{ fontSize: 13, color: '#D090B0', margin: 0, fontStyle: 'italic', letterSpacing: '0.08em' }}>
+            {lang === 'en' ? '✨ coming soon ✨' : '✨ 近日公開 ✨'}
           </p>
         </section>
 
