@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { fetchAlbum } from '../lib/journal'
 import VoiceLibrary from '../components/VoiceLibrary'
+import { getUserRole } from '../lib/pairDaily'
 
 const demoAlbumDays = [
   { date: '2026-04-01', label: '4月1日', photos: ['/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp','/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp','/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png'] },
@@ -215,7 +216,7 @@ export default function AlbumPage({ lang = 'ja' }) {
 
       {/* Voice tab */}
       {pairId && !isDemo && activeTab === 'voice' && (
-        <VoiceLibrary lang={lang} pairId={pairId} />
+        <VoiceLibrary lang={lang} pairId={pairId} role={getUserRole()} />
       )}
       {isDemo && activeTab === 'voice' && (
         <section style={{ width: '100%' }}>
