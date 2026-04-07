@@ -8,7 +8,7 @@ import DemoPage from './pages/DemoPage'
 import LandingPage from './pages/LandingPage'
 import RoleSelectPage from './pages/RoleSelectPage'
 import { getUserRole, clearUserRole, PAIR_ID_STORAGE_KEY } from './lib/pairDaily'
-import PwaInstallBanner from './components/PwaInstallBanner'
+import PwaInstallBanner, { BANNER_HEIGHT } from './components/PwaInstallBanner'
 import { db } from './lib/firebase'
 import { doc, getDoc } from 'firebase/firestore'
 
@@ -88,11 +88,12 @@ function RootRoute({ lang = 'ja' }) {
 }
 
 function App() {
+  const [bannerVisible, setBannerVisible] = useState(false)
   return (
     <>
       <div className="mobile-white-overlay" aria-hidden="true" />
-      <PwaInstallBanner lang="ja" />
-      <div className="app-foreground app-root">
+      <PwaInstallBanner lang="ja" onVisibilityChange={setBannerVisible} />
+      <div className="app-foreground app-root" style={bannerVisible ? { paddingTop: BANNER_HEIGHT } : undefined}>
         <HashRouter>
           <Routes>
             <Route path="/" element={<RootOrLanding />} />
