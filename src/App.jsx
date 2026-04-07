@@ -8,6 +8,7 @@ import DemoPage from './pages/DemoPage'
 import LandingPage from './pages/LandingPage'
 import RoleSelectPage from './pages/RoleSelectPage'
 import { getUserRole, clearUserRole, PAIR_ID_STORAGE_KEY } from './lib/pairDaily'
+import PwaInstallBanner from './components/PwaInstallBanner'
 import { db } from './lib/firebase'
 import { doc, getDoc } from 'firebase/firestore'
 
@@ -90,6 +91,7 @@ function App() {
   return (
     <>
       <div className="mobile-white-overlay" aria-hidden="true" />
+      <PwaInstallBanner lang="ja" />
       <div className="app-foreground app-root">
         <HashRouter>
           <Routes>
