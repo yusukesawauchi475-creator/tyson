@@ -7,7 +7,7 @@ import AlbumPage from './pages/AlbumPage'
 import DemoPage from './pages/DemoPage'
 import LandingPage from './pages/LandingPage'
 import RoleSelectPage from './pages/RoleSelectPage'
-import { getUserRole, clearUserRole, PAIR_ID_STORAGE_KEY } from './lib/pairDaily'
+import { getUserRole, clearUserRole, getPairId, PAIR_ID_STORAGE_KEY } from './lib/pairDaily'
 import PwaInstallBanner, { BANNER_HEIGHT } from './components/PwaInstallBanner'
 import { db } from './lib/firebase'
 import { doc, getDoc } from 'firebase/firestore'
@@ -58,6 +58,8 @@ function RootOrLanding({ lang = 'ja' }) {
     const numberFromUrl = params.get('number')?.trim()
     if (numberFromUrl) return <NumberResolver number={numberFromUrl} lang={lang} />
   } catch (_) {}
+  const storedPairId = getPairId()
+  if (storedPairId && storedPairId !== 'demo') return <RootRoute lang={lang} />
   return <LandingPage lang={lang} />
 }
 
