@@ -473,7 +473,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
         await el.play()
         console.log('[handlePlayParent] play() succeeded')
         setIsPlayingParent(true)
-        markSeen(LISTEN_ROLE_CHILD).then(() => setIsParentUnseen(false))
+        markSeen(LISTEN_ROLE_CHILD, undefined, result.dateKey).then(() => setIsParentUnseen(false))
       }
     } catch (playErr) {
       console.error('[handlePlayParent] play() FAILED:', playErr?.name, playErr?.message, playErr)

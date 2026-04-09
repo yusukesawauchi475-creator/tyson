@@ -220,6 +220,7 @@ export async function fetchAudioForPlayback(listenRole, pairId = getPairId(), _d
   const base = `/api/pair-media?pairId=${encodeURIComponent(pairId)}&dateKey=${encodeURIComponent(dateKey)}&type=audio&listenRole=${encodeURIComponent(listenRole)}&v=${cacheBuster}`;
 
   // Step 1: まずメタデータ取得（mode=signed）で hasAudio を確認
+  let resolvedDateKey = dateKey;
   try {
     console.log('[fetchAudio] checking metadata...');
     const metaRes = await fetch(base + '&mode=signed', {
@@ -238,12 +239,14 @@ export async function fetchAudioForPlayback(listenRole, pairId = getPairId(), _d
       };
     }
     const meta = await metaRes.json().catch(() => ({}));
-    console.log('[fetchAudio] meta:', { hasAudio: meta?.hasAudio, hasUrl: !!meta?.url });
+    console.log('[fetchAudio] meta:', { hasAudio: meta?.hasAudio, hasUrl: !!meta?.url, dateKey: meta?.dateKey });
+    if (meta?.dateKey) resolvedDateKey = meta.dateKey;
     if (meta?.hasAudio === false || !meta?.url) {
       return {
         error: null,
         requestId: meta?.requestId || requestId,
         hasAudio: false,
+        dateKey: resolvedDateKey,
       };
     }
   } catch (metaErr) {
@@ -284,7 +287,9 @@ export async function fetchAudioForPlayback(listenRole, pairId = getPairId(), _d
     const version = res.headers.get('X-Audio-Version') || Date.now();
     console.log('[fetchAudio] objectUrl created, type:', contentType);
 
-    return { url: objectUrl, mode: 'blob', requestId: res.headers.get('X-Request-Id') || requestId, version, hasAudio: true };
+    const headerDateKey = res.headers.get('X-Audio-DateKey');
+    if (headerDateKey) resolvedDateKey = headerDateKey;
+    return { url: objectUrl, mode: 'blob', requestId: res.headers.get('X-Request-Id') || requestId, version, hasAudio: true, dateKey: resolvedDateKey };
   } catch (e) {
     console.error('[fetchAudio] blob fetch error:', e);
     return {

@@ -501,6 +501,7 @@ async function handleGet(req, res) {
           updatedAt,
           seenAt,
           audioPath,
+          dateKey: resolvedDateKey,
           requestId: reqId,
           hasAudio: true,
         });
@@ -521,6 +522,7 @@ async function handleGet(req, res) {
     res.setHeader('Cache-Control', 'private, max-age=0, must-revalidate');
     res.setHeader('X-Audio-Version', String(version));
     res.setHeader('X-Audio-UpdatedAt', String(updatedAt));
+    res.setHeader('X-Audio-DateKey', String(resolvedDateKey));
     if (seenAt != null) res.setHeader('X-Audio-SeenAt', String(seenAt));
     res.setHeader('X-Request-Id', reqId);
     return res.status(200).send(contents);

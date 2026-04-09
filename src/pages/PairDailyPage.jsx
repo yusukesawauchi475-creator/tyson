@@ -352,7 +352,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
         await el.play()
         console.log('[handlePlay] play() succeeded')
         setIsPlaying(true)
-        markSeen(LISTEN_ROLE_PARENT).then(() => setIsChildUnseen(false))
+        markSeen(LISTEN_ROLE_PARENT, undefined, result.dateKey).then(() => setIsChildUnseen(false))
       }
     } catch (playErr) {
       console.error('[handlePlay] play() FAILED:', playErr?.name, playErr?.message, playErr)
