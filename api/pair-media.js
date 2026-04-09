@@ -81,6 +81,23 @@ function getDateKeyNY() {
   return `${y}-${m}-${d}`;
 }
 
+/** NY時間の HHMM (4桁、ゼロ埋め)。複数録音保存用のファイル名サフィックス。 */
+function getHHMMNY() {
+  const now = new Date();
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(now);
+    const get = (t) => parts.find((p) => p.type === t)?.value;
+    const h = get('hour'), m = get('minute');
+    if (h && m) return `${String(h).padStart(2, '0')}${String(m).padStart(2, '0')}`;
+  } catch {}
+  return String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0');
+}
+
 /** NY時間で昨日の YYYY-MM-DD */
 function getYesterdayKeyNY() {
   const yesterday = new Date(Date.now() - 86400000);
@@ -291,21 +308,49 @@ async function handleVoiceHistory(req, res) {
 
       for (const role of ['parent', 'child']) {
         const rd = data[role];
-        if (rd && rd.audioPath) {
-          const updatedAt = rd.updatedAt?.toMillis?.() ?? rd.version ?? null;
-          const seenAt = rd.seenAt?.toMillis?.() ?? null;
-          const isUnseen = seenAt == null || (updatedAt != null && updatedAt > seenAt);
+        if (!rd) continue;
+
+        // 録音リストを構築（新スキーマ: 配列, 旧スキーマ: 単一文字列）
+        let recordings = [];
+        if (Array.isArray(rd.audioPath) && rd.audioPath.length > 0) {
+          recordings = rd.audioPath;
+        } else if (typeof rd.audioPath === 'string' && rd.audioPath) {
+          recordings = [{ path: rd.audioPath, hhmm: null, version: rd.version, mimeType: rd.mimeType, ext: rd.extension }];
+        } else if (rd.latestAudioPath) {
+          recordings = [{ path: rd.latestAudioPath, hhmm: null, version: rd.version, mimeType: rd.mimeType }];
+        }
+        if (recordings.length === 0) continue;
+
+        const updatedAt = rd.updatedAt?.toMillis?.() ?? rd.version ?? null;
+        const seenAt = rd.seenAt?.toMillis?.() ?? null;
+        const isUnseen = seenAt == null || (updatedAt != null && updatedAt > seenAt);
+
+        const items = [];
+        for (const r of recordings) {
+          if (!r?.path) continue;
           let url = null;
           try {
-            const fileRef = storageBucket.file(rd.audioPath);
+            const fileRef = storageBucket.file(r.path);
             const [exists] = await fileRef.exists();
             if (exists) {
               const [signedUrl] = await fileRef.getSignedUrl({ action: 'read', expires: Date.now() + 3600000 });
               url = signedUrl;
             }
           } catch (_) {}
-          entry[role] = { hasAudio: true, isUnseen, updatedAt, seenAt, url, mimeType: rd.mimeType || 'audio/mp4' };
+          if (url) items.push({ url, hhmm: r.hhmm || null, version: r.version || null, mimeType: r.mimeType || 'audio/mp4' });
         }
+        if (items.length === 0) continue;
+
+        // 最新が先頭（POST時の順序を維持）
+        entry[role] = {
+          hasAudio: true,
+          isUnseen,
+          updatedAt,
+          seenAt,
+          url: items[0].url,             // 後方互換: 最新1件のURL
+          mimeType: items[0].mimeType || 'audio/mp4',
+          items,                          // 全録音
+        };
       }
       if (entry.parent || entry.child) days.push(entry);
     }
@@ -378,6 +423,15 @@ async function handleGet(req, res) {
 
     initFirebaseAdmin();
 
+    // roleData から有効なオーディオパス（文字列）を解決
+    const extractEffectivePath = (rd) => {
+      if (!rd) return null;
+      if (rd.latestAudioPath && typeof rd.latestAudioPath === 'string') return rd.latestAudioPath;
+      if (typeof rd.audioPath === 'string') return rd.audioPath;
+      if (Array.isArray(rd.audioPath) && rd.audioPath[0]?.path) return rd.audioPath[0].path;
+      return null;
+    };
+
     // Firestoreからroleデータを解決するヘルパー（今日 → 昨日フォールバック対応）
     const resolveMeta = async (dk) => {
       const ref = firestore.collection('pair_media').doc(pairId).collection('days').doc(dk);
@@ -386,9 +440,9 @@ async function handleGet(req, res) {
       const m = snap.data();
       let rd = m?.[listenRole];
       // 旧スキーマフォールバック: parent のみ許す
-      if (!rd?.audioPath) {
+      if (!extractEffectivePath(rd)) {
         if (listenRole === 'parent' && m?.audioPath) {
-          rd = { audioPath: m.audioPath, mimeType: m.mimeType, extension: m.extension,
+          rd = { audioPath: m.audioPath, latestAudioPath: m.audioPath, mimeType: m.mimeType, extension: m.extension,
                   uploadedAt: m.uploadedAt, uploadedBy: m.uploadedBy,
                   version: m.uploadedAt?.toMillis?.() || Date.now(), isLegacy: true };
         } else {
@@ -422,10 +476,10 @@ async function handleGet(req, res) {
     const { meta, roleData, isLegacy, resolvedDateKey } = resolved;
     const objectPath = isLegacy ? 'audioPath' : listenRole;
 
-    logObserve({ requestId: reqId, stage: 'get_resolve', status: 'ok', pairId, role: listenRole, clientDateKey, serverDateKey, storagePath: roleData.audioPath, firestoreDocPath, httpStatus: 200, errorCode: null, note: resolvedDateKey !== dateKey ? `fallback_to_${resolvedDateKey}` : undefined });
-
-    const audioPath = roleData.audioPath;
+    const audioPath = extractEffectivePath(roleData);
     const resolvedAudioPath = audioPath;
+
+    logObserve({ requestId: reqId, stage: 'get_resolve', status: 'ok', pairId, role: listenRole, clientDateKey, serverDateKey, storagePath: audioPath, firestoreDocPath, httpStatus: 200, errorCode: null, note: resolvedDateKey !== dateKey ? `fallback_to_${resolvedDateKey}` : undefined });
     const version = roleData.version || roleData.uploadedAt?.toMillis?.() || Date.now();
     logObserve({ requestId: reqId, stage: 'get_resolve', status: 'ok', pairId, role: listenRole, clientDateKey, serverDateKey, ...(dateKeyNormalized ? { note: 'dateKey_normalized' } : {}), storagePath: resolvedAudioPath, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
 
@@ -568,18 +622,10 @@ async function handlePost(req, res) {
 
     const mimeType = audioFile.mimeType || 'audio/mp4';
     const ext = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('m4a') ? 'm4a' : 'webm';
-    // 固定ファイル名で上書き保証。拡張子が変わった場合は旧ファイルを削除
-    const objectPath = `pair-media/${pairId}/${dateKey}/${role}/recording.${ext}`;
-    // 旧ファイル削除（異なる拡張子の残骸を防ぐ）
-    const otherExts = ['mp4', 'm4a', 'webm'].filter(e => e !== ext);
-    for (const oldExt of otherExts) {
-      try {
-        const oldPath = `pair-media/${pairId}/${dateKey}/${role}/recording.${oldExt}`;
-        const oldFile = storageBucket.file(oldPath);
-        const [exists] = await oldFile.exists();
-        if (exists) await oldFile.delete();
-      } catch (_) {}
-    }
+    // 時刻付きファイル名で複数録音を保存（同じ日に複数回録音できる）
+    const hhmm = getHHMMNY();
+    const objectPath = `pair-media/${pairId}/${dateKey}/${role}/recording_${hhmm}.${ext}`;
+    // NOTE: 過去の録音は削除しない（複数録音保存のため）
     const version = Date.now();
     try {
       const fileRef = storageBucket.file(objectPath);
@@ -597,9 +643,19 @@ async function handlePost(req, res) {
 
     try {
       const metaRef = firestore.collection('pair_media').doc(pairId).collection('days').doc(dateKey);
+
+      // 既存のaudioPath配列を取得して新エントリを先頭に追加
+      const existingSnap = await metaRef.get();
+      const existingRole = existingSnap.exists ? (existingSnap.data()?.[role] || {}) : {};
+      const existingArray = Array.isArray(existingRole.audioPath) ? existingRole.audioPath : [];
+
+      const newEntry = { path: objectPath, hhmm, version, mimeType, ext };
+      const audioPathArray = [newEntry, ...existingArray.filter(e => e?.path !== objectPath)];
+
       const uploadedAtTs = admin.firestore.FieldValue.serverTimestamp();
       const roleData = {
-        audioPath: objectPath,
+        audioPath: audioPathArray,        // 配列: 全録音（新しい順）
+        latestAudioPath: objectPath,      // 文字列: 最新1件
         storagePath: objectPath,
         mimeType,
         extension: ext,
@@ -696,7 +752,10 @@ async function handlePatch(req, res) {
       return res.status(200).json({ success: true, requestId: reqId });
     }
     const roleData = metaSnap.data()?.[role];
-    if (!roleData?.audioPath) {
+    const hasAnyAudio = !!(roleData?.latestAudioPath
+      || (typeof roleData?.audioPath === 'string' && roleData.audioPath)
+      || (Array.isArray(roleData?.audioPath) && roleData.audioPath.length > 0));
+    if (!hasAnyAudio) {
       logObserve({ requestId: reqId, stage: 'mark_seen', status: 'ok', pairId, role, dateKey, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
       return res.status(200).json({ success: true, requestId: reqId });
     }
