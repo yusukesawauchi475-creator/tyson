@@ -63,6 +63,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   const uploadingRef = useRef(false)
   const loadingParentRef = useRef(false)
   const playingParentRef = useRef(false)
+  const partnerDateKeyRef = useRef(null)
   const journalGalleryInputRef = useRef(null)
   const journalCameraInputRef = useRef(null)
   const genericGalleryInputRef = useRef(null)
@@ -355,9 +356,10 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   const refreshParentStatus = () => {
     setHasParentAudio(null)
     setIsParentUnseen(false)
-    getListenRoleMeta(LISTEN_ROLE_CHILD).then(({ hasAudio, isUnseen }) => {
+    getListenRoleMeta(LISTEN_ROLE_CHILD).then(({ hasAudio, isUnseen, dateKey: dk }) => {
       setHasParentAudio(hasAudio)
       setIsParentUnseen(!!isUnseen)
+      if (dk) partnerDateKeyRef.current = dk
     })
   }
 
@@ -414,8 +416,8 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   useEffect(() => {
     let cancelled = false
     getListenRoleMeta(LISTEN_ROLE_CHILD)
-      .then(({ hasAudio, isUnseen }) => {
-        if (!cancelled) { setHasParentAudio(hasAudio); setIsParentUnseen(!!isUnseen) }
+      .then(({ hasAudio, isUnseen, dateKey: dk }) => {
+        if (!cancelled) { setHasParentAudio(hasAudio); setIsParentUnseen(!!isUnseen); if (dk) partnerDateKeyRef.current = dk }
       })
       .catch((e) => setJournalError(t(lang, 'initError', { msg: e?.message || String(e) })))
     return () => { cancelled = true }
@@ -425,9 +427,10 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
     const tick = () => {
       if (document.visibilityState !== 'visible') return
       if (uploadingRef.current || loadingParentRef.current || playingParentRef.current) return
-      getListenRoleMeta(LISTEN_ROLE_CHILD).then(({ hasAudio, isUnseen }) => {
+      getListenRoleMeta(LISTEN_ROLE_CHILD).then(({ hasAudio, isUnseen, dateKey: dk }) => {
         setHasParentAudio(hasAudio)
         setIsParentUnseen(!!isUnseen)
+        if (dk) partnerDateKeyRef.current = dk
       }).catch(() => {})
     }
     const start = () => { if (pollIntervalRef.current != null) return; pollIntervalRef.current = setInterval(tick, 60 * 1000) }
@@ -473,7 +476,8 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
         await el.play()
         console.log('[handlePlayParent] play() succeeded')
         setIsPlayingParent(true)
-        markSeen(LISTEN_ROLE_CHILD, undefined, result.dateKey).then(() => setIsParentUnseen(false))
+        const seenDateKey = result.dateKey || partnerDateKeyRef.current
+        markSeen(LISTEN_ROLE_CHILD, undefined, seenDateKey).then(() => setIsParentUnseen(false)).catch(() => {})
       }
     } catch (playErr) {
       console.error('[handlePlayParent] play() FAILED:', playErr?.name, playErr?.message, playErr)

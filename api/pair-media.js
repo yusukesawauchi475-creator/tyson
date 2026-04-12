@@ -354,6 +354,7 @@ async function handleVoiceHistory(req, res) {
       }
       if (entry.parent || entry.child) days.push(entry);
     }
+    res.setHeader('Cache-Control', 'no-store');
     return res.status(200).json({ success: true, days });
   } catch (e) {
     console.error('[voice-history] error:', e.message, e.stack?.substring(0, 200));
@@ -493,6 +494,7 @@ async function handleGet(req, res) {
         });
         const updatedAt = roleData.updatedAt?.toMillis?.() ?? roleData.version ?? Date.now();
         const seenAt = roleData.seenAt?.toMillis?.() ?? null;
+        res.setHeader('Cache-Control', 'no-store');
         return res.status(200).json({
           success: true,
           mode: 'signed',
@@ -782,6 +784,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Request-Id');
+  res.setHeader('Access-Control-Expose-Headers', 'X-Audio-DateKey, X-Audio-Version, X-Audio-UpdatedAt, X-Audio-SeenAt, X-Audio-MimeType, X-Request-Id');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 

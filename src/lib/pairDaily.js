@@ -411,8 +411,9 @@ export async function getListenRoleMeta(listenRole, pairId = getPairId()) {
     const updatedAt = d?.updatedAt ?? null;
     const seenAt = d?.seenAt ?? null;
     const isUnseen = hasAudio && (seenAt == null || (updatedAt != null && updatedAt > seenAt));
-    console.log('[getListenRoleMeta] hasAudio:', hasAudio, 'isUnseen:', isUnseen);
-    return { hasAudio, isUnseen };
+    const dateKey = d?.dateKey ?? null;
+    console.log('[getListenRoleMeta] hasAudio:', hasAudio, 'isUnseen:', isUnseen, 'dateKey:', dateKey);
+    return { hasAudio, isUnseen, dateKey };
   } catch (err) {
     console.log('[getListenRoleMeta] catch:', err?.message);
     return { hasAudio: null, isUnseen: false }; // ネットワークエラー→null（誤表示防止）

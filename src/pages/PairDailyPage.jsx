@@ -68,6 +68,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   const { level, isSpeaking, start: startAudioLevel, stop: stopAudioLevel } = useAudioLevel()
   const [uploadErrorModal, setUploadErrorModal] = useState({ visible: false, message: '', onRetry: null })
   const lastFailedPhotoRef = useRef(null)
+  const partnerDateKeyRef = useRef(null)
 
   const navigate = useNavigate()
   const ROLE_CHILD = role
@@ -91,9 +92,10 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
     if (isDemoTest) { setHasAudio(true); return }
     setHasAudio(null)
     setIsChildUnseen(false)
-    getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio, isUnseen }) => {
+    getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio, isUnseen, dateKey: dk }) => {
       setHasAudio(hasAudio)
       setIsChildUnseen(!!isUnseen)
+      if (dk) partnerDateKeyRef.current = dk
     })
   }
 
@@ -258,10 +260,11 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
     setDateKey(currentDateKey)
     let cancelled = false
     if (!isDemoTest) {
-      getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio, isUnseen }) => {
+      getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio, isUnseen, dateKey: dk }) => {
         if (!cancelled) {
           setHasAudio(hasAudio)
           setIsChildUnseen(!!isUnseen)
+          if (dk) partnerDateKeyRef.current = dk
         }
       })
     }
@@ -352,7 +355,8 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
         await el.play()
         console.log('[handlePlay] play() succeeded')
         setIsPlaying(true)
-        markSeen(LISTEN_ROLE_PARENT, undefined, result.dateKey).then(() => setIsChildUnseen(false))
+        const seenDateKey = result.dateKey || partnerDateKeyRef.current
+        markSeen(LISTEN_ROLE_PARENT, undefined, seenDateKey).then(() => setIsChildUnseen(false)).catch(() => {})
       }
     } catch (playErr) {
       console.error('[handlePlay] play() FAILED:', playErr?.name, playErr?.message, playErr)
