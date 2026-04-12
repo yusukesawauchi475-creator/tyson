@@ -154,6 +154,28 @@ export default function AlbumPage({ lang = 'ja' }) {
   }
 
   const currentPhoto = lightboxIndex != null ? allPhotos[lightboxIndex] : null
+  const [downloading, setDownloading] = useState(false)
+  const [iosHint, setIosHint] = useState(false)
+
+  const isIOS = typeof navigator !== 'undefined' && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
+
+  const handleDownload = useCallback(async (e) => {
+    e.stopPropagation()
+    if (!currentPhoto?.url) return
+    if (isIOS) { setIosHint(true); setTimeout(() => setIosHint(false), 3000); return }
+    setDownloading(true)
+    try {
+      const res = await fetch(currentPhoto.url)
+      const blob = await res.blob()
+      const ext = blob.type?.includes('png') ? 'png' : blob.type?.includes('webp') ? 'webp' : 'jpg'
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(blob)
+      a.download = `hum_${currentPhoto.dateKey || 'photo'}_${lightboxIndex + 1}.${ext}`
+      a.click()
+      URL.revokeObjectURL(a.href)
+    } catch (_) {}
+    setDownloading(false)
+  }, [currentPhoto, lightboxIndex, isIOS])
 
   if (!pairId && !isDemo) {
     return (
@@ -421,6 +443,29 @@ export default function AlbumPage({ lang = 'ja' }) {
           >
             ×
           </button>
+
+          {/* Download button */}
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={downloading}
+            style={{ position: 'absolute', top: 16, left: 16, background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '8px 14px', borderRadius: 8, lineHeight: 1, zIndex: 1, display: 'flex', alignItems: 'center', gap: 6 }}
+            aria-label={lang === 'en' ? 'Download' : 'ダウンロード'}
+          >
+            <span style={{ fontSize: 18 }}>⬇</span>
+            {downloading ? '...' : (lang === 'en' ? 'Save' : '保存')}
+          </button>
+
+          {/* iOS hint */}
+          {iosHint && (
+            <div onClick={(e) => e.stopPropagation()} style={{
+              position: 'absolute', top: 56, left: 16, right: 16,
+              background: 'rgba(0,0,0,0.85)', color: '#fff', fontSize: 13,
+              padding: '12px 16px', borderRadius: 10, textAlign: 'center', zIndex: 2,
+            }}>
+              {lang === 'en' ? 'Long press the photo to save it' : '写真を長押しして保存してください'}
+            </div>
+          )}
 
           {lightboxIndex > 0 && (
             <button
