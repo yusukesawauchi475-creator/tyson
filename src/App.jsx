@@ -9,7 +9,7 @@ import LandingPage from './pages/LandingPage'
 import RoleSelectPage from './pages/RoleSelectPage'
 import { getUserRole, clearUserRole, getPairId, PAIR_ID_STORAGE_KEY } from './lib/pairDaily'
 import PwaInstallBanner, { BANNER_HEIGHT } from './components/PwaInstallBanner'
-import { db } from './lib/firebase'
+import { db, getIdTokenForApi } from './lib/firebase'
 import { doc, getDoc } from 'firebase/firestore'
 
 function NumberResolver({ lang = 'ja', number }) {
@@ -22,6 +22,8 @@ function NumberResolver({ lang = 'ja', number }) {
   useEffect(() => {
     ;(async () => {
       try {
+        // Firebase Security Rules で認証必須のため、先に匿名認証を完了させる
+        await getIdTokenForApi()
         const snap = await getDoc(doc(db, 'pair_numbers', String(number)))
         if (snap.exists()) {
           const pairId = snap.data()?.pairId
