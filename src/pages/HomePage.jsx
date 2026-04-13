@@ -456,7 +456,6 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
     if (el) { el.pause(); el.src = ''; el.load() }
     setParentAudioUrl(null)
     const result = await fetchAudioForPlayback(LISTEN_ROLE_CHILD)
-    console.log('[DEBUG-markSeen] fetchAudioForPlayback result.dateKey:', result.dateKey, 'partnerDateKeyRef:', partnerDateKeyRef.current, 'hasAudio:', result.hasAudio, 'error:', result.error)
     if (result.error) {
       console.error('[handlePlayParent] fetchAudio error:', result.errorCode, result.error)
       setErrorLine(`再生エラー: ${result.errorCode} - ${result.error}`)
@@ -478,8 +477,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
         console.log('[handlePlayParent] play() succeeded')
         setIsPlayingParent(true)
         const seenDateKey = result.dateKey || partnerDateKeyRef.current
-        console.log('[DEBUG-markSeen] calling markSeen with:', { listenRole: LISTEN_ROLE_CHILD, pairId: 'default(getPairId)', dateKey: seenDateKey })
-        markSeen(LISTEN_ROLE_CHILD, undefined, seenDateKey).then((res) => { console.log('[DEBUG-markSeen] markSeen response:', res); setIsParentUnseen(false) }).catch((err) => { console.error('[DEBUG-markSeen] markSeen error:', err) })
+        markSeen(LISTEN_ROLE_CHILD, undefined, seenDateKey).then(() => setIsParentUnseen(false)).catch(() => {})
       }
     } catch (playErr) {
       console.error('[handlePlayParent] play() FAILED:', playErr?.name, playErr?.message, playErr)

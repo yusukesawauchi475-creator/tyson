@@ -16,8 +16,8 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
       const idToken = await getIdTokenForApi()
       if (!idToken || cancelled) { setLoading(false); return }
       try {
-        const res = await fetch(`/api/pair-media?action=voice-history&pairId=${encodeURIComponent(effectivePairId)}&limit=7`, {
-          headers: { Authorization: `Bearer ${idToken}` },
+        const res = await fetch(`/api/pair-media?action=voice-history&pairId=${encodeURIComponent(effectivePairId)}&limit=7&v=${Date.now()}`, {
+          headers: { Authorization: `Bearer ${idToken}`, Pragma: 'no-cache' },
           cache: 'no-store',
         })
         if (!res.ok) { setLoading(false); return }
