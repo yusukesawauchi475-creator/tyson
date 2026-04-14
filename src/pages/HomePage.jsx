@@ -548,42 +548,34 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
         <WeeklySummary lang={lang} />
 
         {/* (1) Receive card */}
-        <section style={{ width: '100%', background: '#E8FFF4', borderRadius: 14, padding: 10, boxShadow: '0 2px 16px rgba(48,168,112,0.06)', overflow: 'hidden' }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: '#30A870', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t(lang, 'partnerRecordingListen')}</p>
+        <section style={{ width: '100%', background: '#E8FFF4', borderRadius: 14, padding: '6px 10px', boxShadow: '0 2px 12px rgba(48,168,112,0.06)', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <p style={{ fontSize: 10, fontWeight: 600, color: '#30A870', margin: 0, letterSpacing: '0.03em' }}>{t(lang, 'partnerRecordingListen')}</p>
+            {hasParentAudio !== null && (
+              <button type="button" onClick={refreshParentStatus} style={{ padding: '2px 8px', fontSize: 10, color: '#30A870', background: 'transparent', border: '1px solid #30A870', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>{t(lang, 'refresh')}</button>
+            )}
+          </div>
           {hasParentAudio === true ? (
-            <>
-              <p style={{ fontSize: 14, color: '#1A6040', fontWeight: 700, margin: '0 0 10px' }}>
-                {t(lang, 'received')}
-                {isParentUnseen && <span style={{ marginLeft: 6, color: '#E04040' }} title={lang === 'en' ? 'Unplayed' : '未再生'}>●</span>}
-              </p>
-              <button type="button" onClick={handlePlayParent} disabled={isLoadingParent} style={{ width: '100%', padding: 10, fontSize: 15, fontWeight: 700, color: '#fff', background: isLoadingParent ? '#B0A0C8' : isPlayingParent ? 'linear-gradient(160deg,#E04040,#C02020)' : 'linear-gradient(160deg,#40D890,#18B868)', border: 'none', borderRadius: 12, cursor: isLoadingParent ? 'wait' : 'pointer', boxShadow: isLoadingParent ? 'none' : isPlayingParent ? '0 4px 0 #901010' : '0 4px 0 #109848', marginBottom: 6 }}>
-                {isLoadingParent ? t(lang, 'loading') : isPlayingParent ? (lang === 'en' ? '⏹ Stop' : '⏹ 停止') : (lang === 'en' ? '▶ Play' : '▶ 再生')}
-              </button>
-            </>
+            <button type="button" onClick={handlePlayParent} disabled={isLoadingParent} style={{ width: '100%', padding: 12, fontSize: 16, fontWeight: 700, color: '#fff', background: isLoadingParent ? '#B0A0C8' : isPlayingParent ? 'linear-gradient(160deg,#E04040,#C02020)' : 'linear-gradient(160deg,#40D890,#18B868)', border: 'none', borderRadius: 12, cursor: isLoadingParent ? 'wait' : 'pointer', boxShadow: isLoadingParent ? 'none' : isPlayingParent ? '0 4px 0 #901010' : '0 4px 0 #109848' }}>
+              {isLoadingParent ? t(lang, 'loading') : isPlayingParent ? (lang === 'en' ? '⏹ Stop' : '⏹ 停止') : (lang === 'en' ? '▶ Play' : '▶ 再生')}
+              {isParentUnseen && !isPlayingParent && !isLoadingParent && <span style={{ marginLeft: 6, color: '#FFE040' }}>●</span>}
+            </button>
           ) : hasParentAudio === false ? (
-            <p style={{ fontSize: 14, color: '#1A6040', margin: '0 0 10px', opacity: 0.6 }}>{t(lang, 'notReceivedYet')}</p>
+            <p style={{ fontSize: 13, color: '#1A6040', margin: '4px 0', opacity: 0.5, textAlign: 'center' }}>{t(lang, 'notReceivedYet')}</p>
           ) : (
-            <>
-              <p style={{ fontSize: 14, color: '#1A6040', margin: '0 0 10px', opacity: 0.6 }}>{t(lang, 'checking')}</p>
-              {showReloadButton && (
-                <button type="button" onClick={() => window.location.reload()} style={{ padding: '6px 14px', fontSize: 12, color: '#30A870', border: '1.5px solid #30A870', borderRadius: 10, background: '#fff', cursor: 'pointer', fontWeight: 600 }}>{t(lang, 'reload')}</button>
-              )}
-            </>
-          )}
-          {hasParentAudio !== null && (
-            <button type="button" onClick={refreshParentStatus} style={{ padding: '5px 14px', fontSize: 12, color: '#30A870', background: 'transparent', border: '1.5px solid #30A870', borderRadius: 10, cursor: 'pointer', fontWeight: 600 }}>{t(lang, 'refresh')}</button>
+            <p style={{ fontSize: 13, color: '#1A6040', margin: '4px 0', opacity: 0.5, textAlign: 'center' }}>{t(lang, 'checking')}</p>
           )}
         </section>
 
         {/* (2) Send card */}
-        <section style={{ width: '100%', background: '#FFF4E8', borderRadius: 14, padding: 10, boxShadow: '0 2px 16px rgba(208,112,48,0.06)', overflow: 'hidden' }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: '#D07030', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t(lang, 'myRecordingRecordSend')}</p>
-          <button type="button" onClick={handleClick} disabled={isUploading} style={{ width: '100%', padding: 10, fontSize: 15, fontWeight: 700, color: '#fff', background: isUploading ? '#B0A0C8' : isRecording ? 'linear-gradient(160deg,#FF4040,#C02020)' : 'linear-gradient(160deg,#FF8848,#F04818)', border: 'none', borderRadius: 12, cursor: isUploading ? 'wait' : 'pointer', boxShadow: isUploading ? 'none' : isRecording ? '0 4px 0 #901010' : '0 4px 0 #C03010' }}>
-            {isUploading ? t(lang, 'sending') : isRecording ? t(lang, 'recording') : t(lang, 'record')}
+        <section style={{ width: '100%', background: '#FFF4E8', borderRadius: 14, padding: '6px 10px', boxShadow: '0 2px 12px rgba(208,112,48,0.06)', overflow: 'hidden' }}>
+          <p style={{ fontSize: 10, fontWeight: 600, color: '#D07030', margin: '0 0 4px', letterSpacing: '0.03em' }}>{t(lang, 'myRecordingRecordSend')}</p>
+          <button type="button" onClick={handleClick} disabled={isUploading} style={{ width: '100%', padding: 12, fontSize: 16, fontWeight: 700, color: '#fff', background: isUploading ? '#B0A0C8' : isRecording ? 'linear-gradient(160deg,#FF4040,#C02020)' : 'linear-gradient(160deg,#FF8848,#F04818)', border: 'none', borderRadius: 12, cursor: isUploading ? 'wait' : 'pointer', boxShadow: isUploading ? 'none' : isRecording ? '0 4px 0 #901010' : '0 4px 0 #C03010' }}>
+            {isUploading ? t(lang, 'sending') : isRecording ? (lang === 'en' ? '⏹ Recording...' : '⏹ 録音中…') : (lang === 'en' ? '🎙 Record' : '🎙 録音')}
           </button>
 
           {isRecording && isSpeaking && (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 4, marginTop: 8, height: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 4, marginTop: 6, height: 20 }}>
               {[0, 1, 2, 3, 4].map((i) => {
                 const jitter = (Math.random() - 0.5) * 0.1
                 const scale = Math.max(0.2, Math.min(1.0, level * 8 + jitter))
@@ -593,7 +585,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           )}
 
           {sentAt && (
-            <p style={{ fontSize: 14, color: '#804020', fontWeight: 600, margin: '10px 0 0', textAlign: 'center' }}>
+            <p style={{ fontSize: 12, color: '#804020', fontWeight: 600, margin: '6px 0 0', textAlign: 'center' }}>
               {t(lang, 'sentAt', { time: sentAtStr })}
             </p>
           )}
@@ -601,21 +593,17 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           <DailyPromptCard pairId={getPairId()} role={ROLE_PARENT} onTopicChange={handleTopicChange} lang={lang} />
 
           {oneLinerVisible && oneLiner && (
-            <div style={{ width: '100%', marginTop: 12, padding: '12px 16px', background: 'rgba(255,255,255,0.55)', borderRadius: 10, fontSize: 14, color: '#804020', textAlign: 'center', lineHeight: 1.5 }}>{oneLiner}</div>
+            <div style={{ width: '100%', marginTop: 8, padding: '8px 12px', background: 'rgba(255,255,255,0.55)', borderRadius: 8, fontSize: 13, color: '#804020', textAlign: 'center', lineHeight: 1.4 }}>{oneLiner}</div>
           )}
           {analysisVisible && analysisComment && (
-            <div style={{ width: '100%', marginTop: 8, padding: '8px 12px', fontSize: 12, color: '#B08050', textAlign: 'center', lineHeight: 1.4, whiteSpace: 'pre-line' }}>{analysisComment}</div>
+            <div style={{ width: '100%', marginTop: 6, padding: '6px 10px', fontSize: 11, color: '#B08050', textAlign: 'center', lineHeight: 1.3, whiteSpace: 'pre-line' }}>{analysisComment}</div>
           )}
         </section>
 
         {/* (3) Photos card */}
-        <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 14, padding: 10, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: '#7050C0', margin: '0 0 10px' }}>
-            📷 {lang === 'en' ? "Today's Photos" : '今日の写真'}　<span style={{ fontWeight: 500, color: '#8070A0' }}>{isDemoTest ? 3 : photos.filter((p) => p.role === ROLE_PARENT).length}/3{lang === 'en' ? '' : '枚'}</span>
-          </p>
-
+        <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 14, padding: '6px 10px', boxShadow: '0 2px 12px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
           {isDemoTest ? (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', padding: '4px 0' }}>
               {['/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp', '/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png', '/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp'].map((url, i) => (
                 <img key={i} src={url} alt="" width={88} height={88} style={{ width: 88, height: 88, objectFit: 'cover', display: 'block', borderRadius: 11 }} />
               ))}
@@ -625,26 +613,13 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
               <input ref={genericGalleryInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f && typeof f.type === 'string' && f.type.startsWith('image/')) handleJournalFile(f, 'generic_image'); e.target.value = '' }} />
               <input ref={genericCameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'generic_image'); e.target.value = '' }} />
 
-              <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-                {photos.slice(0, 6).map((ph, i) => (
-                  <button key={ph.storagePath + String(i)} type="button" onClick={() => navigate(lang === 'en' ? `/album/eng?pairId=${currentPairId}` : `/album?pairId=${currentPairId}`, { state: { scrollToDate: dateKey } })} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 11, overflow: 'hidden', flexShrink: 0 }} aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}>
-                    <img src={ph.url || ''} alt="" width={52} height={52} style={{ width: 52, height: 52, objectFit: 'cover', display: 'block', borderRadius: 11 }} />
-                  </button>
-                ))}
-                {photos.filter((p) => p.role === ROLE_PARENT).length < 3 && (
-                  <button type="button" onClick={() => { if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }} disabled={journalUploading} style={{ width: 52, height: 52, border: '2px dashed #9070C8', borderRadius: 11, background: 'rgba(112,80,208,0.12)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, cursor: 'pointer', padding: 0 }}>
-                    <span style={{ fontSize: 20, lineHeight: 1 }}>📷</span>
-                    <span style={{ fontSize: 8, color: '#9070C8', fontWeight: 600, lineHeight: 1 }}>{lang === 'en' ? 'Add' : '追加'}</span>
-                  </button>
-                )}
-              </div>
-
               {dailyPhotoLimitMessage && (
-                <p style={{ fontSize: 12, color: '#B0A0C8', margin: '0 0 8px' }}>{dailyPhotoLimitMessage}</p>
+                <p style={{ fontSize: 11, color: '#B0A0C8', margin: '0 0 4px' }}>{dailyPhotoLimitMessage}</p>
               )}
 
-              <button type="button" disabled={journalUploading} onClick={() => { if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }} style={{ width: '100%', padding: 10, fontSize: 14, fontWeight: 700, color: '#fff', background: 'linear-gradient(160deg,#B890F8,#8058D0)', border: 'none', borderRadius: 12, cursor: 'pointer', boxShadow: '0 4px 0 #5838A8' }}>
+              <button type="button" disabled={journalUploading} onClick={() => { if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }} style={{ width: '100%', padding: 12, fontSize: 16, fontWeight: 700, color: '#fff', background: 'linear-gradient(160deg,#B890F8,#8058D0)', border: 'none', borderRadius: 12, cursor: 'pointer', boxShadow: '0 4px 0 #5838A8' }}>
                 {lang === 'en' ? '📷 Add Photo' : '📷 写真を追加する'}
+                {photos.length > 0 && <span style={{ marginLeft: 6, fontSize: 13, opacity: 0.8 }}>({photos.filter((p) => p.role === ROLE_PARENT).length}/3)</span>}
               </button>
             </>
           )}
