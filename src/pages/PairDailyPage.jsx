@@ -815,42 +815,29 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
 
         {/* (3) Photos card */}
         {!isDemoTest && <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 14, padding: '6px 10px', boxShadow: '0 2px 12px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
-          <>
-            <input ref={genericGalleryInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f && typeof f.type === 'string' && f.type.startsWith('image/')) handleJournalFile(f, 'generic_image'); e.target.value = '' }} />
-            <input ref={genericCameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'generic_image'); e.target.value = '' }} />
+          <p style={{ fontSize: 10, fontWeight: 600, color: '#7050C0', margin: '0 0 4px', letterSpacing: '0.03em' }}>
+            📷 {lang === 'en' ? "Today's Photos" : '今日の写真'} <span style={{ fontWeight: 500, color: '#8070A0' }}>{photos.filter((p) => p.role === ROLE_CHILD).length}/3{lang === 'en' ? '' : '枚'}</span>
+          </p>
 
-            {dailyPhotoLimitMessage && <p style={{ fontSize: 11, color: '#B0A0C8', margin: '0 0 4px' }}>{dailyPhotoLimitMessage}</p>}
+          <input ref={genericGalleryInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f && typeof f.type === 'string' && f.type.startsWith('image/')) handleJournalFile(f, 'generic_image'); e.target.value = '' }} />
+          <input ref={genericCameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'generic_image'); e.target.value = '' }} />
 
-            <button type="button" disabled={journalUploading} onClick={() => { if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }} style={{ width: '100%', padding: 12, fontSize: 16, fontWeight: 700, color: '#fff', background: 'linear-gradient(160deg,#B890F8,#8058D0)', border: 'none', borderRadius: 12, cursor: 'pointer', boxShadow: '0 4px 0 #5838A8' }}>
-              {lang === 'en' ? '📷 Add Photo' : '📷 写真を追加する'}
-              {photos.length > 0 && <span style={{ marginLeft: 6, fontSize: 13, opacity: 0.8 }}>({photos.filter((p) => p.role === ROLE_CHILD).length}/3)</span>}
-            </button>
-          </>
+          {photos.length > 0 && (
+            <div style={{ display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
+              {photos.slice(0, 6).map((ph, i) => (
+                <button key={ph.storagePath + String(i)} type="button" onClick={() => navigate(lang === 'en' ? `/album/eng?pairId=${currentPairId}` : `/album?pairId=${currentPairId}`, { state: { scrollToDate: dateKey } })} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 8, overflow: 'hidden', flexShrink: 0 }} aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}>
+                  <img src={ph.url || ''} alt="" width={48} height={48} style={{ width: 48, height: 48, objectFit: 'cover', display: 'block', borderRadius: 8 }} />
+                </button>
+              ))}
+            </div>
+          )}
+
+          {dailyPhotoLimitMessage && <p style={{ fontSize: 11, color: '#B0A0C8', margin: '0 0 4px' }}>{dailyPhotoLimitMessage}</p>}
+
+          <button type="button" disabled={journalUploading} onClick={() => { if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }} style={{ width: '100%', padding: 12, fontSize: 16, fontWeight: 700, color: '#fff', background: 'linear-gradient(160deg,#B890F8,#8058D0)', border: 'none', borderRadius: 12, cursor: 'pointer', boxShadow: '0 4px 0 #5838A8' }}>
+            {lang === 'en' ? '📷 Add Photo' : '📷 写真を追加する'}
+          </button>
         </section>}
-
-        {/* (4) Journal card */}
-        {!isDemoTest ? (
-          <section style={{ width: '100%', minHeight: 180, background: '#FFF4F8', borderRadius: 22, padding: '36px 24px', boxShadow: '0 2px 16px rgba(192,64,128,0.06)', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-            <span style={{ fontSize: 48, lineHeight: 1 }}>📖</span>
-            <p style={{ fontSize: 18, fontWeight: 800, color: '#C04080', margin: 0, letterSpacing: '0.04em' }}>
-              {lang === 'en' ? 'Today\'s Note' : '今日の記録'}
-            </p>
-            <p style={{ fontSize: 13, color: '#D090B0', margin: 0, fontStyle: 'italic', letterSpacing: '0.08em' }}>
-              {lang === 'en' ? '✨ coming soon ✨' : '✨ 近日公開 ✨'}
-            </p>
-          </section>
-        ) : (
-          <section style={{ width: '100%', background: 'linear-gradient(135deg, #F0EEFF, #E8F4FF)', borderRadius: 22, padding: 28, overflow: 'hidden', textAlign: 'center' }}>
-            <style>{`@keyframes bounceDown { 0%,100% { transform: translateY(0); } 50% { transform: translateY(10px); } }`}</style>
-            <p style={{ fontSize: 18, fontWeight: 800, color: '#5040A0', margin: '0 0 8px' }}>
-              {lang === 'en' ? '📷 Record photos & voice' : '📷 写真・声を記録しよう'}
-            </p>
-            <div style={{ fontSize: 32, animation: 'bounceDown 1.5s ease-in-out infinite', background: 'linear-gradient(135deg, #A060FF, #60B0FF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: '12px 0' }}>↓</div>
-            <button type="button" onClick={() => navigate(lang === 'en' ? `/album/eng?pairId=${currentPairId}` : `/album?pairId=${currentPairId}`)} style={{ padding: '14px 32px', fontSize: 16, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg, #FF60B0, #A060FF)', border: 'none', borderRadius: 16, cursor: 'pointer', boxShadow: '0 4px 16px rgba(160,96,255,.3)' }}>
-              {lang === 'en' ? 'View Album →' : 'アルバムを見る →'}
-            </button>
-          </section>
-        )}
 
         {errorLine && <p style={{ fontSize: 14, color: '#E04040', textAlign: 'center', margin: 0 }}>{errorLine}</p>}
       </main>
