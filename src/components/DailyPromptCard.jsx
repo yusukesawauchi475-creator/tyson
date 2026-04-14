@@ -264,8 +264,8 @@ export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role, onTopicCh
   return (
     <div style={{
       width: '100%',
-      marginTop: 16,
-      padding: '12px 16px',
+      marginTop: 8,
+      padding: '8px 12px',
       background: '#f8f9fa',
       border: '1px solid #e0e0e0',
       borderRadius: 8,
