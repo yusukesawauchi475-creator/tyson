@@ -321,19 +321,21 @@ async function handleGet(req, res) {
       return { data, hasImage, updatedAt: upAt, signedUrl, photos, dateKey: dk, requestId: data?.requestId ?? rd?.uploadId ?? null, storagePath: rd?.storagePath ?? null };
     };
 
-    // 今日 → 昨日フォールバック（日付ズレ対策: pair-media.js の handleGet と同じパターン）
+    // 今日を試す → なければ最新の写真がある日を探す
     let resolved = await resolveDay(dateKey);
     if (!resolved || (resolved.photos.length === 0 && !resolved.hasImage)) {
-      const yesterday = new Date(Date.now() - 86400000);
       try {
-        const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(yesterday);
-        const get = (t) => parts.find((p) => p.type === t)?.value;
-        const yKey = `${get('year')}-${get('month')}-${get('day')}`;
-        if (yKey !== dateKey) {
-          const yesterdayResult = await resolveDay(yKey);
-          if (yesterdayResult && (yesterdayResult.photos.length > 0 || yesterdayResult.hasImage)) {
-            resolved = yesterdayResult;
-          }
+        const monthRefs = await firestore.collection('journal').doc(pairId).collection('months').listDocuments();
+        const allDayKeys = [];
+        for (const mRef of monthRefs) {
+          const dayRefs = await mRef.collection('days').listDocuments();
+          for (const dRef of dayRefs) allDayKeys.push(dRef.id);
+        }
+        allDayKeys.sort((a, b) => b.localeCompare(a)); // newest first
+        for (const dk of allDayKeys) {
+          if (dk === dateKey) continue;
+          const fallback = await resolveDay(dk);
+          if (fallback && (fallback.photos.length > 0 || fallback.hasImage)) { resolved = fallback; break; }
         }
       } catch (_) {}
     }

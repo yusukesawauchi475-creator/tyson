@@ -549,7 +549,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
         <WeeklySummary lang={lang} />
 
         {/* (1) Receive card */}
-        <section style={{ width: '100%', background: '#E8FFF4', borderRadius: 14, padding: '10px 10px', boxShadow: '0 2px 12px rgba(48,168,112,0.06)', overflow: 'hidden' }}>
+        <section style={{ width: '100%', minHeight: 72, background: '#E8FFF4', borderRadius: 14, padding: '10px 10px', boxShadow: '0 2px 12px rgba(48,168,112,0.06)', overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
             <p style={{ fontSize: 10, fontWeight: 600, color: '#30A870', margin: 0, letterSpacing: '0.03em' }}>{t(lang, 'partnerRecordingListen')}</p>
             {hasParentAudio !== null && (
@@ -569,7 +569,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
         </section>
 
         {/* (2) Send card */}
-        <section style={{ width: '100%', background: '#FFF4E8', borderRadius: 14, padding: '6px 10px', boxShadow: '0 2px 12px rgba(208,112,48,0.06)', overflow: 'hidden' }}>
+        <section style={{ width: '100%', minHeight: 72, background: '#FFF4E8', borderRadius: 14, padding: '10px 10px', boxShadow: '0 2px 12px rgba(208,112,48,0.06)', overflow: 'hidden' }}>
           <p style={{ fontSize: 10, fontWeight: 600, color: '#D07030', margin: '0 0 4px', letterSpacing: '0.03em' }}>{t(lang, 'myRecordingRecordSend')}</p>
           <button type="button" onClick={handleClick} disabled={isUploading} style={{ width: '100%', padding: 12, fontSize: 16, fontWeight: 700, color: '#fff', background: isUploading ? '#B0A0C8' : isRecording ? 'linear-gradient(160deg,#FF4040,#C02020)' : 'linear-gradient(160deg,#FF8848,#F04818)', border: 'none', borderRadius: 12, cursor: isUploading ? 'wait' : 'pointer', boxShadow: isUploading ? 'none' : isRecording ? '0 4px 0 #901010' : '0 4px 0 #C03010' }}>
             {isUploading ? t(lang, 'sending') : isRecording ? (lang === 'en' ? '⏹ Recording...' : '⏹ 録音中…') : (lang === 'en' ? '🎙 Record' : '🎙 録音')}
@@ -602,7 +602,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
         </section>
 
         {/* (3) Photos card */}
-        <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 14, padding: '6px 10px', boxShadow: '0 2px 12px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
+        <section style={{ width: '100%', minHeight: 72, background: '#F0EEFF', borderRadius: 14, padding: '10px 10px', boxShadow: '0 2px 12px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
           <p style={{ fontSize: 10, fontWeight: 600, color: '#7050C0', margin: '0 0 4px', letterSpacing: '0.03em' }}>
             📷 {lang === 'en' ? "Today's Photos" : '今日の写真'} <span style={{ fontWeight: 500, color: '#8070A0' }}>{isDemoTest ? 3 : photos.filter((p) => p.role === ROLE_PARENT).length}/3{lang === 'en' ? '' : '枚'}</span>
           </p>
