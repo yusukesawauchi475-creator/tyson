@@ -273,98 +273,84 @@ async function handleGet(req, res) {
 
     initFirebaseAdmin();
 
-    const docRef = firestore.collection('journal').doc(pairId).collection('months').doc(monthKey).collection('days').doc(dateKey);
-    const snap = await docRef.get();
+    // 指定日のドキュメントを読み、journal_image + generic_images (photos) を解決するヘルパー
+    const resolveDay = async (dk) => {
+      const mk = dk.slice(0, 7);
+      const ref = firestore.collection('journal').doc(pairId).collection('months').doc(mk).collection('days').doc(dk);
+      const snap = await ref.get();
+      if (!snap.exists) return null;
+      const data = snap.data();
 
-    if (!snap.exists) {
-      logObserve({ requestId: reqId, stage: 'journal_get', status: 'ok', pairId, role, clientDateKey, serverDateKey, storagePath: null, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
-      return res.status(200).json({
-        success: true,
-        hasImage: false,
-        requestId: null,
-        dateKey,
-        storagePath: null,
-        updatedAt: null,
-        photos: [],
-      });
-    }
-
-    const data = snap.data();
-    const roleDataRaw = data?.roleData?.[role];
-    // 最新優先: journal_image があればそれを使用（上書き対応）、でなければ flat storagePath
-    const roleData = (roleDataRaw?.journal_image && typeof roleDataRaw.journal_image?.storagePath === 'string')
-      ? roleDataRaw.journal_image
-      : (roleDataRaw && typeof roleDataRaw.storagePath === 'string')
-        ? roleDataRaw
-        : null;
-    const hasImage = !!(roleData?.storagePath);
-    const updatedAt = roleData?.updatedAt?.toMillis?.() ?? roleData?.updatedAt ?? null;
-
-    let signedUrl = null;
-    if (hasImage && roleData?.storagePath) {
-      try {
-        const fileRef = storageBucket.file(roleData.storagePath);
-        const [url] = await fileRef.getSignedUrl({
-          action: 'read',
-          expires: Date.now() + 60 * 60 * 1000,
-        });
-        signedUrl = url || null;
-      } catch (urlErr) {
-        // signed URL 失敗時は url なしで返す
+      // journal_image
+      const roleDataRaw = data?.roleData?.[role];
+      const rd = (roleDataRaw?.journal_image && typeof roleDataRaw.journal_image?.storagePath === 'string')
+        ? roleDataRaw.journal_image
+        : (roleDataRaw && typeof roleDataRaw.storagePath === 'string') ? roleDataRaw : null;
+      const hasImage = !!(rd?.storagePath);
+      const upAt = rd?.updatedAt?.toMillis?.() ?? rd?.updatedAt ?? null;
+      let signedUrl = null;
+      if (hasImage && rd?.storagePath) {
+        try { const [u] = await storageBucket.file(rd.storagePath).getSignedUrl({ action: 'read', expires: Date.now() + 3600000 }); signedUrl = u || null; } catch (_) {}
       }
-    }
 
-    // 日常写真(generic_image): 両ロール分を photos 配列で返す（相手側でも一覧で見える）
-    const photos = [];
-    const roleDataAll = data?.roleData ?? {};
-    console.log('[journal photos] roleDataAll keys:', Object.keys(roleDataAll), 'pairId:', pairId, 'dateKey:', dateKey);
-    for (const r of ['parent', 'child']) {
-      const rd = roleDataAll[r];
-      if (!rd || typeof rd !== 'object') { console.log('[journal photos] no roleData for:', r); continue; }
-      let list = Array.isArray(rd.generic_images) ? rd.generic_images : [];
-      if (list.length === 0 && rd.generic_image && typeof rd.generic_image.storagePath === 'string') {
-        list = [{ ...rd.generic_image, index: 1 }];
-      }
-      console.log('[journal photos] role:', r, 'generic_images count:', list.length, 'paths:', list.map(x => x?.storagePath).join(', '));
-      for (let i = 0; i < list.length; i++) {
-        const item = list[i];
-        const path = item?.storagePath;
-        if (!path) { console.log('[journal photos] skip item with no storagePath:', JSON.stringify(item)?.substring(0, 200)); continue; }
-        let urlPhoto = null;
-        try {
-          const fileRef = storageBucket.file(path);
-          const [u] = await fileRef.getSignedUrl({
-            action: 'read',
-            expires: Date.now() + 60 * 60 * 1000,
-          });
-          urlPhoto = u || null;
-          if (!urlPhoto) console.warn('[journal photos] getSignedUrl returned empty for:', path);
-        } catch (signErr) {
-          console.error('[journal photos] getSignedUrl FAILED:', path, signErr?.message?.substring(0, 120));
+      // generic_images (両ロール)
+      const photos = [];
+      const roleDataAll = data?.roleData ?? {};
+      for (const r of ['parent', 'child']) {
+        const rData = roleDataAll[r];
+        if (!rData || typeof rData !== 'object') continue;
+        let list = Array.isArray(rData.generic_images) ? rData.generic_images : [];
+        if (list.length === 0 && rData.generic_image && typeof rData.generic_image.storagePath === 'string') {
+          list = [{ ...rData.generic_image, index: 1 }];
         }
-        const updatedAtPhoto = item?.updatedAt?.toMillis?.() ?? item?.updatedAt ?? null;
-        let roleNormalized = 'unknown';
-        if (r === 'child') roleNormalized = 'child';
-        else if (r === 'parent') roleNormalized = 'parent';
-        else logObserve({ requestId: reqId, stage: 'journal_get_photos', photoRoleUnknown: r, storagePath: path });
-        photos.push({
-          url: urlPhoto,
-          storagePath: path,
-          updatedAt: updatedAtPhoto,
-          index: typeof item.index === 'number' ? item.index : i + 1,
-          role: roleNormalized,
-        });
+        for (let i = 0; i < list.length; i++) {
+          const item = list[i];
+          const path = item?.storagePath;
+          if (!path) continue;
+          let urlPhoto = null;
+          try { const [u] = await storageBucket.file(path).getSignedUrl({ action: 'read', expires: Date.now() + 3600000 }); urlPhoto = u || null; } catch (_) {}
+          photos.push({
+            url: urlPhoto,
+            storagePath: path,
+            updatedAt: item?.updatedAt?.toMillis?.() ?? item?.updatedAt ?? null,
+            index: typeof item.index === 'number' ? item.index : i + 1,
+            role: r === 'child' ? 'child' : 'parent',
+          });
+        }
       }
+      return { data, hasImage, updatedAt: upAt, signedUrl, photos, dateKey: dk, requestId: data?.requestId ?? rd?.uploadId ?? null, storagePath: rd?.storagePath ?? null };
+    };
+
+    // 今日 → 昨日フォールバック（日付ズレ対策: pair-media.js の handleGet と同じパターン）
+    let resolved = await resolveDay(dateKey);
+    if (!resolved || (resolved.photos.length === 0 && !resolved.hasImage)) {
+      const yesterday = new Date(Date.now() - 86400000);
+      try {
+        const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(yesterday);
+        const get = (t) => parts.find((p) => p.type === t)?.value;
+        const yKey = `${get('year')}-${get('month')}-${get('day')}`;
+        if (yKey !== dateKey) {
+          const yesterdayResult = await resolveDay(yKey);
+          if (yesterdayResult && (yesterdayResult.photos.length > 0 || yesterdayResult.hasImage)) {
+            resolved = yesterdayResult;
+          }
+        }
+      } catch (_) {}
     }
 
-    console.log('[journal photos] final count:', photos.length, 'urls:', photos.map(p => p.url ? 'OK' : 'NULL').join(','));
-    logObserve({ requestId: reqId, stage: 'journal_get', status: 'ok', pairId, role, clientDateKey, serverDateKey, storagePath: roleData?.storagePath ?? null, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null, photosCount: photos.length });
+    if (!resolved) {
+      logObserve({ requestId: reqId, stage: 'journal_get', status: 'ok', pairId, role, clientDateKey, serverDateKey, storagePath: null, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
+      return res.status(200).json({ success: true, hasImage: false, requestId: null, dateKey, storagePath: null, updatedAt: null, photos: [] });
+    }
+
+    const { hasImage, updatedAt, signedUrl, photos } = resolved;
+    logObserve({ requestId: reqId, stage: 'journal_get', status: 'ok', pairId, role, clientDateKey, serverDateKey, storagePath: resolved.storagePath, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null, photosCount: photos.length, resolvedDateKey: resolved.dateKey });
     return res.status(200).json({
       success: true,
       hasImage,
-      requestId: data?.requestId ?? roleData?.uploadId ?? null,
-      dateKey,
-      storagePath: roleData?.storagePath ?? null,
+      requestId: resolved.requestId,
+      dateKey: resolved.dateKey,
+      storagePath: resolved.storagePath,
       updatedAt,
       url: signedUrl,
       signedUrl: signedUrl,
