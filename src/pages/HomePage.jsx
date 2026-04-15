@@ -333,8 +333,8 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
       if (num) url = `https://www.humfamily.com/pair/${num}?role=child&openExternalBrowser=1`
     } catch (_) {}
     const text = lang === 'en'
-      ? "Let's exchange voices every day on Hum. Listen to today's message 👋"
-      : 'Humで毎日声を交換しよう。今日のメッセージを聞いてね 👋'
+      ? 'Connect with your family every day with Hum. Open this link to get started.'
+      : '毎日1分、声でつながるアプリHumです。このリンクを開いて始めてください。'
     if (navigator.share) {
       try { await navigator.share({ title: 'Hum', text, url }) } catch (_) {}
     } else {
