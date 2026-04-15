@@ -317,17 +317,19 @@ async function handleGet(req, res) {
     // 日常写真(generic_image): 両ロール分を photos 配列で返す（相手側でも一覧で見える）
     const photos = [];
     const roleDataAll = data?.roleData ?? {};
+    console.log('[journal photos] roleDataAll keys:', Object.keys(roleDataAll), 'pairId:', pairId, 'dateKey:', dateKey);
     for (const r of ['parent', 'child']) {
       const rd = roleDataAll[r];
-      if (!rd || typeof rd !== 'object') continue;
+      if (!rd || typeof rd !== 'object') { console.log('[journal photos] no roleData for:', r); continue; }
       let list = Array.isArray(rd.generic_images) ? rd.generic_images : [];
       if (list.length === 0 && rd.generic_image && typeof rd.generic_image.storagePath === 'string') {
         list = [{ ...rd.generic_image, index: 1 }];
       }
+      console.log('[journal photos] role:', r, 'generic_images count:', list.length, 'paths:', list.map(x => x?.storagePath).join(', '));
       for (let i = 0; i < list.length; i++) {
         const item = list[i];
         const path = item?.storagePath;
-        if (!path) continue;
+        if (!path) { console.log('[journal photos] skip item with no storagePath:', JSON.stringify(item)?.substring(0, 200)); continue; }
         let urlPhoto = null;
         try {
           const fileRef = storageBucket.file(path);
@@ -336,7 +338,10 @@ async function handleGet(req, res) {
             expires: Date.now() + 60 * 60 * 1000,
           });
           urlPhoto = u || null;
-        } catch (_) {}
+          if (!urlPhoto) console.warn('[journal photos] getSignedUrl returned empty for:', path);
+        } catch (signErr) {
+          console.error('[journal photos] getSignedUrl FAILED:', path, signErr?.message?.substring(0, 120));
+        }
         const updatedAtPhoto = item?.updatedAt?.toMillis?.() ?? item?.updatedAt ?? null;
         let roleNormalized = 'unknown';
         if (r === 'child') roleNormalized = 'child';
@@ -352,7 +357,8 @@ async function handleGet(req, res) {
       }
     }
 
-    logObserve({ requestId: reqId, stage: 'journal_get', status: 'ok', pairId, role, clientDateKey, serverDateKey, storagePath: roleData?.storagePath ?? null, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null });
+    console.log('[journal photos] final count:', photos.length, 'urls:', photos.map(p => p.url ? 'OK' : 'NULL').join(','));
+    logObserve({ requestId: reqId, stage: 'journal_get', status: 'ok', pairId, role, clientDateKey, serverDateKey, storagePath: roleData?.storagePath ?? null, firestoreDocPath, httpStatus: 200, errorCode: null, errorMessage: null, photosCount: photos.length });
     return res.status(200).json({
       success: true,
       hasImage,
