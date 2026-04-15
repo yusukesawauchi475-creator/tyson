@@ -759,22 +759,22 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
         <WeeklySummary lang={lang} />
 
         {/* (1) Receive card */}
-        <section style={{ width: '100%', minHeight: 72, background: '#E8FFF4', borderRadius: 14, padding: '10px 10px', boxShadow: '0 2px 12px rgba(48,168,112,0.06)', overflow: 'hidden' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        <section style={{ width: '100%', minHeight: 72, background: '#E8FFF4', borderRadius: 14, padding: '10px 10px', boxShadow: '0 2px 12px rgba(48,168,112,0.06)', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
             <p style={{ fontSize: 10, fontWeight: 600, color: '#30A870', margin: 0, letterSpacing: '0.03em' }}>{t(lang, 'partnerRecordingListen')}</p>
             {hasAudio !== null && (
               <button type="button" onClick={refreshStatus} style={{ padding: '2px 8px', fontSize: 10, color: '#30A870', background: 'transparent', border: '1px solid #30A870', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>{t(lang, 'refresh')}</button>
             )}
           </div>
           {hasAudio === true ? (
-            <button type="button" onClick={handlePlay} disabled={isLoading} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 700, color: '#fff', background: isLoading ? '#B0A0C8' : isPlaying ? 'linear-gradient(160deg,#E04040,#C02020)' : 'linear-gradient(160deg,#40D890,#18B868)', border: 'none', borderRadius: 12, cursor: isLoading ? 'wait' : 'pointer', boxShadow: isLoading ? 'none' : isPlaying ? '0 4px 0 #901010' : '0 4px 0 #109848' }}>
+            <button type="button" onClick={handlePlay} disabled={isLoading} style={{ width: '100%', padding: 12, fontSize: 16, fontWeight: 700, color: '#fff', background: isLoading ? '#B0A0C8' : isPlaying ? 'linear-gradient(160deg,#E04040,#C02020)' : 'linear-gradient(160deg,#40D890,#18B868)', border: 'none', borderRadius: 12, cursor: isLoading ? 'wait' : 'pointer', boxShadow: isLoading ? 'none' : isPlaying ? '0 4px 0 #901010' : '0 4px 0 #109848' }}>
               {isLoading ? t(lang, 'loading') : isPlaying ? (lang === 'en' ? '⏹ Stop' : '⏹ 停止') : (lang === 'en' ? '▶ Play' : '▶ 再生')}
               {isChildUnseen && !isPlaying && !isLoading && <span style={{ marginLeft: 6, color: '#FFE040' }}>●</span>}
             </button>
           ) : hasAudio === false ? (
-            <p style={{ fontSize: 14, color: '#1A6040', margin: '10px 0', opacity: 0.5, textAlign: 'center', fontWeight: 600 }}>{t(lang, 'notReceivedYetOk')}</p>
+            <p style={{ fontSize: 14, color: '#1A6040', margin: '6px 0', opacity: 0.5, textAlign: 'center', fontWeight: 600 }}>{t(lang, 'notReceivedYetOk')}</p>
           ) : (
-            <p style={{ fontSize: 14, color: '#1A6040', margin: '10px 0', opacity: 0.5, textAlign: 'center' }}>{t(lang, 'checking')}</p>
+            <p style={{ fontSize: 14, color: '#1A6040', margin: '6px 0', opacity: 0.5, textAlign: 'center' }}>{t(lang, 'checking')}</p>
           )}
         </section>
 
