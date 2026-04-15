@@ -7,7 +7,7 @@ import AlbumPage from './pages/AlbumPage'
 import DemoPage from './pages/DemoPage'
 import LandingPage from './pages/LandingPage'
 import RoleSelectPage from './pages/RoleSelectPage'
-import { getUserRole, clearUserRole, getPairId, PAIR_ID_STORAGE_KEY } from './lib/pairDaily'
+import { getUserRole, setUserRole, clearUserRole, getPairId, PAIR_ID_STORAGE_KEY } from './lib/pairDaily'
 import PwaInstallBanner, { BANNER_HEIGHT } from './components/PwaInstallBanner'
 import { db, getIdTokenForApi } from './lib/firebase'
 import { doc, getDoc } from 'firebase/firestore'
@@ -67,13 +67,19 @@ function RootOrLanding({ lang = 'ja' }) {
 
 function RootRoute({ lang = 'ja' }) {
   const [role, setRole] = useState(() => {
-    // URLに?pairId=がある場合は古いroleをクリアして役割選択を強制表示
     try {
       const hash = window.location.hash || '';
       const qIndex = hash.indexOf('?');
       const qs = qIndex >= 0 ? hash.slice(qIndex + 1) : '';
-      const pairIdFromUrl = new URLSearchParams(qs).get('pairId')?.trim();
+      const params = new URLSearchParams(qs);
+      const pairIdFromUrl = params.get('pairId')?.trim();
       const storedPairId = localStorage.getItem('tyson_pairId')?.trim();
+      // URLに role=parent|child があれば自動セット（招待リンクからの遷移）
+      const roleFromUrl = params.get('role')?.trim();
+      if (roleFromUrl === 'parent' || roleFromUrl === 'child') {
+        setUserRole(roleFromUrl);
+        return roleFromUrl;
+      }
       // URLのpairIdが既存のlocalStorageと違う場合 → 新規ユーザー → roleクリア
       if (pairIdFromUrl && pairIdFromUrl !== storedPairId) {
         clearUserRole();

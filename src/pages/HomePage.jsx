@@ -326,11 +326,11 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
 
   const handleShare = async () => {
     const pid = getPairId()
-    let url = `https://www.humfamily.com/#/?pairId=${encodeURIComponent(pid)}`
+    let url = `https://www.humfamily.com/#/?pairId=${encodeURIComponent(pid)}&role=child&openExternalBrowser=1`
     try {
       const snap = await getDoc(doc(db, 'pairs', pid))
       const num = snap.data()?.number
-      if (num) url = `https://www.humfamily.com/pair/${num}`
+      if (num) url = `https://www.humfamily.com/pair/${num}?role=child&openExternalBrowser=1`
     } catch (_) {}
     const text = lang === 'en'
       ? "Let's exchange voices every day on Hum. Listen to today's message 👋"

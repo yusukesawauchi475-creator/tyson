@@ -84,7 +84,8 @@ export default async function handler(req, res) {
       if (!resolvedPairId) {
         return res.status(404).json({ success: false, error: 'pairId not found for number', requestId });
       }
-      return res.redirect(302, `https://www.humfamily.com/#/?number=${encodeURIComponent(req.query.number)}`);
+      const roleParam = req.query.role === 'parent' || req.query.role === 'child' ? `&role=${req.query.role}` : '';
+      return res.redirect(302, `https://www.humfamily.com/#/?number=${encodeURIComponent(req.query.number)}${roleParam}`);
     } catch (e) {
       return res.status(500).json({ success: false, error: e.message, requestId });
     }
