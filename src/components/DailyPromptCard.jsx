@@ -264,27 +264,27 @@ export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role, onTopicCh
   return (
     <div style={{
       width: '100%',
-      marginTop: 8,
-      padding: '8px 12px',
+      marginTop: 6,
+      padding: '5px 10px',
       background: '#f8f9fa',
       border: '1px solid #e0e0e0',
-      borderRadius: 8,
-      fontSize: 14,
+      borderRadius: 6,
+      fontSize: 12,
     }}>
-      <p style={{ margin: '0 0 8px', fontSize: 12, color: '#666', fontWeight: 500 }}>
+      <p style={{ margin: '0 0 3px', fontSize: 10, color: '#888', fontWeight: 500 }}>
         {t(lang, 'todayTopic')}
       </p>
-      <p style={{ margin: '0 0 12px', fontSize: 14, color: '#333', lineHeight: 1.5 }}>
+      <p style={{ margin: '0 0 5px', fontSize: 12, color: '#555', lineHeight: 1.4 }}>
         {topicDisplay}
       </p>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         <button
           type="button"
           onClick={handleNextTopic}
           style={{
             flex: 1,
-            padding: '6px 12px',
-            fontSize: 12,
+            padding: '4px 8px',
+            fontSize: 10,
             color: '#4a90d9',
             background: 'transparent',
             border: '1px solid #4a90d9',
@@ -299,8 +299,8 @@ export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role, onTopicCh
           onClick={handleSkip}
           style={{
             flex: 1,
-            padding: '6px 12px',
-            fontSize: 12,
+            padding: '4px 8px',
+            fontSize: 10,
             color: '#888',
             background: 'transparent',
             border: '1px solid #e0e0e0',
