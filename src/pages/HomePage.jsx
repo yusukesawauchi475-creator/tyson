@@ -593,13 +593,6 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           )}
 
           <DailyPromptCard pairId={getPairId()} role={ROLE_PARENT} onTopicChange={handleTopicChange} lang={lang} />
-
-          {oneLinerVisible && oneLiner && (
-            <div style={{ width: '100%', marginTop: 8, padding: '8px 12px', background: 'rgba(255,255,255,0.5)', borderRadius: 12, fontSize: 13, color: '#6b2a3a', textAlign: 'center', lineHeight: 1.4, fontFamily: 'Nunito, sans-serif' }}>{oneLiner}</div>
-          )}
-          {analysisVisible && analysisComment && (
-            <div style={{ width: '100%', marginTop: 6, padding: '6px 10px', fontSize: 11, color: '#8a4a5a', textAlign: 'center', lineHeight: 1.3, whiteSpace: 'pre-line' }}>{analysisComment}</div>
-          )}
         </section>
 
         {/* (3) Photos card — purple */}
