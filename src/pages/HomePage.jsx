@@ -552,12 +552,12 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
         <section style={{ width: '100%', minHeight: 72, background: '#E8FFF4', borderRadius: 14, padding: '10px 10px', boxShadow: '0 2px 12px rgba(48,168,112,0.06)', overflow: 'hidden' }}>
           <p style={{ fontSize: 10, fontWeight: 600, color: '#30A870', margin: '0 0 4px', letterSpacing: '0.03em' }}>{t(lang, 'partnerRecordingListen')}</p>
           {hasParentAudio === true ? (
-            <button type="button" onClick={handlePlayParent} disabled={isLoadingParent} style={{ width: '100%', padding: 12, fontSize: 16, fontWeight: 700, color: '#fff', background: isLoadingParent ? '#B0A0C8' : isPlayingParent ? 'linear-gradient(160deg,#E04040,#C02020)' : 'linear-gradient(160deg,#40D890,#18B868)', border: 'none', borderRadius: 12, cursor: isLoadingParent ? 'wait' : 'pointer', boxShadow: isLoadingParent ? 'none' : isPlayingParent ? '0 4px 0 #901010' : '0 4px 0 #109848' }}>
+            <button type="button" onClick={handlePlayParent} disabled={isLoadingParent} style={{ width: '100%', padding: 16, fontSize: 18, fontWeight: 700, color: '#fff', background: isLoadingParent ? '#B0A0C8' : isPlayingParent ? 'linear-gradient(160deg,#E04040,#C02020)' : 'linear-gradient(160deg,#40D890,#18B868)', border: 'none', borderRadius: 12, cursor: isLoadingParent ? 'wait' : 'pointer', boxShadow: isLoadingParent ? 'none' : isPlayingParent ? '0 4px 0 #901010' : '0 4px 0 #109848' }}>
               {isLoadingParent ? t(lang, 'loading') : isPlayingParent ? (lang === 'en' ? '⏹ Stop' : '⏹ 停止') : (lang === 'en' ? '▶ Play' : '▶ 再生')}
               {isParentUnseen && !isPlayingParent && !isLoadingParent && <span style={{ marginLeft: 6, color: '#FFE040' }}>●</span>}
             </button>
           ) : (
-            <button type="button" disabled style={{ width: '100%', padding: 12, fontSize: 16, fontWeight: 700, color: '#fff', background: 'linear-gradient(160deg,#40D890,#18B868)', border: 'none', borderRadius: 12, cursor: 'default', boxShadow: '0 4px 0 #109848', opacity: 0.4 }}>
+            <button type="button" disabled style={{ width: '100%', padding: 16, fontSize: 18, fontWeight: 700, color: '#fff', background: 'linear-gradient(160deg,#40D890,#18B868)', border: 'none', borderRadius: 12, cursor: 'default', boxShadow: '0 4px 0 #109848', opacity: 0.4 }}>
               {hasParentAudio === false ? (lang === 'en' ? '▶ Not yet received' : '▶ まだ届いていません') : (lang === 'en' ? '▶ Checking...' : '▶ 確認中…')}
             </button>
           )}
