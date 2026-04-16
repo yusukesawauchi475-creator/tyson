@@ -758,40 +758,46 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
       <main className="page-content page" style={{ flex: 1, maxWidth: 480, margin: '0 auto', width: '100%', paddingTop: 8 }}>
         <WeeklySummary lang={lang} />
 
-        {/* (1) Receive card */}
-        <section style={{ width: '100%', minHeight: 72, background: '#E8FFF4', borderRadius: 14, padding: '10px 10px', boxShadow: '0 2px 12px rgba(48,168,112,0.06)', overflow: 'hidden' }}>
-          <p style={{ fontSize: 10, fontWeight: 600, color: '#30A870', margin: '0 0 4px', letterSpacing: '0.03em' }}>{t(lang, 'partnerRecordingListen')}</p>
+        {/* (1) Receive card — green */}
+        <section style={{ width: '100%', background: '#b8f0d8', borderRadius: 20, padding: 16, boxShadow: '0 4px 0 0 #6bbf96', overflow: 'hidden', fontFamily: 'Nunito, sans-serif' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <span style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>👂</span>
+            <span style={{ fontSize: 15, fontWeight: 800, color: '#1a5c3a' }}>{lang === 'en' ? "Listen to partner's voice" : '相手の声を聴く'}</span>
+          </div>
           {hasAudio === true ? (
-            <button type="button" onClick={handlePlay} disabled={isLoading} style={{ width: '100%', padding: 16, fontSize: 18, fontWeight: 700, color: '#fff', background: isLoading ? '#B0A0C8' : isPlaying ? 'linear-gradient(160deg,#E04040,#C02020)' : 'linear-gradient(160deg,#40D890,#18B868)', border: 'none', borderRadius: 12, cursor: isLoading ? 'wait' : 'pointer', boxShadow: isLoading ? 'none' : isPlaying ? '0 4px 0 #901010' : '0 4px 0 #109848' }}>
+            <button type="button" onClick={handlePlay} disabled={isLoading} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#1a6645', background: '#fff', border: 'none', borderRadius: 14, cursor: isLoading ? 'wait' : 'pointer', boxShadow: '0 4px 0 #a8d8bc', fontFamily: 'Nunito, sans-serif' }}>
               {isLoading ? t(lang, 'loading') : isPlaying ? (lang === 'en' ? '⏹ Stop' : '⏹ 停止') : (lang === 'en' ? '▶ Play' : '▶ 再生')}
-              {isChildUnseen && !isPlaying && !isLoading && <span style={{ marginLeft: 6, color: '#FFE040' }}>●</span>}
+              {isChildUnseen && !isPlaying && !isLoading && <span style={{ marginLeft: 6, color: '#E04040' }}>●</span>}
             </button>
           ) : (
-            <button type="button" disabled style={{ width: '100%', padding: 16, fontSize: 18, fontWeight: 700, color: '#fff', background: 'linear-gradient(160deg,#40D890,#18B868)', border: 'none', borderRadius: 12, cursor: 'default', boxShadow: '0 4px 0 #109848', opacity: 0.4 }}>
+            <button type="button" disabled style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#1a6645', background: '#fff', border: 'none', borderRadius: 14, cursor: 'default', boxShadow: '0 4px 0 #a8d8bc', opacity: 0.4, fontFamily: 'Nunito, sans-serif' }}>
               {hasAudio === false ? (lang === 'en' ? '▶ Not yet received' : '▶ まだ届いていません') : (lang === 'en' ? '▶ Checking...' : '▶ 確認中…')}
             </button>
           )}
         </section>
 
-        {/* (2) Send card */}
-        <section style={{ width: '100%', minHeight: 72, background: '#FFF4E8', borderRadius: 14, padding: '10px 10px', boxShadow: '0 2px 12px rgba(208,112,48,0.06)', overflow: 'hidden' }}>
-          <p style={{ fontSize: 10, fontWeight: 600, color: '#D07030', margin: '0 0 4px', letterSpacing: '0.03em' }}>{t(lang, 'myRecordingRecordSend')}</p>
-          <button type="button" onClick={handleRecordClick} disabled={isUploading} style={{ width: '100%', padding: 12, fontSize: 16, fontWeight: 700, color: '#fff', background: isUploading ? '#B0A0C8' : isRecording ? 'linear-gradient(160deg,#FF4040,#C02020)' : 'linear-gradient(160deg,#FF8848,#F04818)', border: 'none', borderRadius: 12, cursor: isUploading ? 'wait' : 'pointer', boxShadow: isUploading ? 'none' : isRecording ? '0 4px 0 #901010' : '0 4px 0 #C03010' }}>
+        {/* (2) Send card — pink */}
+        <section style={{ width: '100%', background: '#f5d8e0', borderRadius: 20, padding: 16, boxShadow: '0 4px 0 0 #c98fa0', overflow: 'hidden', fontFamily: 'Nunito, sans-serif' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <span style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🎙</span>
+            <span style={{ fontSize: 15, fontWeight: 800, color: '#6b2a3a' }}>{lang === 'en' ? 'Record & send your voice' : '声を録って送る'}</span>
+          </div>
+          <button type="button" onClick={handleRecordClick} disabled={isUploading} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#fff', background: isUploading ? '#B0A0C8' : isRecording ? '#E04040' : '#c0536e', border: 'none', borderRadius: 14, cursor: isUploading ? 'wait' : 'pointer', boxShadow: isUploading ? 'none' : isRecording ? '0 4px 0 #901010' : '0 4px 0 #8a2a42', fontFamily: 'Nunito, sans-serif' }}>
             {isUploading ? t(lang, 'sending') : isRecording ? (lang === 'en' ? '⏹ Recording...' : '⏹ 録音中…') : (lang === 'en' ? '🎙 Record' : '🎙 録音')}
           </button>
 
           {isRecording && isSpeaking && (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 4, marginTop: 6, height: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 4, marginTop: 8, height: 20 }}>
               {[0, 1, 2, 3, 4].map((i) => {
                 const jitter = (Math.random() - 0.5) * 0.1
                 const scale = Math.max(0.2, Math.min(1.0, level * 8 + jitter))
-                return <span key={i} style={{ width: 3, height: '100%', background: '#FF8848', borderRadius: 2, transform: `scaleY(${scale})`, transformOrigin: 'center', transition: 'transform 0.1s ease-out' }} />
+                return <span key={i} style={{ width: 3, height: '100%', background: '#c0536e', borderRadius: 2, transform: `scaleY(${scale})`, transformOrigin: 'center', transition: 'transform 0.1s ease-out' }} />
               })}
             </div>
           )}
 
           {sentAt && (
-            <p style={{ fontSize: 12, color: '#804020', fontWeight: 600, margin: '6px 0 0', textAlign: 'center' }}>
+            <p style={{ fontSize: 12, color: '#6b2a3a', fontWeight: 700, margin: '8px 0 0', textAlign: 'center', fontFamily: 'Nunito, sans-serif' }}>
               {t(lang, 'sentAt', { time: sentAtStr })}
             </p>
           )}
@@ -799,37 +805,40 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
           <DailyPromptCard pairId={getPairId()} role={ROLE_CHILD} onTopicChange={handleTopicChange} lang={lang} />
 
           {oneLinerVisible && oneLiner && (
-            <div style={{ width: '100%', marginTop: 8, padding: '8px 12px', background: 'rgba(255,255,255,0.55)', borderRadius: 8, fontSize: 13, color: '#804020', textAlign: 'center', lineHeight: 1.4 }}>{oneLiner}</div>
+            <div style={{ width: '100%', marginTop: 8, padding: '8px 12px', background: 'rgba(255,255,255,0.5)', borderRadius: 12, fontSize: 13, color: '#6b2a3a', textAlign: 'center', lineHeight: 1.4, fontFamily: 'Nunito, sans-serif' }}>{oneLiner}</div>
           )}
           {(analysisVisible && analysisComment) || commentText ? (
-            <div style={{ width: '100%', marginTop: 6, padding: '6px 10px', fontSize: 11, color: '#B08050', textAlign: 'center', lineHeight: 1.3, whiteSpace: 'pre-line' }}>
+            <div style={{ width: '100%', marginTop: 6, padding: '6px 10px', fontSize: 11, color: '#8a4a5a', textAlign: 'center', lineHeight: 1.3, whiteSpace: 'pre-line' }}>
               {commentText || (analysisVisible ? analysisComment : '')}
             </div>
           ) : null}
         </section>
 
-        {/* (3) Photos card */}
-        {!isDemoTest && <section style={{ width: '100%', minHeight: 72, background: '#F0EEFF', borderRadius: 14, padding: '10px 10px', boxShadow: '0 2px 12px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
-          <p style={{ fontSize: 10, fontWeight: 600, color: '#7050C0', margin: '0 0 4px', letterSpacing: '0.03em' }}>
-            📷 {lang === 'en' ? "Today's Photos" : '今日の写真'} <span style={{ fontWeight: 500, color: '#8070A0' }}>{photos.filter((p) => p.role === ROLE_CHILD).length}/3{lang === 'en' ? '' : '枚'}</span>
-          </p>
+        {/* (3) Photos card — purple */}
+        {!isDemoTest && <section style={{ width: '100%', background: '#d4bfff', borderRadius: 20, padding: 16, boxShadow: '0 4px 0 0 #8b6bd4', overflow: 'hidden', fontFamily: 'Nunito, sans-serif' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <span style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>📷</span>
+            <span style={{ fontSize: 15, fontWeight: 800, color: '#3a1a7a' }}>
+              {lang === 'en' ? 'Send photos' : '写真を送る'} · {photos.filter((p) => p.role === ROLE_CHILD).length}/3
+            </span>
+          </div>
 
           <input ref={genericGalleryInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f && typeof f.type === 'string' && f.type.startsWith('image/')) handleJournalFile(f, 'generic_image'); e.target.value = '' }} />
           <input ref={genericCameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'generic_image'); e.target.value = '' }} />
 
           {photos.length > 0 && (
-            <div style={{ display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
               {photos.slice(0, 6).map((ph, i) => (
-                <button key={ph.storagePath + String(i)} type="button" onClick={() => navigate(lang === 'en' ? `/album/eng?pairId=${currentPairId}` : `/album?pairId=${currentPairId}`, { state: { scrollToDate: dateKey } })} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 8, overflow: 'hidden', flexShrink: 0 }} aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}>
-                  <img src={ph.url || ''} alt="" width={48} height={48} style={{ width: 48, height: 48, objectFit: 'cover', display: 'block', borderRadius: 8 }} />
+                <button key={ph.storagePath + String(i)} type="button" onClick={() => navigate(lang === 'en' ? `/album/eng?pairId=${currentPairId}` : `/album?pairId=${currentPairId}`, { state: { scrollToDate: dateKey } })} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 10, overflow: 'hidden', flexShrink: 0 }} aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}>
+                  <img src={ph.url || ''} alt="" width={48} height={48} style={{ width: 48, height: 48, objectFit: 'cover', display: 'block', borderRadius: 10 }} />
                 </button>
               ))}
             </div>
           )}
 
-          {dailyPhotoLimitMessage && <p style={{ fontSize: 11, color: '#B0A0C8', margin: '0 0 4px' }}>{dailyPhotoLimitMessage}</p>}
+          {dailyPhotoLimitMessage && <p style={{ fontSize: 11, color: '#5a3a8a', margin: '0 0 4px' }}>{dailyPhotoLimitMessage}</p>}
 
-          <button type="button" disabled={journalUploading} onClick={() => { if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }} style={{ width: '100%', padding: 12, fontSize: 16, fontWeight: 700, color: '#fff', background: 'linear-gradient(160deg,#B890F8,#8058D0)', border: 'none', borderRadius: 12, cursor: 'pointer', boxShadow: '0 4px 0 #5838A8' }}>
+          <button type="button" disabled={journalUploading} onClick={() => { if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#fff', background: '#7c4fd4', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 0 #4a2490', fontFamily: 'Nunito, sans-serif' }}>
             {lang === 'en' ? '📷 Add Photo' : '📷 写真を追加する'}
           </button>
         </section>}

@@ -264,53 +264,45 @@ export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role, onTopicCh
   return (
     <div style={{
       width: '100%',
-      marginTop: 6,
-      padding: '4px 8px',
-      background: '#f8f9fa',
-      border: '1px solid #e0e0e0',
-      borderRadius: 6,
-      fontSize: 11,
+      marginTop: 8,
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6,
     }}>
-      <p style={{ margin: '0 0 2px', fontSize: 9, color: '#999', fontWeight: 500 }}>
-        {t(lang, 'todayTopic')}
-      </p>
-      <p style={{ margin: '0 0 4px', fontSize: 11, color: '#666', lineHeight: 1.3 }}>
+      <div style={{
+        flex: 1,
+        padding: '6px 12px',
+        background: 'rgba(255,255,255,0.6)',
+        borderRadius: 20,
+        fontSize: 12,
+        color: '#6b2a3a',
+        lineHeight: 1.3,
+        minWidth: 0,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        fontFamily: 'Nunito, sans-serif',
+      }}>
         {topicDisplay}
-      </p>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        <button
-          type="button"
-          onClick={handleNextTopic}
-          style={{
-            flex: 1,
-            padding: '3px 10px',
-            fontSize: 10,
-            color: '#4a90d9',
-            background: 'transparent',
-            border: '1px solid #4a90d9',
-            borderRadius: 6,
-            cursor: 'pointer',
-          }}
-        >
-          {t(lang, 'anotherTopic')}
-        </button>
-        <button
-          type="button"
-          onClick={handleSkip}
-          style={{
-            flex: 1,
-            padding: '3px 10px',
-            fontSize: 10,
-            color: '#999',
-            background: 'transparent',
-            border: '1px solid #e0e0e0',
-            borderRadius: 6,
-            cursor: 'pointer',
-          }}
-        >
-          {t(lang, 'skip')}
-        </button>
       </div>
+      <button
+        type="button"
+        onClick={handleNextTopic}
+        style={{
+          padding: '5px 10px',
+          fontSize: 11,
+          fontWeight: 700,
+          color: '#6b2a3a',
+          background: 'rgba(255,255,255,0.4)',
+          border: 'none',
+          borderRadius: 12,
+          cursor: 'pointer',
+          whiteSpace: 'nowrap',
+          fontFamily: 'Nunito, sans-serif',
+        }}
+      >
+        {t(lang, 'anotherTopic')}
+      </button>
     </div>
   )
 }
