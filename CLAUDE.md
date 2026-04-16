@@ -102,3 +102,66 @@ npm run dev          # Vite開発サーバー
 npm run build        # 本番ビルド
 firebase deploy --only firestore:rules,storage  # ルールデプロイ
 ```
+
+## Routine QA
+推測禁止。全てコードを読んでから報告。
+
+### 1. セキュリティ & データ漏洩
+- firestore.rules を読む
+- TYSON-ZH90 が外部からアクセスできる経路がないか確認
+- PAIR-DEMOTEST への書き込みが全APIでブロックされてるか確認
+- getPairId() が null/invalid 時にフォールバックしてないか確認
+- pairId='demo' でAPIを叩いたとき PAIR-DEMOTEST のデータが返らないか確認
+
+### 2. データ整合性
+- api/pair-media.js の set() が全て merge:true なしか確認
+- 「送信しました」表示がFirestore書き込み確認後のみか確認
+- Firebase Admin Storage が全て admin.storage().bucket(storageBucketName) か確認
+
+### 3. Vercel関数スロット
+- ls api/*.js | wc -l で関数数を確認（上限12）
+- 12超えてたらCritical
+
+### 4. JP/EN
+- src/pages/ 以下の全JSXファイルで日本語ハードコード文字列を検索
+- grep -rn "[^\x00-\x7F]" src/pages/ | grep -v "//.*[^\x00-\x7F]" でリストアップ
+- i18n対応されてない文字列を報告
+
+### 5. UIの一貫性
+- BottomNavがHomePage/AlbumPage/PairDailyPageに存在するか確認
+- HashRouter形式（/#/path）が全リンクで使われてるか確認
+- pairId=PAIR-DEMOTESTでデモ写真・音声のフォールバックがあるか確認（他pairIdに漏れてないか）
+
+### 6. Firestore インデックス
+- 全クエリに .orderBy() があるものをリストアップ
+- 対応するインデックスがfirestore.indexes.jsonに定義されてるか確認
+
+### 7. ボタン動作確認
+- src/pages/ 全JSXファイルでonClickハンドラーがないbuttonタグを検索
+  grep -n "<button" src/pages/*.jsx | grep -v "onClick"
+- 録音ボタン・写真追加ボタン・招待ボタン・再生ボタンのhandlerが存在するか確認
+- PAIR-DEMOTEST時のデモメッセージ表示ロジックが各ボタンにあるか確認
+
+### 8. クロスユーザーデータ漏洩
+- 全APIファイルでpairIdバリデーションを確認：
+  grep -n "pairId" api/*.js | grep -v "req.query\|req.body\|return.*400\|return.*403"
+- pairIdなし・不正値でAPIが200を返すケースがないか確認
+- AlbumPage/VoiceLibraryでdays.length===0のフォールバックがPAIR-DEMOTEST限定か再確認
+
+### 9. JP/EN文字列チェック
+- JPモード時に英語ハードコード文字列がないか確認：
+  grep -rn 'lang.*jp\|lang.*JP' src/pages/ | head -20
+- 以下のキーワードが日本語ページに存在しないか確認：
+  grep -rn '"Send"\|"Record"\|"Add Photo"\|"Invite"\|"Play"' src/pages/
+- 日付フォーマットがNYタイムゾーン基準か確認：
+  grep -rn "getDateKeyNY\|toLocaleString" src/ | head -20
+
+### 報告形式
+問題が見つかったら以下の形式で：
+#### [Critical/High/Medium/Low] タイトル
+- ファイル: xxx.js L123
+- 問題: 何が起きてるか
+- 影響: 誰が/何が影響を受けるか
+- 修正案: 何をすべきか
+
+問題がなければ「✅ クリーン」と報告。
