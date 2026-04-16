@@ -200,6 +200,7 @@ export default function AlbumPage({ lang = 'ja' }) {
       fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
       color: '#333',
       overscrollBehavior: 'none',
+      paddingBottom: 72,
     }}>
       <header style={{
         position: 'sticky',
@@ -520,6 +521,13 @@ export default function AlbumPage({ lang = 'ja' }) {
           </p>
         </div>
       )}
+
+      {/* Bottom nav */}
+      <nav className="bottom-nav">
+        <button type="button" onClick={() => navigate('/')}><span style={{ fontSize: 20 }}>🏠</span><span>{lang === 'en' ? 'Home' : 'ホーム'}</span></button>
+        <button type="button" className="active"><span style={{ fontSize: 20 }}>🖼</span><span>{lang === 'en' ? 'Album' : 'アルバム'}</span></button>
+        <button type="button" onClick={() => navigate('/')}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : '招待'}</span></button>
+      </nav>
     </div>
   )
 }
