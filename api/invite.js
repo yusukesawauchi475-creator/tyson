@@ -139,18 +139,19 @@ export default async function handler(req, res) {
       for (let i = 0; i < 6; i++) pairId += chars[Math.floor(Math.random() * chars.length)];
 
       try {
-        // Get next number: fetch all pair_numbers docs and find max
+        // Generate random 6-char slug (a-z 0-9, ~2.1 billion combinations)
+        const slugChars = 'abcdefghijklmnopqrstuvwxyz0123456789';
         const allSnap = await firestore.collection('pair_numbers').get();
-        let maxNum = 0;
-        allSnap.forEach(doc => {
-          const n = parseInt(doc.id, 10);
-          if (!isNaN(n) && n > maxNum) maxNum = n;
-        });
-        const nextNum = maxNum + 1;
-        console.log('[invite] create-numbered: maxNum=', maxNum, 'nextNum=', nextNum, 'total docs=', allSnap.size);
+        const existingSlugs = new Set(allSnap.docs.map(d => d.id));
+        let slug;
+        do {
+          slug = '';
+          for (let i = 0; i < 6; i++) slug += slugChars[Math.floor(Math.random() * slugChars.length)];
+        } while (existingSlugs.has(slug));
+        console.log('[invite] create-numbered: slug=', slug, 'total docs=', allSnap.size);
 
-        // Write pair_numbers/{N}
-        await firestore.collection('pair_numbers').doc(String(nextNum)).set({
+        // Write pair_numbers/{slug}
+        await firestore.collection('pair_numbers').doc(slug).set({
           pairId,
           memo,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -159,16 +160,16 @@ export default async function handler(req, res) {
         // Write pairs/{pairId}
         await firestore.collection('pairs').doc(pairId).set({
           pairId,
-          number: nextNum,
+          number: slug,
           memo,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
 
         return res.status(200).json({
           success: true,
-          number: nextNum,
+          number: slug,
           pairId,
-          url: `https://humfamily.com/pair/${nextNum}`,
+          url: `https://humfamily.com/pair/${slug}`,
           requestId,
         });
       } catch (e) {
