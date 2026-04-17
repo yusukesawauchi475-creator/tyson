@@ -61,7 +61,7 @@ function RootOrLanding({ lang = 'ja' }) {
     if (numberFromUrl) return <NumberResolver number={numberFromUrl} lang={lang} />
   } catch (_) {}
   const storedPairId = getPairId()
-  if (storedPairId && storedPairId !== 'demo') return <RootRoute lang={lang} />
+  if (storedPairId) return <RootRoute lang={lang} />
   return <LandingPage lang={lang} />
 }
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getDateKey, getPairId, PAIR_ID_DEMO } from '../lib/pairDaily'
+import { getDateKey, getPairId } from '../lib/pairDaily'
 import { t } from '../lib/i18n'
 
 const TOPICS = [
@@ -166,7 +166,7 @@ function getFallbackTopic(pairId, role, dateKey, offset) {
   return (baseIndex + offset) % TOPICS.length
 }
 
-export default function DailyPromptCard({ pairId = PAIR_ID_DEMO, role, onTopicChange, lang = 'ja' }) {
+export default function DailyPromptCard({ pairId = null, role, onTopicChange, lang = 'ja' }) {
   const [topicIndex, setTopicIndex] = useState(0)
   const [aiTopic, setAiTopic] = useState(null)
   const [isSkipped, setIsSkipped] = useState(false)

@@ -44,9 +44,6 @@ export function getYesterdayKeyNY() {
 /** getDateKeyNY のエイリアス（後方互換） */
 export const getDateKey = getDateKeyNY;
 
-/** MVP用固定 pairId。単一ソース。 */
-export const PAIR_ID_DEMO = 'demo';
-
 export const PAIR_ID_STORAGE_KEY = 'tyson_pairId';
 
 /** ユーザーの役割（parent / child）を localStorage で管理 */
@@ -87,11 +84,12 @@ export function initPairId() {
 
 /**
  * pairId を取得（同期）。
- * 優先順位: URLクエリ > localStorage > 'demo'。
+ * 優先順位: URLクエリ > localStorage > null。
  * URLに ?pairId=XXXX があれば常に優先し、localStorageに上書き保存する。
+ * Philosophy #2: fallback禁止。見つからなければ null を返す。
  */
 export function getPairId() {
-  if (typeof window === 'undefined') return PAIR_ID_DEMO;
+  if (typeof window === 'undefined') return null;
   try {
     // URLクエリを最優先（新規リンクで別pairIdに切り替わる）
     const hash = window.location.hash || '';
@@ -106,7 +104,7 @@ export function getPairId() {
     const fromStorage = localStorage.getItem(PAIR_ID_STORAGE_KEY)?.trim?.();
     if (fromStorage && fromStorage !== 'PAIR-DEMOTEST') return fromStorage;
   } catch (_) {}
-  return PAIR_ID_DEMO;
+  return null;
 }
 
 /** pairIdが明示的に設定されているか（'demo'フォールバックでないか） */
@@ -140,7 +138,7 @@ export function genRequestId() {
  * @param {string} [requestId] - 呼び出し側で生成したrequestId（省略時は内部生成）
  */
 export async function uploadAudio(blob, role, pairId = getPairId(), _dateKey, requestId = genRequestId()) {
-  if (pairId === 'demo' && !hasPairId()) {
+  if (!pairId) {
     return { success: false, error: 'ペアIDが見つかりません。招待リンクから再アクセスしてください。', requestId: requestId || 'NO-PAIR', errorCode: 'no_pair_id' };
   }
   const dateKey = getDateKeyNY();

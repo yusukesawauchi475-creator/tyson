@@ -56,7 +56,7 @@ export default function AlbumPage({ lang = 'ja' }) {
       }
       // fallback: localStorage（/pair/1 経由でpairIdが保存済みの場合）
       const stored = getPairId()
-      if (stored && stored !== 'demo') return stored
+      if (stored) return stored
       return null
     } catch (_) { return null }
   })()
@@ -524,9 +524,9 @@ export default function AlbumPage({ lang = 'ja' }) {
 
       {/* Bottom nav */}
       <nav className="bottom-nav">
-        <button type="button" onClick={() => navigate('/')}><span style={{ fontSize: 20 }}>🏠</span><span>{lang === 'en' ? 'Home' : 'ホーム'}</span></button>
+        <button type="button" onClick={() => navigate(rawPairId ? `/?pairId=${encodeURIComponent(rawPairId)}` : '/')}><span style={{ fontSize: 20 }}>🏠</span><span>{lang === 'en' ? 'Home' : 'ホーム'}</span></button>
         <button type="button" className="active"><span style={{ fontSize: 20 }}>🖼</span><span>{lang === 'en' ? 'Album' : 'アルバム'}</span></button>
-        <button type="button" onClick={() => navigate('/')}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : '招待'}</span></button>
+        <button type="button" onClick={() => navigate(rawPairId ? `/?pairId=${encodeURIComponent(rawPairId)}` : '/')}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : '招待'}</span></button>
       </nav>
     </div>
   )

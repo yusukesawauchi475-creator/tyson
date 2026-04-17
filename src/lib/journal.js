@@ -64,7 +64,7 @@ export function resizeImageIfNeeded(file) {
  */
 export async function uploadJournalImage(file, requestId = genRequestId(), pairId, role = 'parent', kind = 'journal_image') {
   const pid = pairId ?? getPairId();
-  if (pid === 'demo' && !hasPairId()) {
+  if (!pid) {
     return { success: false, error: 'ペアIDが見つかりません。招待リンクから再アクセスしてください。', requestId, errorCode: 'no_pair_id' };
   }
   const idToken = await getIdTokenForApi();
