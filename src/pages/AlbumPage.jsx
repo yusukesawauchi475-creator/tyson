@@ -186,7 +186,7 @@ export default function AlbumPage({ lang = 'ja' }) {
         <p style={{ fontSize: 16, color: '#7050C0', fontWeight: 600, textAlign: 'center' }}>
           {lang === 'en' ? 'Pair ID required to view album.' : 'アルバムを表示するにはペアIDが必要です。'}
         </p>
-        <button type="button" onClick={() => navigate(-1)} style={{ marginTop: 16, padding: '10px 24px', fontSize: 14, fontWeight: 600, color: '#fff', background: 'linear-gradient(135deg, #FF80C0, #A060FF)', border: 'none', borderRadius: 12, cursor: 'pointer' }}>
+        <button type="button" onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/')} style={{ marginTop: 16, padding: '10px 24px', fontSize: 14, fontWeight: 600, color: '#fff', background: 'linear-gradient(135deg, #FF80C0, #A060FF)', border: 'none', borderRadius: 12, cursor: 'pointer' }}>
           {lang === 'en' ? '← Back' : '← 戻る'}
         </button>
       </div>
@@ -215,7 +215,7 @@ export default function AlbumPage({ lang = 'ja' }) {
       }}>
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/')}
           style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', padding: '0 4px', color: '#7050C0', lineHeight: 1 }}
           aria-label={lang === 'en' ? 'Back' : '戻る'}
         >
@@ -524,9 +524,9 @@ export default function AlbumPage({ lang = 'ja' }) {
 
       {/* Bottom nav */}
       <nav className="bottom-nav">
-        <button type="button" onClick={() => navigate(rawPairId ? `/?pairId=${encodeURIComponent(rawPairId)}` : '/')}><span style={{ fontSize: 20 }}>🏠</span><span>{lang === 'en' ? 'Home' : 'ホーム'}</span></button>
+        <button type="button" onClick={() => navigate('/')}><span style={{ fontSize: 20 }}>🏠</span><span>{lang === 'en' ? 'Home' : 'ホーム'}</span></button>
         <button type="button" className="active"><span style={{ fontSize: 20 }}>🖼</span><span>{lang === 'en' ? 'Album' : 'アルバム'}</span></button>
-        <button type="button" onClick={() => navigate(rawPairId ? `/?pairId=${encodeURIComponent(rawPairId)}` : '/')}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : '招待'}</span></button>
+        <button type="button" onClick={() => navigate('/')}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : '招待'}</span></button>
       </nav>
     </div>
   )
