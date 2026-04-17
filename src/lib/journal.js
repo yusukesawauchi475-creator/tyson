@@ -178,18 +178,19 @@ export async function fetchTodayJournalMeta(pairId, role = 'parent') {
 }
 
 /**
- * アルバム（過去全日付の写真一覧）を取得。新しい日付順。
+ * アルバム（過去全日付の写真一覧、または指定月のみ）を取得。新しい日付順。
  * @param {string} [pairId]
+ * @param {string} [month] - YYYY-MM。指定時はその月のみ返す。
  * @returns {Promise<{ days: Array<{ dateKey: string, photos: Array<{ url: string, storagePath: string, role: string, kind: string, updatedAt: number|null }> }> }>}
  */
-export async function fetchAlbum(pairId) {
+export async function fetchAlbum(pairId, month) {
   const pid = pairId ?? getPairId();
   const idToken = await getIdTokenForApi();
   if (!idToken) throw new Error('認証できません（idToken取得失敗）');
-  const res = await fetch(
-    `/api/album?pairId=${encodeURIComponent(pid)}&v=${Date.now()}`,
-    { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }
-  );
+  const url = month
+    ? `/api/album?pairId=${encodeURIComponent(pid)}&month=${encodeURIComponent(month)}&v=${Date.now()}`
+    : `/api/album?pairId=${encodeURIComponent(pid)}&v=${Date.now()}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.error || `API error HTTP ${res.status}`);
   return { days: Array.isArray(data?.days) ? data.days : [] };

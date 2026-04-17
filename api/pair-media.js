@@ -362,10 +362,51 @@ async function handleVoiceHistory(req, res) {
   }
 }
 
+/** GET: voice-month action (calendar view用、月のhasParent/hasChildのみ返す) */
+async function handleVoiceMonth(req, res) {
+  const idToken = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+  if (!idToken) return res.status(401).json({ error: 'Unauthorized' });
+  try { await verifyIdToken(idToken); } catch { return res.status(401).json({ error: 'Invalid token' }); }
+
+  const pairId = req.query?.pairId;
+  const month = req.query?.month;
+  if (!pairId) return res.status(400).json({ error: 'pairId is required' });
+  if (!month || !/^\d{4}-\d{2}$/.test(month)) return res.status(400).json({ error: 'month must be YYYY-MM' });
+  if (isTysonOnlyBlocked(req, pairId)) return res.status(403).json({ error: 'Access denied' });
+
+  try {
+    initFirebaseAdmin();
+    const daysSnap = await firestore
+      .collection('pair_media').doc(pairId).collection('days')
+      .get();
+
+    const days = [];
+    for (const doc of daysSnap.docs) {
+      const dateKey = doc.id;
+      if (!dateKey.startsWith(`${month}-`)) continue;
+      const data = doc.data();
+      const hasRole = (rd) => !!(rd?.latestAudioPath
+        || (Array.isArray(rd?.audioPath) && rd.audioPath.length > 0)
+        || (typeof rd?.audioPath === 'string' && rd.audioPath));
+      const hasParent = hasRole(data?.parent);
+      const hasChild = hasRole(data?.child);
+      if (hasParent || hasChild) days.push({ date: dateKey, hasParent, hasChild });
+    }
+
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(200).json({ success: true, days });
+  } catch (e) {
+    console.error('[voice-month] error:', e.message, e.stack?.substring(0, 200));
+    return res.status(500).json({ error: e.message });
+  }
+}
+
 /** GET: blob または signed URL */
 async function handleGet(req, res) {
   // voice-history アクション
   if (req.query?.action === 'voice-history') return handleVoiceHistory(req, res);
+  // voice-month アクション（カレンダービュー用）
+  if (req.query?.action === 'voice-month') return handleVoiceMonth(req, res);
 
   const reqId = req.headers['x-request-id'] || genRequestId();
   const pairId = req.query?.pairId || req.query?.pair_id;

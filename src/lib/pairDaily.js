@@ -417,3 +417,22 @@ export async function getListenRoleMeta(listenRole, pairId = getPairId()) {
     return { hasAudio: null, isUnseen: false }; // ネットワークエラー→null（誤表示防止）
   }
 }
+
+/**
+ * カレンダービュー用: 指定月の日ごとに { date, hasParent, hasChild } を返す。
+ * 音声本体やsignedURLは生成せず、バッジ判定のみ。
+ * @param {string} pairId
+ * @param {string} month - YYYY-MM
+ * @returns {Promise<{ days: Array<{ date: string, hasParent: boolean, hasChild: boolean }> }>}
+ */
+export async function fetchVoiceMonth(pairId, month) {
+  const idToken = await getIdTokenForApi();
+  if (!idToken) throw new Error('認証できません（idToken取得失敗）');
+  const res = await fetch(
+    `/api/pair-media?action=voice-month&pairId=${encodeURIComponent(pairId)}&month=${encodeURIComponent(month)}&v=${Date.now()}`,
+    { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error || `API error HTTP ${res.status}`);
+  return { days: Array.isArray(data?.days) ? data.days : [] };
+}

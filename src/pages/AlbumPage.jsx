@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { fetchAlbum } from '../lib/journal'
 import VoiceLibrary from '../components/VoiceLibrary'
+import AlbumCalendar from '../components/AlbumCalendar'
 import { getUserRole, getPairId } from '../lib/pairDaily'
 
 const demoAlbumDays = [
@@ -39,6 +40,7 @@ export default function AlbumPage({ lang = 'ja' }) {
   const [error, setError] = useState(null)
   const [lightboxIndex, setLightboxIndex] = useState(null)
   const [activeTab, setActiveTab] = useState('photo')
+  const [internalScrollDate, setInternalScrollDate] = useState(null)
   const [playingKey, setPlayingKey] = useState(null)
   const [playedKeys, setPlayedKeys] = useState({})
   const voiceAudioRef = useRef(null)
@@ -109,10 +111,15 @@ export default function AlbumPage({ lang = 'ja' }) {
   }, [allPhotos.length])
 
   useEffect(() => {
-    if (loading || !scrollToDate) return
-    const el = document.getElementById(`date-${scrollToDate}`)
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [loading, scrollToDate])
+    if (activeTab !== 'photo' || loading) return
+    const target = internalScrollDate || scrollToDate
+    if (!target) return
+    const t = setTimeout(() => {
+      const el = document.getElementById(`date-${target}`)
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 50)
+    return () => clearTimeout(t)
+  }, [activeTab, loading, internalScrollDate, scrollToDate])
 
   useEffect(() => {
     if (lightboxIndex == null) return
@@ -229,17 +236,34 @@ export default function AlbumPage({ lang = 'ja' }) {
 
       {/* Pill Tabs */}
       {(pairId || isDemo) && (
-        <div style={{ display: 'flex', gap: 8, padding: '10px 16px', background: '#FFF8FF', position: 'sticky', top: 49, zIndex: 99 }}>
-          <button type="button" onClick={() => setActiveTab('photo')} style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700, color: activeTab === 'photo' ? '#fff' : '#999', background: activeTab === 'photo' ? 'linear-gradient(90deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+        <div style={{ display: 'flex', gap: 6, padding: '10px 16px', background: '#FFF8FF', position: 'sticky', top: 49, zIndex: 99 }}>
+          <button type="button" onClick={() => setActiveTab('photo')} style={{ flex: 1, padding: '10px 0', fontSize: 13, fontWeight: 700, color: activeTab === 'photo' ? '#fff' : '#999', background: activeTab === 'photo' ? 'linear-gradient(90deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
             📷 {lang === 'en' ? 'Photos' : '写真'}
           </button>
-          <button type="button" onClick={() => setActiveTab('voice')} style={{ flex: 1, padding: '10px 0', fontSize: 14, fontWeight: 700, color: activeTab === 'voice' ? '#fff' : '#999', background: activeTab === 'voice' ? 'linear-gradient(90deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+          <button type="button" onClick={() => setActiveTab('voice')} style={{ flex: 1, padding: '10px 0', fontSize: 13, fontWeight: 700, color: activeTab === 'voice' ? '#fff' : '#999', background: activeTab === 'voice' ? 'linear-gradient(90deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
             🎙 {lang === 'en' ? 'Voice' : '声'}
+          </button>
+          <button type="button" onClick={() => setActiveTab('calendar')} style={{ flex: 1, padding: '10px 0', fontSize: 13, fontWeight: 700, color: activeTab === 'calendar' ? '#fff' : '#999', background: activeTab === 'calendar' ? 'linear-gradient(90deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+            📅 {lang === 'en' ? 'Calendar' : 'カレンダー'}
           </button>
         </div>
       )}
 
       <main style={{ padding: '16px', maxWidth: 480, margin: '0 auto' }}>
+
+      {/* Calendar tab */}
+      {pairId && !isDemo && activeTab === 'calendar' && (
+        <AlbumCalendar
+          pairId={pairId}
+          lang={lang}
+          onDateClick={(dateKey) => { setInternalScrollDate(dateKey); setActiveTab('photo') }}
+        />
+      )}
+      {isDemo && activeTab === 'calendar' && (
+        <p style={{ textAlign: 'center', color: '#999', fontSize: 12, margin: '24px 0', fontStyle: 'italic' }}>
+          {lang === 'en' ? 'Calendar view is available once you have data.' : 'カレンダーはデータが蓄積されると表示されます'}
+        </p>
+      )}
 
       {/* Voice tab */}
       {pairId && !isDemo && activeTab === 'voice' && (

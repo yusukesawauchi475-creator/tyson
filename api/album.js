@@ -105,9 +105,12 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, error: 'Invalid token', requestId });
   }
 
-  const { pairId } = req.query;
+  const { pairId, month } = req.query;
   if (!pairId) {
     return res.status(400).json({ success: false, error: 'pairId is required', requestId });
+  }
+  if (month && !/^\d{4}-\d{2}$/.test(month)) {
+    return res.status(400).json({ success: false, error: 'month must be YYYY-MM', requestId });
   }
 
   // Block TYSON-ZH90 access from humfamily.com
@@ -119,15 +122,16 @@ export default async function handler(req, res) {
     }
   }
 
-  console.log('[album] request', { pairId, requestId });
+  console.log('[album] request', { pairId, month: month || 'all', requestId });
 
   try {
     initFirebaseAdmin();
 
     // listDocuments() を使う: phantom document (doc自体は存在しないがsubcollectionがある) も含めて列挙
-    const monthDocRefs = await firestore
-      .collection('journal').doc(pairId).collection('months')
-      .listDocuments();
+    // month指定時は該当月のみ処理、無指定時は全月
+    const monthDocRefs = month
+      ? [firestore.collection('journal').doc(pairId).collection('months').doc(month)]
+      : await firestore.collection('journal').doc(pairId).collection('months').listDocuments();
 
     console.log('[album] months found:', monthDocRefs.length, { pairId });
 
