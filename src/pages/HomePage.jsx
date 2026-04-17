@@ -79,6 +79,13 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
     playingParentRef.current = isPlayingParent
   }, [isUploading, isLoadingParent, isPlayingParent])
 
+  useEffect(() => {
+    if (!isUploading && !isRecording) return
+    const handler = (e) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isUploading, isRecording])
+
   const ROLE_PARENT = 'parent'
   const LISTEN_ROLE_CHILD = 'child'
   const [currentPairId] = useState(() => getPairId())
@@ -325,6 +332,11 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   }
 
   const handleShare = async () => {
+    if (isRecording) {
+      const msg = lang === 'en' ? 'Recording in progress. Stop and navigate away?' : '録音中です。中断して移動しますか？'
+      if (!window.confirm(msg)) return
+      stopRecording()
+    }
     const pid = getPairId()
     if (!pid) {
       alert(lang === 'en' ? 'Pair ID not found. Please open from your invite link.' : 'ペアIDが見つかりません。招待リンクからアクセスしてください。')
@@ -647,7 +659,14 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
       {/* Bottom nav */}
       <nav className="bottom-nav">
         <button type="button" className="active"><span style={{ fontSize: 20 }}>🏠</span><span>{lang === 'en' ? 'Home' : 'ホーム'}</span></button>
-        <button type="button" onClick={() => navigate(lang === 'en' ? `/album/eng?pairId=${currentPairId}` : `/album?pairId=${currentPairId}`)}><span style={{ fontSize: 20 }}>🖼</span><span>{lang === 'en' ? 'Album' : 'アルバム'}</span></button>
+        <button type="button" onClick={() => {
+          if (isRecording) {
+            const msg = lang === 'en' ? 'Recording in progress. Stop and navigate away?' : '録音中です。中断して移動しますか？'
+            if (!window.confirm(msg)) return
+            stopRecording()
+          }
+          navigate(lang === 'en' ? `/album/eng?pairId=${currentPairId}` : `/album?pairId=${currentPairId}`)
+        }}><span style={{ fontSize: 20 }}>🖼</span><span>{lang === 'en' ? 'Album' : 'アルバム'}</span></button>
         <button type="button" onClick={handleShare}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : '招待'}</span></button>
       </nav>
 

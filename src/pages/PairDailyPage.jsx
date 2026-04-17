@@ -83,6 +83,13 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
     }
   }, [isDemoTest])
 
+  useEffect(() => {
+    if (!isUploading && !isRecording) return
+    const handler = (e) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isUploading, isRecording])
+
   const handleTopicChange = useCallback((topic) => {
     setDailyTopic(topic)
     topicRef.current = topic
@@ -683,6 +690,11 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   }
 
   const handleShare = async () => {
+    if (isRecording) {
+      const msg = lang === 'en' ? 'Recording in progress. Stop and navigate away?' : '録音中です。中断して移動しますか？'
+      if (!window.confirm(msg)) return
+      stopRecording()
+    }
     const pid = getPairId()
     if (!pid) {
       alert(lang === 'en' ? 'Pair ID not found. Please open from your invite link.' : 'ペアIDが見つかりません。招待リンクからアクセスしてください。')
@@ -845,7 +857,14 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
       <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9000, display: 'flex', background: '#fff', borderTop: '2px solid #F0E8FF', boxShadow: '0 -4px 20px rgba(180,120,255,0.15)', paddingBottom: 'max(4px, env(safe-area-inset-bottom))' }}>
         {[
           { icon: '🏠', label: lang === 'en' ? 'Home' : 'ホーム', bg: '#FFE8F4', bgActive: '#FFD0E8', active: true, onClick: null },
-          { icon: '🖼', label: lang === 'en' ? 'Album' : 'アルバム', bg: '#F0E8FF', bgActive: '#E0D0FF', active: false, onClick: () => navigate(lang === 'en' ? `/album/eng?pairId=${currentPairId}` : `/album?pairId=${currentPairId}`) },
+          { icon: '🖼', label: lang === 'en' ? 'Album' : 'アルバム', bg: '#F0E8FF', bgActive: '#E0D0FF', active: false, onClick: () => {
+            if (isRecording) {
+              const msg = lang === 'en' ? 'Recording in progress. Stop and navigate away?' : '録音中です。中断して移動しますか？'
+              if (!window.confirm(msg)) return
+              stopRecording()
+            }
+            navigate(lang === 'en' ? `/album/eng?pairId=${currentPairId}` : `/album?pairId=${currentPairId}`)
+          } },
           { icon: '👋', label: lang === 'en' ? 'Invite' : '招待', bg: '#FFF0E8', bgActive: '#FFE0D0', active: false, onClick: handleShare },
         ].map((item) => (
           <button key={item.label} type="button" onClick={item.onClick} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 0 4px', border: 'none', background: 'none', cursor: 'pointer' }}>
