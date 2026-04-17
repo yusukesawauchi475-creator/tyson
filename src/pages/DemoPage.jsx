@@ -105,7 +105,7 @@ export default function DemoPage({ lang = 'ja' }) {
   }
 
   const handleShareDemo = async () => {
-    const url = 'https://www.humfamily.com/#/?pairId=PAIR-DEMOTEST'
+    const url = 'https://www.humfamily.com/#/?pairId=PAIR-DEMOTEST&openExternalBrowser=1'
     const text = lang === 'en'
       ? "Let's exchange voices every day on Hum. Listen to today's message 👋"
       : 'Humで毎日声を交換しよう。今日のメッセージを聞いてね 👋'

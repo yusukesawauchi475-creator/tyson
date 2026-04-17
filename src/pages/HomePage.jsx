@@ -326,6 +326,10 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
 
   const handleShare = async () => {
     const pid = getPairId()
+    if (!pid) {
+      alert(lang === 'en' ? 'Pair ID not found. Please open from your invite link.' : 'ペアIDが見つかりません。招待リンクからアクセスしてください。')
+      return
+    }
     let url = `https://www.humfamily.com/#/?pairId=${encodeURIComponent(pid)}&role=child&openExternalBrowser=1`
     try {
       const snap = await getDoc(doc(db, 'pairs', pid))
