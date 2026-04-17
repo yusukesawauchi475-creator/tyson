@@ -12,6 +12,42 @@ Humの全ての判断はこの3原則から逆算される。機能追加・バ�
 2. **User data never crossed** — あるペアのデータが別のペアに見えてはならない。pairId fallbackは絶対禁止（nullならエラー、デモへのフォールバックも不可）。PAIR-DEMOTESTの isolation は厳守。
 3. **Easy look back** — 積み重なった家族の記録（写真・音声）に、いつでも戻れる体験を最優先に設計する。過去を遡ることで今日の1分に意味が生まれる。Album、カレンダービュー、日付スクロール等の「振り返り機能」はHumの中核。
 
+## Architectural Axioms（30年耐える設計のための公理）
+
+Humの全ての実装判断はこの4公理から演繹される。違反は機能追加・バグ修正に関わらず却下される。
+
+### 公理1: URL = Source of Truth
+
+状態は常にURLから復元可能であること。localStorage / sessionStorage / memory はキャッシュであり、真実のソースではない。pairId の真実のソースは URL path（/pair/:slug）のみ。リロード・戻る・進む・URL共有・PWAインストールのいずれの経路でも、URLが同じなら同じ状態が復元されなければならない。
+
+### 公理2: Pair is a World
+
+各 pair は独立した「世界」である。世界は URL path で識別される。ある世界のデータが別の世界に流出する経路は構造的に存在してはならない。世界間の橋は demo への導線のみ（demo は完全独立の特殊世界）。
+
+### 公理3: Side effects are explicit
+
+関数の命名で副作用の有無を明示する。get* / fetch* 関数は read のみ。set* / save* / update* 関数は write のみ。両方を行う関数は命名で明示（syncPairContext 等）。混合関数は作らない。
+
+### 公理4: Verification is automatic
+
+公理1-3への違反を人間の目視で発見する仕組みは信用しない。毎日 nightly CI / static analysis が自動検証する。人間のレビューは二次検証であり一次ではない。
+
+## 不変の3原則（Core Philosophy の継続）
+
+1. User data never lost — 一度入ったデータは失われない
+2. User data never crossed — ペア間データは構造的に混ざらない
+3. Verify every day — 毎日自動検証される
+
+このCore Philosophyセクションは全ての技術判断の上位概念として機能する。Axiomsと原則が衝突する実装が要求された場合、CTOは作業を止めて確認を求める。
+
+## 進行中のMigration
+
+Pair-World Refactor 実施中（2026年4月〜）。「localStorage + URL query 併用」設計から「URL path = Source of Truth」設計への移行。
+
+詳細・Phase計画・影響範囲・実施記録: docs/migrations/pair-world-refactor.md
+
+完了後、このセクションは docs/migrations/ へのリンクのみ残し、詳細は全て歴史記録へ移動する。
+
 ## スタック
 - **フロントエンド**: Vite + React (HashRouter), インラインCSS中心
 - **バックエンド**: Vercel Serverless Functions (`api/` ディレクトリ)
