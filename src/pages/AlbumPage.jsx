@@ -4,6 +4,8 @@ import { fetchAlbum } from '../lib/journal'
 import VoiceLibrary from '../components/VoiceLibrary'
 import AlbumCalendar from '../components/AlbumCalendar'
 import { getUserRole, getPairId } from '../lib/pairDaily'
+import { db } from '../lib/firebase'
+import { doc, getDoc } from 'firebase/firestore'
 
 const demoAlbumDays = [
   { date: '2026-04-01', label: '4月1日', photos: ['/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp','/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp','/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png'] },
@@ -138,6 +140,34 @@ export default function AlbumPage({ lang = 'ja' }) {
   const handleTouchStart = useCallback((e) => {
     touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
   }, [])
+
+  const handleShare = async () => {
+    if (!rawPairId) {
+      alert(lang === 'en' ? 'Pair ID not found. Please open from your invite link.' : 'ペアIDが見つかりません。招待リンクからアクセスしてください。')
+      return
+    }
+    const userRole = getUserRole()
+    const inviteeRole = userRole === 'parent' ? 'child' : 'parent'
+    let url = `https://www.humfamily.com/#/?pairId=${encodeURIComponent(rawPairId)}&role=${inviteeRole}&openExternalBrowser=1`
+    try {
+      const snap = await getDoc(doc(db, 'pairs', rawPairId))
+      const num = snap.data()?.number
+      if (num) url = `https://www.humfamily.com/pair/${num}?role=${inviteeRole}&openExternalBrowser=1`
+    } catch (_) {}
+    const text = lang === 'en'
+      ? 'Connect with your family every day with Hum. Open this link to get started.'
+      : '毎日1分、声でつながるアプリHumです。このリンクを開いて始めてください。'
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Hum', text, url }) } catch (_) {}
+    } else {
+      try {
+        await navigator.clipboard.writeText(url)
+        alert(lang === 'en' ? 'Link copied!' : 'リンクをコピーしました')
+      } catch (_) {
+        alert(lang === 'en' ? 'Copy failed' : 'コピーに失敗しました')
+      }
+    }
+  }
 
   const handleTouchEnd = useCallback((e) => {
     if (!touchStartRef.current) return
@@ -551,7 +581,7 @@ export default function AlbumPage({ lang = 'ja' }) {
       <nav className="bottom-nav">
         <button type="button" onClick={() => navigate(backPath)}><span style={{ fontSize: 20 }}>🏠</span><span>{lang === 'en' ? 'Home' : 'ホーム'}</span></button>
         <button type="button" className="active"><span style={{ fontSize: 20 }}>🖼</span><span>{lang === 'en' ? 'Album' : 'アルバム'}</span></button>
-        <button type="button" onClick={() => navigate(backPath)}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : '招待'}</span></button>
+        <button type="button" onClick={handleShare}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : '招待'}</span></button>
       </nav>
     </div>
   )
