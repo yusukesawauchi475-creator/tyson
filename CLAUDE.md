@@ -45,13 +45,25 @@
 | `src/components/VoiceLibrary.jsx` | 声の履歴一覧 (アルバム声タブ用) |
 | `src/components/PwaInstallBanner.jsx` | Android PWAインストールバナー |
 | `src/components/WeeklySummary.jsx` | 週次サマリー (日曜のみ) |
+| `src/components/AdminAuth.jsx` | 管理画面パスワード認証 (sessionStorage) |
+| `src/components/LanguageSwitch.jsx` | JP/EN言語切替ボタン |
+| `src/components/FamilyInsightCard.jsx` | AI生成の家族インサイトコメントカード |
+| `src/components/OneYearAgoBanner.jsx` | 過去の声バナー (7/14/30/90/365日前) |
+| `src/components/UploadErrorModal.jsx` | 音声/写真アップロードエラーモーダル |
 | `src/lib/pairDaily.js` | getPairId, getUserRole, markSeen, uploadAudio, fetchAudio 等 |
 | `src/lib/journal.js` | 写真アップロード, fetchTodayJournalMeta, fetchAlbum |
 | `src/lib/firebase.js` | Firebase初期化, getIdTokenForApi (匿名認証) |
 | `src/lib/i18n.js` | 日英翻訳 |
+| `src/lib/uiCopy.js` | UI文言共通化 (topic種別判定→i18n文言返却) |
+| `src/lib/tysonThemes.js` | DailyPromptCard用フォールバックテーマ定数 |
+| `src/lib/useAudioLevel.js` | マイク音量レベル取得カスタムフック |
+| `src/lib/indexedDB.js` | 音声データのIndexedDBバックアップ/取得 |
+| `src/lib/fcm.js` | FCMプッシュ通知 (PairDailyPage専用) |
+| `src/lib/dateFormat.js` | 日付表示ユーティリティ (JST基準) |
+| `src/lib/deployHealthCheck.js` | デプロイ健全性チェック (BUILD_TIME/BUILD_SHA検証) |
 | `src/index.css` | グローバルCSS (.page, .bottom-nav 等) |
 
-### API (Vercel Serverless)
+### API (Vercel Serverless) — 現在11関数 / 上限12
 | ファイル | 役割 |
 |---------|------|
 | `api/pair-media.js` | 音声 GET/POST/PATCH(markSeen) + voice-history |
@@ -59,7 +71,9 @@
 | `api/album.js` | アルバム全日写真取得 |
 | `api/invite.js` | ペア発行(create-numbered), スラグ解決(resolve) |
 | `api/streak.js` | 連続記録ストリーク |
-| `api/daily-theme.js` | AI話題生成 |
+| `api/daily-theme.js` | AI話題生成 (OpenAI, tysonThemesフォールバック) |
+| `api/family-insight.js` | AI家族インサイトコメント生成 (OpenAI) |
+| `api/journal-analysis.js` | 日記写真OCR+AI解析 (管理者専用, OpenAI Vision) |
 | `api/admin-reset.js` | 管理リセット |
 | `api/admin-restore.js` | 管理復元 |
 | `api/admin-pairs.js` | ペアダッシュボード |
