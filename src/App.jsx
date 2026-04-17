@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { HashRouter, Routes, Route } from 'react-router-dom'
+// Phase 1: BrowserRouter へ移行。JSX 使用箇所を変えないため HashRouter 名でエイリアス。Phase 4 で正式名に戻す予定。
+import { BrowserRouter as HashRouter, Routes, Route } from 'react-router-dom'
 import PairDailyPage from './pages/PairDailyPage'
 import HomePage from './pages/HomePage'
 import AdminPage from './pages/AdminPage'
@@ -7,6 +8,8 @@ import AlbumPage from './pages/AlbumPage'
 import DemoPage from './pages/DemoPage'
 import LandingPage from './pages/LandingPage'
 import RoleSelectPage from './pages/RoleSelectPage'
+import PairWorld from './components/PairWorld'
+import InvitePage from './pages/InvitePage'
 import { getUserRole, setUserRole, clearUserRole, getPairId, PAIR_ID_STORAGE_KEY } from './lib/pairDaily'
 import PwaInstallBanner, { BANNER_HEIGHT } from './components/PwaInstallBanner'
 import { db, getIdTokenForApi } from './lib/firebase'
@@ -120,6 +123,11 @@ function App() {
             <Route path="/demo" element={<DemoPage />} />
             <Route path="/landing" element={<LandingPage />} />
             <Route path="/landing/eng" element={<LandingPage lang="en" />} />
+            <Route path="/pair/:slug" element={<PairWorld />}>
+              <Route index element={<RootRoute />} />
+              <Route path="album" element={<AlbumPage />} />
+              <Route path="invite" element={<InvitePage />} />
+            </Route>
           </Routes>
         </HashRouter>
       </div>
