@@ -118,9 +118,10 @@ firebase deploy --only firestore:rules,storage  # ルールデプロイ
 - 「送信しました」表示がFirestore書き込み確認後のみか確認
 - Firebase Admin Storage が全て admin.storage().bucket(storageBucketName) か確認
 
-### 3. Vercel関数スロット
-- ls api/*.js | wc -l で関数数を確認（上限12）
-- 12超えてたらCritical
+### 3. Vercel関数の追加
+- Vercel Pro プラン使用中のため、関数数の上限（旧12個）は撤廃済み
+- 新規 serverless 関数の追加は「個数制限」ではなく「要承認」ルール（勝手に追加しない）
+- 既存関数の修正は通常通り可
 
 ### 4. JP/EN
 - src/pages/ 以下の全JSXファイルで日本語ハードコード文字列を検索
