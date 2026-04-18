@@ -42,11 +42,13 @@ Humの全ての実装判断はこの4公理から演繹される。違反は機�
 
 ## 進行中のMigration
 
-Pair-World Refactor 実施中（2026年4月〜）。「localStorage + URL query 併用」設計から「URL path = Source of Truth」設計への移行。
+Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-world-refactor.md 参照。
 
-詳細・Phase計画・影響範囲・実施記録: docs/migrations/pair-world-refactor.md
+現在、Humは「URL = Source of Truth」原則で動作し、pair間データ混線は構造的に不可能。4公理（URL = Source of Truth / Pair is a World / Side effects are explicit / Verification is automatic）への準拠を達成。ただし公理4（Verification is automatic）は nightly CI 未実装のため、部分達成。
 
-完了後、このセクションは docs/migrations/ へのリンクのみ残し、詳細は全て歴史記録へ移動する。
+次のMigration予定: なし（必要時に docs/migrations/ に新規ファイル作成）
+
+進行中の将来機能: Memory Surfacing（docs/features/memory-surfacing.md 参照）
 
 ## スタック
 - **フロントエンド**: Vite + React (HashRouter), インラインCSS中心

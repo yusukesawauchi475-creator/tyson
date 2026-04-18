@@ -123,34 +123,94 @@ Verification System（nightly 自動検証）の実装を別途開始する。�
 - UID = ブラウザ識別、pairId = 家族世界識別
 - Refactor後もこの直交性を維持
 
-## Implementation Log（各Phase完了時に追記）
+## Implementation Log
 
 ### Phase 1
 
-- Status: 未着手
+- Status: 完了
 - Branch: feature/pair-world-phase-1
-- Start: (未定)
-- Merged: (未定)
-- Commit SHA: (未定)
-- Deployment: (未定)
-- βユーザー影響: (未定)
+- Start: 2026-04 (Phase 0 直後)
+- Commit SHA: 90d522d
+- Merge commit: 9e566ec (--no-ff)
+- Deployment: humfamily.com 本番（Vercel 自動デプロイ）
+- βユーザー影響: なし（確認時点で影響ゼロ）
+- Yusuke 承認記録: 実機4項目（/pair/ulf1q6 Home, /pair/ulf1q6/album, /, /#/admin）全OK
 
 ### Phase 2
 
-- Status: 未着手
+- Status: 完了
+- Branch: feature/pair-world-phase-2
+- Start: 2026-04 (Phase 1 直後)
+- Commit 履歴:
+  - c00569c: 元 Phase 2 (useOutletContext 移行 + navigate 新形式)
+  - 1e30bf4: Commit A (HashRouter 完全削除、LanguageSwitch useSearchParams 化)
+  - 64d2e2c: Commit B (getPairId/initPairId/NumberResolver/localStorage tyson_pairId 完全削除)
+  - ff5f47b: Commit C (コンポーネント5個 props 化、ライブラリ関数 pairId 必須引数化)
+  - 80dd657: Commit D (/admin 新ルート、vercel.json redirects 削除)
+  - dd095a0: Commit E (DemoPage の hash URL → navigate 新形式に修正)
+  - ce14460: Commit F (/eng 系ルート4つ削除)
+- Merge commit: e082ba9 (--no-ff)
+- Deployment: humfamily.com 本番（Vercel 自動デプロイ）
+- Yusuke 承認記録: 実機5項目（Home/Album遷移/Home戻り/Landing/Demo）全OK、PAIR-DEMOTEST は Firestore に手動登録で対応
 
 ### Phase 3
 
-- Status: 未着手
+- Status: 廃止（βユーザー不要前提の変更により、Phase 2 に統合）
 
 ### Phase 4
 
-- Status: 未着手
+- Status: 廃止（Phase 2 Final に統合完了）
 
-## Post-Refactor Evaluation（完了後に記載）
+## Post-Refactor Evaluation
 
-(Phase 4完了後に書く)
+### 実施期間
+2026年4月（Phase 0 ドキュメント化から Phase 2 Final main マージ完了まで）
 
-## Lessons Learned（完了後に記載）
+### 結果サマリ
+- 7 commit で Pair-World Refactor を完了
+- 全 grep チェッククリア（localStorage tyson_pairId / getPairId / initPairId / NumberResolver / window.location.hash / HashRouter / PAIR_ID_STORAGE_KEY / tyson_pairId リテラル、全てゼロ件）
+- 4公理のうち 3.5 達成:
+  - 公理1 URL = Source of Truth: 達成（localStorage 依存完全除去、URL slug が pairId の唯一のソース）
+  - 公理2 Pair is a World: 達成（pair 間データ混線の経路が構造的に存在しない）
+  - 公理3 Side effects are explicit: 達成（read-中-write 副作用を持つ getPairId を関数ごと削除）
+  - 公理4 Verification is automatic: 部分達成（nightly CI / static analysis 未実装、将来タスク）
 
-(Phase 4完了後に書く)
+### 発見された dead code
+以下2コンポーネントは Refactor 過程で import 元が存在しないことが判明。削除せず保持:
+- src/components/OneYearAgoBanner.jsx
+- src/components/FamilyInsightCard.jsx
+
+将来の Memory Surfacing 機能（docs/features/memory-surfacing.md 参照）で活用予定。
+
+### 保留された作業
+- TYSON-ZH90 保護コード（api/album.js, api/pair-media.js, api/journal.js の 403 blocker, AdminPage の HIDDEN_PAIR_IDS）: 意図的に維持。現状の isolation で十分。
+- tyson → hum の名称変更（リポジトリ名、Vercel 設定等）: 任意、将来判断。
+- apex humfamily.com → www.humfamily.com 307 redirect: 意図不明だが触らない方針。
+- Verification System（公理4）: nightly CI / static analysis 未実装、別タスクとして着手予定。
+
+### βユーザーへの影響
+なし。移行期間中の βユーザー 0 前提で実施したため、既存 localStorage 喪失・旧URL非互換化のコストを許容できた。
+
+## Lessons Learned
+
+### セカンドオピニオンの有効性
+Gemini 2.5 Pro と ChatGPT に独立監査を依頼し、両AIとも「構造問題、URL path = Source of Truth への移行を今すぐ実施すべき」と判定。この一致により方針確定が加速した。大規模リファクタの方針決定時は、独立した複数の判断源を取ることが有効。
+
+### 3層役割分担の機能
+Boss（戦略・設計）/ CTO（指示書の実装プロンプト化）/ Claude Code（実装）の3層分担は、各層の責任が明確で効率的に機能した。特に CTO が Boss の指示書を Claude Code が実行可能な精密プロンプトに変換する層は、実装時の推測ミスを大幅に減らした。
+
+### 柔軟な Phase 設計の価値
+当初の4 Phase 計画（各Phase完了後に1日様子見）は、途中で前提が変わった際（既存ユーザー0判明）に Phase 3/4 を Phase 2 に統合するスコープ縮小が可能だった。Phase を「時間の経過」ではなく「論理的な境界」で切っておくと、前提変化に柔軟に対応できる。
+
+### ドキュメントの二層構造の価値
+CLAUDE.md は「今の原則」、docs/migrations/ は「歴史的記録」の二層構造を Phase 0 で確立したことで、移行が進んでも CLAUDE.md は肥大化せず、進行中リファクタの詳細は migrations に集約できた。完了時には CLAUDE.md の「進行中のMigration」セクションを完了状態に更新するだけで履歴は migrations に残る。
+
+### コードブロック内バッククォートのネスト問題
+Boss から CTO への指示書、および CTO から Claude Code への指示書で、マークダウンコードブロックのバッククォート（3連続）をネストすると指示書が壊れる事件が発生。以降の原則として、指示書内のコード例はインデント or 行プレフィックス or EOF heredoc で表現し、マークダウンコードブロックのネストは禁止とする。
+
+### 次回リファクタ時の推奨アプローチ
+- Phase 0 として必ず原則のドキュメント化とセカンドオピニオンを先行
+- docs/migrations/ 配下に新ファイルを作成し、影響範囲調査（Pre-Refactor Affected Surfaces）を最初に完了
+- Phase 境界は論理的な切れ目で、各 Phase で build と grep による検証を必ず通す
+- 既存ユーザーへの影響評価を Phase 計画に組み込み、影響が小さければスコープを圧縮できる設計にする
+- 破壊変更を含む commit は feature ブランチで複数の論理 commit に分割し、各 commit で build を通しておく（revert 時の切り分けが可能になる）
