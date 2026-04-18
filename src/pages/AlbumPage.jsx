@@ -48,21 +48,14 @@ export default function AlbumPage({ lang = 'ja' }) {
   const [playingKey, setPlayingKey] = useState(null)
   const [playedKeys, setPlayedKeys] = useState({})
   const voiceAudioRef = useRef(null)
-  // pairId extraction: outletContext (Phase 2 new flow) → URL → localStorage fallback
+  // pairId extraction: outletContext (Phase 2 new flow) → URL search → localStorage fallback
   const rawPairId = (() => {
     try {
       // Phase 2: /pair/:slug/album route → outletContext から取得
       if (outletContext?.pairId) return outletContext.pairId
-      // react-router useLocation().search (works with navigate())
+      // BrowserRouter URL search
       const fromRouter = new URLSearchParams(location.search).get('pairId')?.trim()
       if (fromRouter) return fromRouter
-      // fallback: parse hash directly (works with window.location.href)
-      const hash = window.location.hash || ''
-      const qi = hash.indexOf('?')
-      if (qi >= 0) {
-        const fromHash = new URLSearchParams(hash.slice(qi + 1)).get('pairId')?.trim()
-        if (fromHash) return fromHash
-      }
       // fallback: localStorage（旧URL経由でpairIdが保存済みの場合）
       const stored = getPairId()
       if (stored) return stored

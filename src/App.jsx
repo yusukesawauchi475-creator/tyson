@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-// Phase 1: BrowserRouter へ移行。JSX 使用箇所を変えないため HashRouter 名でエイリアス。Phase 4 で正式名に戻す予定。
-import { BrowserRouter as HashRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useSearchParams } from 'react-router-dom'
 import PairDailyPage from './pages/PairDailyPage'
 import HomePage from './pages/HomePage'
 import AdminPage from './pages/AdminPage'
@@ -53,43 +52,18 @@ function NumberResolver({ lang = 'ja', number }) {
 }
 
 function RootOrLanding({ lang = 'ja' }) {
-  try {
-    const hash = window.location.hash || ''
-    const qIndex = hash.indexOf('?')
-    const qs = qIndex >= 0 ? hash.slice(qIndex + 1) : ''
-    const params = new URLSearchParams(qs)
-    const pairIdFromUrl = params.get('pairId')?.trim()
-    if (pairIdFromUrl) return <RootRoute lang={lang} />
-    const numberFromUrl = params.get('number')?.trim()
-    if (numberFromUrl) return <NumberResolver number={numberFromUrl} lang={lang} />
-  } catch (_) {}
-  const storedPairId = getPairId()
-  if (storedPairId) return <RootRoute lang={lang} />
   return <LandingPage lang={lang} />
 }
 
 function RootRoute({ lang = 'ja' }) {
+  const [searchParams] = useSearchParams()
   const [role, setRole] = useState(() => {
-    try {
-      const hash = window.location.hash || '';
-      const qIndex = hash.indexOf('?');
-      const qs = qIndex >= 0 ? hash.slice(qIndex + 1) : '';
-      const params = new URLSearchParams(qs);
-      const pairIdFromUrl = params.get('pairId')?.trim();
-      const storedPairId = localStorage.getItem('tyson_pairId')?.trim();
-      // URLに role=parent|child があれば自動セット（招待リンクからの遷移）
-      const roleFromUrl = params.get('role')?.trim();
-      if (roleFromUrl === 'parent' || roleFromUrl === 'child') {
-        setUserRole(roleFromUrl);
-        return roleFromUrl;
-      }
-      // URLのpairIdが既存のlocalStorageと違う場合 → 新規ユーザー → roleクリア
-      if (pairIdFromUrl && pairIdFromUrl !== storedPairId) {
-        clearUserRole();
-        return null;
-      }
-    } catch (_) {}
-    return getUserRole();
+    const roleFromUrl = searchParams.get('role')?.trim()
+    if (roleFromUrl === 'parent' || roleFromUrl === 'child') {
+      setUserRole(roleFromUrl)
+      return roleFromUrl
+    }
+    return getUserRole()
   })
 
   const handleSelect = (selectedRole) => setRole(selectedRole)
@@ -107,7 +81,7 @@ function App() {
       <div className="mobile-white-overlay" aria-hidden="true" />
       <PwaInstallBanner lang="ja" onVisibilityChange={setBannerVisible} />
       <div className="app-foreground app-root" style={bannerVisible ? { paddingTop: BANNER_HEIGHT } : undefined}>
-        <HashRouter>
+        <Router>
           <Routes>
             <Route path="/" element={<RootOrLanding />} />
             <Route path="/eng" element={<RootOrLanding lang="en" />} />
@@ -129,7 +103,7 @@ function App() {
               <Route path="invite" element={<InvitePage />} />
             </Route>
           </Routes>
-        </HashRouter>
+        </Router>
       </div>
     </>
   )

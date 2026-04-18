@@ -67,19 +67,10 @@ export function generatePairId() {
 }
 
 /**
- * URLに ?pairId=XXXX がある場合のみ localStorage に保存する。
- * 自動生成はしない（'demo' フォールバックを維持するため）。
+ * Phase 2 final: hash parsing removed. No-op (function deleted in Commit B).
  */
 export function initPairId() {
-  if (typeof window === 'undefined') return;
-  try {
-    const hash = window.location.hash || '';
-    const qs = hash.indexOf('?') >= 0 ? hash.slice(hash.indexOf('?') + 1) : '';
-    const fromQuery = new URLSearchParams(qs).get('pairId')?.trim?.();
-    if (fromQuery) {
-      localStorage.setItem(PAIR_ID_STORAGE_KEY, fromQuery);
-    }
-  } catch (_) {}
+  // intentionally empty
 }
 
 /**
@@ -98,17 +89,12 @@ export function getPairId() {
   return null;
 }
 
-/** pairIdが明示的に設定されているか（'demo'フォールバックでないか） */
+/** pairIdが localStorage に存在するか（旧URLサポート廃止済み）。 */
 export function hasPairId() {
   if (typeof window === 'undefined') return false;
   try {
     const fromStorage = localStorage.getItem(PAIR_ID_STORAGE_KEY)?.trim?.();
     if (fromStorage) return true;
-    const hash = window.location.hash || '';
-    const qIndex = hash.indexOf('?');
-    const queryString = qIndex >= 0 ? hash.slice(qIndex + 1) : '';
-    const fromQuery = new URLSearchParams(queryString).get('pairId')?.trim?.();
-    if (fromQuery) return true;
   } catch (_) {}
   return false;
 }
