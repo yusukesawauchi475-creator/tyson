@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getDateKey, getPairId } from '../lib/pairDaily'
+import { getDateKey } from '../lib/pairDaily'
 import { t } from '../lib/i18n'
 
 const TOPICS = [
@@ -208,7 +208,7 @@ export default function DailyPromptCard({ pairId = null, role, onTopicChange, la
         // Show fallback immediately, then try AI
         if (onTopicChange) try { onTopicChange(TOPICS[finalIndex] || null) } catch {}
 
-        fetch(`/api/daily-theme?lang=${lang}&pairId=${encodeURIComponent(getPairId())}&pastTopics=${encodeURIComponent(getRecentAiTopics())}`)
+        fetch(`/api/daily-theme?lang=${lang}&pairId=${encodeURIComponent(pairId ?? '')}&pastTopics=${encodeURIComponent(getRecentAiTopics())}`)
           .then(r => r.json())
           .then(data => {
             if (data.success && data.topic) {
@@ -240,7 +240,7 @@ export default function DailyPromptCard({ pairId = null, role, onTopicChange, la
       if (onTopicChange) try { onTopicChange(TOPICS[finalIndex] || null) } catch {}
 
       // Fetch new AI topic
-      fetch(`/api/daily-theme?lang=${lang}&pairId=${encodeURIComponent(getPairId())}&pastTopics=${encodeURIComponent(getRecentAiTopics())}`)
+      fetch(`/api/daily-theme?lang=${lang}&pairId=${encodeURIComponent(pairId ?? '')}&pastTopics=${encodeURIComponent(getRecentAiTopics())}`)
         .then(r => r.json())
         .then(data => {
           if (data.success && data.topic) {

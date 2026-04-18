@@ -1,13 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
-import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, getPairId, getDateKey, genRequestId, getStreak, updateStreak } from '../lib/pairDaily'
+import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, getDateKey, genRequestId, getStreak, updateStreak } from '../lib/pairDaily'
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import { t } from '../lib/i18n'
 import DailyPromptCard, { getCountry, cycleCountry } from '../components/DailyPromptCard'
 import LanguageSwitch from '../components/LanguageSwitch'
-import { getIdTokenForApi, auth, isFirebaseConfigured, db } from '../lib/firebase'
-import { doc, getDoc } from 'firebase/firestore'
+import { getIdTokenForApi, auth, isFirebaseConfigured } from '../lib/firebase'
 import { getAuth } from 'firebase/auth'
 import { formatDeployedAtLocal, getBuildHash } from '../lib/dateFormat'
 import { useAudioLevel } from '../lib/useAudioLevel'
@@ -90,7 +89,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
 
   const ROLE_PARENT = 'parent'
   const LISTEN_ROLE_CHILD = 'child'
-  const [currentPairId] = useState(() => outletContext?.pairId ?? getPairId())
+  const [currentPairId] = useState(() => outletContext?.pairId ?? null)
   const isDemoTest = currentPairId === 'PAIR-DEMOTEST'
 
   const handleTopicChange = useCallback((topic) => {
@@ -339,21 +338,11 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
       if (!window.confirm(msg)) return
       stopRecording()
     }
-    const pid = currentPairId
-    if (!pid) {
-      alert(lang === 'en' ? 'Pair ID not found. Please open from your invite link.' : 'ペアIDが見つかりません。招待リンクからアクセスしてください。')
+    if (!slug) {
+      alert(lang === 'en' ? 'Cannot share: slug not available. Please open from a valid pair URL.' : '共有できません。有効なペアURLからアクセスしてください。')
       return
     }
-    let url = `https://www.humfamily.com/#/?pairId=${encodeURIComponent(pid)}&role=child&openExternalBrowser=1`
-    if (slug) {
-      url = `https://www.humfamily.com/pair/${slug}?role=child&openExternalBrowser=1`
-    } else {
-      try {
-        const snap = await getDoc(doc(db, 'pairs', pid))
-        const num = snap.data()?.number
-        if (num) url = `https://www.humfamily.com/pair/${num}?role=child&openExternalBrowser=1`
-      } catch (_) {}
-    }
+    const url = `https://www.humfamily.com/pair/${slug}?role=child&openExternalBrowser=1`
     const text = lang === 'en'
       ? 'Connect with your family every day with Hum. Open this link to get started.'
       : '毎日1分、声でつながるアプリHumです。このリンクを開いて始めてください。'
@@ -640,7 +629,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
               {photos.length > 0 && (
                 <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
                   {photos.slice(0, 6).map((ph, i) => (
-                    <button key={ph.storagePath + String(i)} type="button" onClick={() => navigate(slug ? `/pair/${slug}/album` : (lang === 'en' ? `/album/eng?pairId=${currentPairId}` : `/album?pairId=${currentPairId}`), { state: { scrollToDate: dateKey, from: window.location.pathname + window.location.search || '/' } })} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 10, overflow: 'hidden', flexShrink: 0 }} aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}>
+                    <button key={ph.storagePath + String(i)} type="button" onClick={() => { if (!slug) { console.error('slug required'); return } navigate(`/pair/${slug}/album`, { state: { scrollToDate: dateKey } }) }} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 10, overflow: 'hidden', flexShrink: 0 }} aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}>
                       <img src={ph.url || ''} alt="" width={48} height={48} style={{ width: 48, height: 48, objectFit: 'cover', display: 'block', borderRadius: 10 }} />
                     </button>
                   ))}
@@ -671,7 +660,8 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
             if (!window.confirm(msg)) return
             stopRecording()
           }
-          navigate(slug ? `/pair/${slug}/album` : (lang === 'en' ? `/album/eng?pairId=${currentPairId}` : `/album?pairId=${currentPairId}`), { state: { from: window.location.pathname + window.location.search || '/' } })
+          if (!slug) { console.error('slug required'); return }
+          navigate(`/pair/${slug}/album`)
         }}><span style={{ fontSize: 20 }}>🖼</span><span>{lang === 'en' ? 'Album' : 'アルバム'}</span></button>
         <button type="button" onClick={handleShare}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : '招待'}</span></button>
       </nav>

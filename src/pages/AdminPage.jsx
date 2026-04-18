@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { getIdTokenForApi, db } from '../lib/firebase.js'
-import { getPairId, getDateKey, genRequestId } from '../lib/pairDaily.js'
+import { getDateKey, genRequestId } from '../lib/pairDaily.js'
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore'
 
 const STORAGE_KEY = 'tyson_admin_secret'
@@ -242,7 +242,7 @@ export default function AdminPage({ lang = 'ja' }) {
       const res = await fetch(`/api/admin-${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}`, 'X-Request-Id': reqId },
-        body: JSON.stringify({ pairId: getPairId(), dateKey: getDateKey() }),
+        body: JSON.stringify({ pairId: null, dateKey: getDateKey() }),
       })
       const data = await res.json().catch(() => ({}))
       setActionResult({ ok: data.success, msg: data.message || data.error || (data.success ? 'OK' : 'Failed') })
@@ -290,7 +290,7 @@ export default function AdminPage({ lang = 'ja' }) {
       </div>
 
       <div className="card" style={{ padding: '12px 16px' }}>
-        <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 8 }}>{getPairId()} · {getDateKey()}</div>
+        <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 8 }}>{null} · {getDateKey()}</div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button type="button" onClick={() => handleAction('reset')} disabled={actionLoading} style={{
             flex: 1, padding: '8px 0', fontSize: 13, fontWeight: 600,

@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { getIdTokenForApi } from '../lib/firebase'
-import { getPairId } from '../lib/pairDaily'
 
 /**
  * Past voice banner.
@@ -39,7 +38,7 @@ export default function OneYearAgoBanner({ lang = 'ja' }) {
       try {
         const idToken = await getIdTokenForApi()
         if (!idToken) return
-        const pairId = getPairId()
+        const pairId = null
 
         // First check if 7 days of data exists (app usage check)
         const sevenDaysAgo = datesToCheck(7)

@@ -1,5 +1,5 @@
 import { getIdTokenForApi } from './firebase.js';
-import { getDateKeyNY, getPairId, genRequestId, hasPairId } from './pairDaily.js';
+import { getDateKeyNY, genRequestId } from './pairDaily.js';
 
 /** File を data URL (base64) に変換 */
 function fileToDataUrl(file) {
@@ -63,7 +63,7 @@ export function resizeImageIfNeeded(file) {
  * @returns {Promise<{ success: boolean, requestId?: string, dateKey?: string, storagePath?: string, error?: string, errorCode?: string }>}
  */
 export async function uploadJournalImage(file, requestId = genRequestId(), pairId, role = 'parent', kind = 'journal_image') {
-  const pid = pairId ?? getPairId();
+  const pid = pairId ?? null;
   if (!pid) {
     return { success: false, error: 'ペアIDが見つかりません。招待リンクから再アクセスしてください。', requestId, errorCode: 'no_pair_id' };
   }
@@ -148,7 +148,7 @@ export async function uploadJournalImage(file, requestId = genRequestId(), pairI
  * @returns {Promise<{ hasImage: boolean, requestId?: string, dateKey?: string, storagePath?: string, updatedAt?: number, photos?: Array<{ url: string, storagePath: string, updatedAt?: number, index: number, role: string }> }>}
  */
 export async function fetchTodayJournalMeta(pairId, role = 'parent') {
-  const pid = pairId ?? getPairId();
+  const pid = pairId ?? null;
   const idToken = await getIdTokenForApi();
   if (!idToken) return { hasImage: false, photos: [] };
 
@@ -184,7 +184,7 @@ export async function fetchTodayJournalMeta(pairId, role = 'parent') {
  * @returns {Promise<{ days: Array<{ dateKey: string, photos: Array<{ url: string, storagePath: string, role: string, kind: string, updatedAt: number|null }> }> }>}
  */
 export async function fetchAlbum(pairId, month) {
-  const pid = pairId ?? getPairId();
+  const pid = pairId ?? null;
   const idToken = await getIdTokenForApi();
   if (!idToken) throw new Error('認証できません（idToken取得失敗）');
   const url = month
@@ -203,7 +203,7 @@ export async function fetchAlbum(pairId, month) {
  * @returns {Promise<string|null>}
  */
 export async function fetchJournalViewUrl(pairId, role = 'parent') {
-  const pid = pairId ?? getPairId();
+  const pid = pairId ?? null;
   const idToken = await getIdTokenForApi();
   if (!idToken) throw new Error('認証できません');
 

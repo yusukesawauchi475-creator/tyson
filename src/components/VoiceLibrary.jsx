@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { getPairId, markSeen } from '../lib/pairDaily'
+import { markSeen } from '../lib/pairDaily'
 import { getIdTokenForApi } from '../lib/firebase'
 
 export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pairIdProp, onDataLoaded }) {
@@ -8,7 +8,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
   const [playingKey, setPlayingKey] = useState(null) // url
   const audioRef = useRef(null)
 
-  const effectivePairId = pairIdProp || getPairId()
+  const effectivePairId = pairIdProp || null
 
   useEffect(() => {
     let cancelled = false

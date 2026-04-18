@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { getIdTokenForApi } from '../lib/firebase'
-import { getPairId } from '../lib/pairDaily'
 
 /**
  * Weekly summary bar - shown only on Sundays.
@@ -18,7 +17,7 @@ export default function WeeklySummary({ lang = 'ja' }) {
       try {
         const idToken = await getIdTokenForApi()
         if (!idToken) return
-        const pairId = getPairId()
+        const pairId = null
 
         // Get this week's dates (Mon-Sun)
         const dates = []
