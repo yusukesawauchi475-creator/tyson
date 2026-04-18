@@ -45,13 +45,9 @@ function App() {
         <Router>
           <Routes>
             <Route path="/" element={<RootOrLanding />} />
-            <Route path="/eng" element={<RootOrLanding lang="en" />} />
-            <Route path="/admin/eng" element={<AdminPage lang="en" />} />
             <Route path="/admin" element={<AdminPage />} />
-            <Route path="/demo/eng" element={<DemoPage lang="en" />} />
             <Route path="/demo" element={<DemoPage />} />
             <Route path="/landing" element={<LandingPage />} />
-            <Route path="/landing/eng" element={<LandingPage lang="en" />} />
             <Route path="/pair/:slug" element={<PairWorld />}>
               <Route index element={<RootRoute />} />
               <Route path="album" element={<AlbumPage />} />
