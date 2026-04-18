@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { getDateKey, fetchAudioForPlayback, hasTodayAudio, getListenRoleMeta, markSeen, uploadAudio, getPairId, genRequestId, getStreak, updateStreak } from '../lib/pairDaily'
+import { useNavigate, useOutletContext } from 'react-router-dom'
+import { getDateKey, fetchAudioForPlayback, hasTodayAudio, getListenRoleMeta, markSeen, uploadAudio, genRequestId, getStreak, updateStreak } from '../lib/pairDaily'
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import { t } from '../lib/i18n'
 import DailyPromptCard, { getCountry, cycleCountry } from '../components/DailyPromptCard'
 import LanguageSwitch from '../components/LanguageSwitch'
-import { getIdTokenForApi, auth, isFirebaseConfigured, db } from '../lib/firebase'
-import { doc, getDoc } from 'firebase/firestore'
+import { getIdTokenForApi, auth, isFirebaseConfigured } from '../lib/firebase'
 import { getAuth } from 'firebase/auth'
 import { formatDeployedAtLocal, getBuildHash } from '../lib/dateFormat'
 import { useAudioLevel } from '../lib/useAudioLevel'
@@ -15,6 +14,8 @@ import UploadErrorModal from '../components/UploadErrorModal'
 import WeeklySummary from '../components/WeeklySummary'
 
 export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child' }) {
+  const outletContext = useOutletContext()
+  const slug = outletContext?.slug
   const [today, setToday] = useState('')
   const [streakCount, setStreakCount] = useState(null)
   const [daysSinceStart, setDaysSinceStart] = useState(null)
@@ -73,7 +74,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   const navigate = useNavigate()
   const ROLE_CHILD = role
   const LISTEN_ROLE_PARENT = 'parent'
-  const [currentPairId] = useState(() => getPairId())
+  const [currentPairId] = useState(() => outletContext?.pairId ?? null)
   const isDemoTest = currentPairId === 'PAIR-DEMOTEST'
 
   useEffect(() => {
@@ -114,7 +115,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
     setCommentStatus('loading')
     try {
       const currentDateKey = dateKey || getDateKey()
-      const res = await fetch(`/api/analysis-comment?pairId=${getPairId()}&dateKey=${currentDateKey}&role=${ROLE_CHILD}`, {
+      const res = await fetch(`/api/analysis-comment?pairId=${currentPairId}&dateKey=${currentDateKey}&role=${ROLE_CHILD}`, {
         headers: {
           Authorization: `Bearer ${idToken}`,
         },
@@ -171,7 +172,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
     try {
       const reqId = genRequestId()
       const toUpload = await resizeImageIfNeeded(file)
-      const result = await uploadJournalImage(toUpload, reqId, getPairId(), ROLE_CHILD, kind)
+      const result = await uploadJournalImage(toUpload, reqId, currentPairId, ROLE_CHILD, kind)
       setJournalUploading(false)
       if (result.success) {
         console.log('[upload success]', { requestId: reqId, kind, result: { success: result.success, requestId: result.requestId, dateKey: result.dateKey, storagePath: result.storagePath } })
@@ -179,7 +180,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
         if (kind === 'journal_image') {
           setJournalUploaded(true)
           if (result.dateKey) setJournalDateKey(result.dateKey)
-          fetchTodayJournalMeta(getPairId(), ROLE_CHILD).then((r) => {
+          fetchTodayJournalMeta(currentPairId, ROLE_CHILD).then((r) => {
             setJournalUploaded(!!r.hasImage)
             if (r.dateKey) setJournalDateKey(r.dateKey)
           })
@@ -188,7 +189,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
         }
         if (kind === 'generic_image') {
           setDailyPhotoLimitMessage(null)
-          const doRefresh = () => fetchTodayJournalMeta(getPairId(), ROLE_CHILD).then((r) => setPhotos((r.photos ?? []).filter((ph) => ph?.url)))
+          const doRefresh = () => fetchTodayJournalMeta(currentPairId, ROLE_CHILD).then((r) => setPhotos((r.photos ?? []).filter((ph) => ph?.url)))
           doRefresh()
           setTimeout(doRefresh, 400)
         }
@@ -228,7 +229,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   }
 
   useEffect(() => {
-    fetchTodayJournalMeta(getPairId(), 'child')
+    fetchTodayJournalMeta(currentPairId, 'child')
       .then(({ hasImage, dateKey, photos: p }) => {
         setJournalUploaded(!!hasImage)
         if (dateKey) setJournalDateKey(dateKey)
@@ -241,7 +242,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
     setMyJournalLoading(true)
     setMyJournalError(null)
     try {
-      const url = await fetchJournalViewUrl(getPairId(), 'child')
+      const url = await fetchJournalViewUrl(currentPairId, 'child')
       setMyJournalUrl(url)
     } catch (e) {
       setMyJournalError(e?.message || String(e))
@@ -279,7 +280,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   }, [lang])
 
   useEffect(() => {
-    getStreak(getPairId()).then(({ count, firstDateKey }) => {
+    getStreak(currentPairId).then(({ count, firstDateKey }) => {
       setStreakCount(count)
       if (firstDateKey) {
         const first = new Date(firstDateKey + 'T00:00:00')
@@ -451,7 +452,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
         const durationSec = recordStartRef.current
           ? Math.max(1, Math.min(6000, Math.round((Date.now() - recordStartRef.current) / 1000)))
           : null
-        const result = await uploadAudio(blob, ROLE_CHILD, getPairId(), getDateKey(), reqId)
+        const result = await uploadAudio(blob, ROLE_CHILD, currentPairId, getDateKey(), reqId)
 
         if (result.success) {
           // 古いタイマーをクリア（連続録音対策）
@@ -479,7 +480,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
           setErrorLine(null)
           // 親と子の両方が録音済みならstreakを更新
           if (hasAudio === true) {
-            updateStreak(getPairId()).then(({ success, count }) => {
+            updateStreak(currentPairId).then(({ success, count }) => {
               if (success) setStreakCount(count)
             })
           }
@@ -516,7 +517,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
                   Authorization: `Bearer ${idToken}`,
                 },
                 body: JSON.stringify({
-                  pairId: getPairId(),
+                  pairId: currentPairId,
                   dateKey: dateKeyForThisUpload,
                   role: ROLE_CHILD,
                   topic: topicRef.current,
@@ -548,7 +549,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
                   Authorization: `Bearer ${idToken}`,
                 },
                 body: JSON.stringify({
-                  pairId: getPairId(),
+                  pairId: currentPairId,
                   dateKey: dateKeyForThisUpload,
                   role: ROLE_CHILD,
                   sourceVersion,
@@ -586,7 +587,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
                   // 再度チェック（非同期処理中にseqが変わった可能性）
                   if (analysisReqSeqRef.current !== seq) return false
                   
-                  const res = await fetch(`/api/analysis-comment?pairId=${getPairId()}&dateKey=${dateKeyForThisUpload}&role=${ROLE_CHILD}`, {
+                  const res = await fetch(`/api/analysis-comment?pairId=${currentPairId}&dateKey=${dateKeyForThisUpload}&role=${ROLE_CHILD}`, {
                     headers: {
                       Authorization: `Bearer ${idToken}`,
                     },
@@ -695,17 +696,11 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
       if (!window.confirm(msg)) return
       stopRecording()
     }
-    const pid = getPairId()
-    if (!pid) {
-      alert(lang === 'en' ? 'Pair ID not found. Please open from your invite link.' : 'ペアIDが見つかりません。招待リンクからアクセスしてください。')
+    if (!slug) {
+      alert(lang === 'en' ? 'Cannot share: slug not available. Please open from a valid pair URL.' : '共有できません。有効なペアURLからアクセスしてください。')
       return
     }
-    let url = `https://www.humfamily.com/#/?pairId=${encodeURIComponent(pid)}&role=parent&openExternalBrowser=1`
-    try {
-      const snap = await getDoc(doc(db, 'pairs', pid))
-      const num = snap.data()?.number
-      if (num) url = `https://www.humfamily.com/pair/${num}?role=parent&openExternalBrowser=1`
-    } catch (_) {}
+    const url = `https://www.humfamily.com/pair/${slug}?role=parent&openExternalBrowser=1`
     const text = lang === 'en'
       ? 'Connect with your family every day with Hum. Open this link to get started.'
       : '毎日1分、声でつながるアプリHumです。このリンクを開いて始めてください。'
@@ -772,7 +767,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
       </div>
 
       <main className="page-content page" style={{ flex: 1, maxWidth: 480, margin: '0 auto', width: '100%', paddingTop: 8 }}>
-        <WeeklySummary lang={lang} />
+        <WeeklySummary lang={lang} pairId={currentPairId} />
 
         {/* (1) Receive card — green */}
         <section style={{ width: '100%', background: '#b8f0d8', borderRadius: 20, padding: 16, boxShadow: '0 4px 0 0 #6bbf96', overflow: 'hidden', fontFamily: 'Nunito, sans-serif' }}>
@@ -818,7 +813,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
             </p>
           )}
 
-          <DailyPromptCard pairId={getPairId()} role={ROLE_CHILD} onTopicChange={handleTopicChange} lang={lang} />
+          <DailyPromptCard pairId={currentPairId} role={ROLE_CHILD} onTopicChange={handleTopicChange} lang={lang} />
         </section>
 
         {/* (3) Photos card — purple */}
@@ -836,7 +831,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
           {photos.length > 0 && (
             <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
               {photos.slice(0, 6).map((ph, i) => (
-                <button key={ph.storagePath + String(i)} type="button" onClick={() => navigate(lang === 'en' ? `/album/eng?pairId=${currentPairId}` : `/album?pairId=${currentPairId}`, { state: { scrollToDate: dateKey, from: window.location.hash.replace(/^#/, '') || '/' } })} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 10, overflow: 'hidden', flexShrink: 0 }} aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}>
+                <button key={ph.storagePath + String(i)} type="button" onClick={() => { if (!slug) { console.error('slug required'); return } navigate(`/pair/${slug}/album`, { state: { scrollToDate: dateKey } }) }} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 10, overflow: 'hidden', flexShrink: 0 }} aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}>
                   <img src={ph.url || ''} alt="" width={48} height={48} style={{ width: 48, height: 48, objectFit: 'cover', display: 'block', borderRadius: 10 }} />
                 </button>
               ))}
@@ -863,7 +858,8 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
               if (!window.confirm(msg)) return
               stopRecording()
             }
-            navigate(lang === 'en' ? `/album/eng?pairId=${currentPairId}` : `/album?pairId=${currentPairId}`, { state: { from: window.location.hash.replace(/^#/, '') || '/' } })
+            if (!slug) { console.error('slug required'); return }
+            navigate(`/pair/${slug}/album`)
           } },
           { icon: '👋', label: lang === 'en' ? 'Invite' : '招待', bg: '#FFF0E8', bgActive: '#FFE0D0', active: false, onClick: handleShare },
         ].map((item) => (

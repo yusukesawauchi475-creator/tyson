@@ -1,16 +1,18 @@
+import { useSearchParams } from 'react-router-dom'
+
 /**
- * 日本語 / English 切替（既存ルートへの遷移のみ。データ/API は変更しない）
- * variant: 'home' -> / と /eng, 'pair' -> /tyson と /tyson/eng
+ * 日本語 / English 切替（URL クエリ ?lang=ja|en で表現）。
+ * URL path は変えず、lang クエリパラメータのみ更新する。
  */
-export default function LanguageSwitch({ lang = 'ja', variant = 'home' }) {
+export default function LanguageSwitch({ lang = 'ja' }) {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const currentLang = searchParams.get('lang') || lang
+
   const goTo = (targetLang) => {
-    if (targetLang === lang) return
-    const path = variant === 'home'
-      ? (targetLang === 'en' ? '/eng' : '/')
-      : (targetLang === 'en' ? '/tyson/eng' : '/tyson')
-    const hash = window.location.hash || '#/'
-    const search = hash.includes('?') ? hash.slice(hash.indexOf('?')) : (window.location.search || '')
-    window.location.hash = path + search
+    if (targetLang === currentLang) return
+    const next = new URLSearchParams(searchParams)
+    next.set('lang', targetLang)
+    setSearchParams(next)
   }
 
   const baseStyle = {
@@ -48,14 +50,14 @@ export default function LanguageSwitch({ lang = 'ja', variant = 'home' }) {
       <button
         type="button"
         onClick={() => goTo('ja')}
-        style={lang === 'ja' ? leftActive : leftStyle}
+        style={currentLang === 'ja' ? leftActive : leftStyle}
       >
         日本語
       </button>
       <button
         type="button"
         onClick={() => goTo('en')}
-        style={lang === 'en' ? rightActive : rightStyle}
+        style={currentLang === 'en' ? rightActive : rightStyle}
       >
         English
       </button>

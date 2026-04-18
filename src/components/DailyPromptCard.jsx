@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getDateKey, getPairId } from '../lib/pairDaily'
+import { getDateKey } from '../lib/pairDaily'
 import { t } from '../lib/i18n'
 
 const TOPICS = [
@@ -166,13 +166,14 @@ function getFallbackTopic(pairId, role, dateKey, offset) {
   return (baseIndex + offset) % TOPICS.length
 }
 
-export default function DailyPromptCard({ pairId = null, role, onTopicChange, lang = 'ja' }) {
+export default function DailyPromptCard({ pairId, role, onTopicChange, lang = 'ja' }) {
   const [topicIndex, setTopicIndex] = useState(0)
   const [aiTopic, setAiTopic] = useState(null)
   const [isSkipped, setIsSkipped] = useState(false)
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
+    if (!pairId) return
     try {
       const dateKey = getDateKey()
       const skipKey = getSkipKey(pairId, role, dateKey)
@@ -208,7 +209,7 @@ export default function DailyPromptCard({ pairId = null, role, onTopicChange, la
         // Show fallback immediately, then try AI
         if (onTopicChange) try { onTopicChange(TOPICS[finalIndex] || null) } catch {}
 
-        fetch(`/api/daily-theme?lang=${lang}&pairId=${encodeURIComponent(getPairId())}&pastTopics=${encodeURIComponent(getRecentAiTopics())}`)
+        fetch(`/api/daily-theme?lang=${lang}&pairId=${encodeURIComponent(pairId)}&pastTopics=${encodeURIComponent(getRecentAiTopics())}`)
           .then(r => r.json())
           .then(data => {
             if (data.success && data.topic) {
@@ -240,7 +241,7 @@ export default function DailyPromptCard({ pairId = null, role, onTopicChange, la
       if (onTopicChange) try { onTopicChange(TOPICS[finalIndex] || null) } catch {}
 
       // Fetch new AI topic
-      fetch(`/api/daily-theme?lang=${lang}&pairId=${encodeURIComponent(getPairId())}&pastTopics=${encodeURIComponent(getRecentAiTopics())}`)
+      fetch(`/api/daily-theme?lang=${lang}&pairId=${encodeURIComponent(pairId)}&pastTopics=${encodeURIComponent(getRecentAiTopics())}`)
         .then(r => r.json())
         .then(data => {
           if (data.success && data.topic) {

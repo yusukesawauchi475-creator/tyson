@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import { getIdTokenForApi } from '../lib/firebase'
-import { getPairId, getDateKeyNY } from '../lib/pairDaily'
+import { getDateKeyNY } from '../lib/pairDaily'
 
 const CACHE_KEY_PREFIX = 'hum_insight_'
 
-export default function FamilyInsightCard({ lang = 'ja' }) {
+export default function FamilyInsightCard({ lang = 'ja', pairId }) {
   const [comment, setComment] = useState(null)
 
   useEffect(() => {
+    if (!pairId) return
     ;(async () => {
       try {
         const dateKey = getDateKeyNY()
@@ -19,8 +20,6 @@ export default function FamilyInsightCard({ lang = 'ja' }) {
 
         const idToken = await getIdTokenForApi()
         if (!idToken) return
-
-        const pairId = getPairId()
         const res = await fetch(
           `/api/family-insight?pairId=${encodeURIComponent(pairId)}&lang=${lang}`,
           { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }
@@ -33,7 +32,7 @@ export default function FamilyInsightCard({ lang = 'ja' }) {
         }
       } catch {}
     })()
-  }, [lang])
+  }, [lang, pairId])
 
   if (!comment) return null
 

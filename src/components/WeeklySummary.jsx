@@ -1,24 +1,23 @@
 import { useState, useEffect } from 'react'
 import { getIdTokenForApi } from '../lib/firebase'
-import { getPairId } from '../lib/pairDaily'
 
 /**
  * Weekly summary bar - shown only on Sundays.
  * Shows combined voice and photo counts for the week.
  */
-export default function WeeklySummary({ lang = 'ja' }) {
+export default function WeeklySummary({ lang = 'ja', pairId }) {
   const [data, setData] = useState(null)
 
   useEffect(() => {
     const today = new Date()
     // Only show on Sundays (0 = Sunday)
     if (today.getDay() !== 0) return
+    if (!pairId) return
 
     ;(async () => {
       try {
         const idToken = await getIdTokenForApi()
         if (!idToken) return
-        const pairId = getPairId()
 
         // Get this week's dates (Mon-Sun)
         const dates = []
@@ -72,7 +71,7 @@ export default function WeeklySummary({ lang = 'ja' }) {
         setData({ parentVoice, childVoice, parentPhoto, childPhoto })
       } catch {}
     })()
-  }, [])
+  }, [pairId])
 
   if (!data) return null
 

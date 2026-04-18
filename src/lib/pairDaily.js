@@ -44,8 +44,6 @@ export function getYesterdayKeyNY() {
 /** getDateKeyNY のエイリアス（後方互換） */
 export const getDateKey = getDateKeyNY;
 
-export const PAIR_ID_STORAGE_KEY = 'tyson_pairId';
-
 /** ユーザーの役割（parent / child）を localStorage で管理 */
 export const USER_ROLE_STORAGE_KEY = 'tyson_userRole';
 export function getUserRole() {
@@ -66,62 +64,6 @@ export function generatePairId() {
   return id; // 例: "PAIR-A3F7C9"
 }
 
-/**
- * URLに ?pairId=XXXX がある場合のみ localStorage に保存する。
- * 自動生成はしない（'demo' フォールバックを維持するため）。
- */
-export function initPairId() {
-  if (typeof window === 'undefined') return;
-  try {
-    const hash = window.location.hash || '';
-    const qs = hash.indexOf('?') >= 0 ? hash.slice(hash.indexOf('?') + 1) : '';
-    const fromQuery = new URLSearchParams(qs).get('pairId')?.trim?.();
-    if (fromQuery) {
-      localStorage.setItem(PAIR_ID_STORAGE_KEY, fromQuery);
-    }
-  } catch (_) {}
-}
-
-/**
- * pairId を取得（同期）。
- * 優先順位: URLクエリ > localStorage > null。
- * URLに ?pairId=XXXX があれば常に優先し、localStorageに上書き保存する。
- * Philosophy #2: fallback禁止。見つからなければ null を返す。
- */
-export function getPairId() {
-  if (typeof window === 'undefined') return null;
-  try {
-    // URLクエリを最優先（新規リンクで別pairIdに切り替わる）
-    const hash = window.location.hash || '';
-    const qIndex = hash.indexOf('?');
-    const queryString = qIndex >= 0 ? hash.slice(qIndex + 1) : '';
-    const fromQuery = new URLSearchParams(queryString).get('pairId')?.trim?.();
-    if (fromQuery) {
-      try { localStorage.setItem(PAIR_ID_STORAGE_KEY, fromQuery); } catch (_) {}
-      return fromQuery;
-    }
-    // URLになければlocalStorageを使う（PAIR-DEMOTESTはスキップ）
-    const fromStorage = localStorage.getItem(PAIR_ID_STORAGE_KEY)?.trim?.();
-    if (fromStorage && fromStorage !== 'PAIR-DEMOTEST') return fromStorage;
-  } catch (_) {}
-  return null;
-}
-
-/** pairIdが明示的に設定されているか（'demo'フォールバックでないか） */
-export function hasPairId() {
-  if (typeof window === 'undefined') return false;
-  try {
-    const fromStorage = localStorage.getItem(PAIR_ID_STORAGE_KEY)?.trim?.();
-    if (fromStorage) return true;
-    const hash = window.location.hash || '';
-    const qIndex = hash.indexOf('?');
-    const queryString = qIndex >= 0 ? hash.slice(qIndex + 1) : '';
-    const fromQuery = new URLSearchParams(queryString).get('pairId')?.trim?.();
-    if (fromQuery) return true;
-  } catch (_) {}
-  return false;
-}
-
 /** requestId生成: REQ- + base36 timestamp + 乱数 */
 export function genRequestId() {
   const ts = Date.now().toString(36).toUpperCase();
@@ -137,7 +79,7 @@ export function genRequestId() {
  * @param {string} dateKey
  * @param {string} [requestId] - 呼び出し側で生成したrequestId（省略時は内部生成）
  */
-export async function uploadAudio(blob, role, pairId = getPairId(), _dateKey, requestId = genRequestId()) {
+export async function uploadAudio(blob, role, pairId, _dateKey, requestId = genRequestId()) {
   if (!pairId) {
     return { success: false, error: 'ペアIDが見つかりません。招待リンクから再アクセスしてください。', requestId: requestId || 'NO-PAIR', errorCode: 'no_pair_id' };
   }
@@ -201,7 +143,7 @@ export async function uploadAudio(blob, role, pairId = getPairId(), _dateKey, re
  * @param {string} pairId
  * @param {string} dateKey
  */
-export async function fetchAudioForPlayback(listenRole, pairId = getPairId(), _dateKey, requestId = genRequestId()) {
+export async function fetchAudioForPlayback(listenRole, pairId, _dateKey, requestId = genRequestId()) {
   const dateKey = _dateKey || getDateKeyNY();
   console.log('[fetchAudio] start', { listenRole, pairId, dateKey, requestId });
   const idToken = await getIdTokenForApi();
@@ -300,7 +242,7 @@ export async function fetchAudioForPlayback(listenRole, pairId = getPairId(), _d
 }
 
 /** action=markSeen で seenAt を更新。再生開始時に呼ぶ */
-export async function markSeen(listenRole, pairId = getPairId(), _dateKey, requestId = genRequestId()) {
+export async function markSeen(listenRole, pairId, _dateKey, requestId = genRequestId()) {
   // 呼び出し側が dateKey を指定した場合はそれを使う（昨日分対応）
   const dateKey = _dateKey || getDateKeyNY();
   const idToken = await getIdTokenForApi();
@@ -319,7 +261,7 @@ export async function markSeen(listenRole, pairId = getPairId(), _dateKey, reque
 }
 
 /** 相手の音声が存在するか確認（軽量チェック） */
-export async function hasTodayAudio(listenRole, pairId = getPairId()) {
+export async function hasTodayAudio(listenRole, pairId) {
   const dateKey = getDateKeyNY();
   const idToken = await getIdTokenForApi();
   if (!idToken) return false;
@@ -347,7 +289,7 @@ export async function hasTodayAudio(listenRole, pairId = getPairId()) {
 }
 
 /** streakを取得。戻り値 { count, lastDateKey, firstDateKey } */
-export async function getStreak(pairId = getPairId()) {
+export async function getStreak(pairId) {
   const idToken = await getIdTokenForApi();
   if (!idToken) return { count: 0, lastDateKey: null, firstDateKey: null };
   try {
@@ -364,7 +306,7 @@ export async function getStreak(pairId = getPairId()) {
 }
 
 /** streakを更新。親と子の両方が録音した日に呼ぶ */
-export async function updateStreak(pairId = getPairId()) {
+export async function updateStreak(pairId) {
   const idToken = await getIdTokenForApi();
   if (!idToken) return { success: false };
   try {
@@ -385,7 +327,7 @@ export async function updateStreak(pairId = getPairId()) {
 }
 
 /** hasAudio + isUnseen（未再生バッジ用）。updatedAt > seenAt または seenAt なしで未再生 */
-export async function getListenRoleMeta(listenRole, pairId = getPairId()) {
+export async function getListenRoleMeta(listenRole, pairId) {
   const todayKey = getDateKeyNY();
   console.log('[getListenRoleMeta] pairId:', pairId, 'listenRole:', listenRole, 'todayKey:', todayKey);
   const idToken = await getIdTokenForApi();

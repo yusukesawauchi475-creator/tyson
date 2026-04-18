@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { t } from '../lib/i18n'
 
 const DEMO_PAIR_ID = 'PAIR-DEMOTEST'
@@ -74,6 +75,7 @@ function ensurePulseStyle() {
 }
 
 export default function DemoPage({ lang = 'ja' }) {
+  const navigate = useNavigate()
   const [isPlayingParent, setIsPlayingParent] = useState(false)
   const [errorLine, setErrorLine] = useState(null)
   const [lightboxIndex, setLightboxIndex] = useState(null)
@@ -105,7 +107,7 @@ export default function DemoPage({ lang = 'ja' }) {
   }
 
   const handleShareDemo = async () => {
-    const url = 'https://www.humfamily.com/#/?pairId=PAIR-DEMOTEST&openExternalBrowser=1'
+    const url = `https://www.humfamily.com/pair/${DEMO_PAIR_ID}?openExternalBrowser=1`
     const text = lang === 'en'
       ? "Let's exchange voices every day on Hum. Listen to today's message 👋"
       : 'Humで毎日声を交換しよう。今日のメッセージを聞いてね 👋'
@@ -245,7 +247,7 @@ export default function DemoPage({ lang = 'ja' }) {
         {/* Album link with animated badge */}
         <section style={{ width: '100%', textAlign: 'center', padding: '8px 0' }}>
           <style>{`@keyframes badgeBounce { 0%,100% { transform: perspective(400px) rotateY(0deg) scale(1); } 50% { transform: perspective(400px) rotateY(180deg) scale(1.1); } }`}</style>
-          <button type="button" onClick={() => { window.location.href = '/#/album?pairId=PAIR-DEMOTEST' }} style={{ padding: '12px 28px', fontSize: 14, fontWeight: 700, color: '#7050C0', background: '#fff', border: '2px solid #E0D8FF', borderRadius: 16, cursor: 'pointer', position: 'relative' }}>
+          <button type="button" onClick={() => navigate(`/pair/${DEMO_PAIR_ID}/album`)} style={{ padding: '12px 28px', fontSize: 14, fontWeight: 700, color: '#7050C0', background: '#fff', border: '2px solid #E0D8FF', borderRadius: 16, cursor: 'pointer', position: 'relative' }}>
             📷 {lang === 'en' ? 'View Album' : 'アルバムを見る'}
             <span style={{ position: 'absolute', top: -8, right: -8, background: 'linear-gradient(135deg, #FF6090, #FF8C00)', color: '#fff', fontSize: 9, fontWeight: 800, padding: '3px 7px', borderRadius: 10, boxShadow: '0 2px 8px rgba(255,96,144,.4)', animation: 'badgeBounce 3s ease-in-out infinite', display: 'inline-block' }}>NEW</span>
           </button>
@@ -258,7 +260,7 @@ export default function DemoPage({ lang = 'ja' }) {
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9000, background: 'linear-gradient(0deg, #FFF8FF 80%, transparent)', padding: '16px 18px max(16px, env(safe-area-inset-bottom))' }}>
         <button
           type="button"
-          onClick={() => { window.location.href = '/#/?pairId=PAIR-DEMOTEST' }}
+          onClick={() => navigate(`/pair/${DEMO_PAIR_ID}`)}
           style={{ width: '100%', maxWidth: 480, margin: '0 auto', display: 'block', padding: 20, fontSize: 18, fontWeight: 800, color: '#fff', background: 'linear-gradient(135deg, #FF60B0 0%, #A060FF 50%, #60B0FF 100%)', border: 'none', borderRadius: 18, cursor: 'pointer', boxShadow: '0 4px 16px rgba(192,128,255,0.4)', animation: 'demoPulse 2s ease-in-out infinite', letterSpacing: '0.02em' }}
         >
           {lang === 'en' ? '✨ Try this app' : '✨ このアプリを使ってみる'}
