@@ -5,30 +5,22 @@ import VoiceLibrary from '../components/VoiceLibrary'
 import AlbumCalendar from '../components/AlbumCalendar'
 import { getUserRole } from '../lib/pairDaily'
 
-const demoAlbumDays = [
-  { date: '2026-04-01', label: '4月1日', photos: ['/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp','/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp','/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png'] },
-  { date: '2026-03-31', label: '3月31日', photos: ['/demo-photos/nekocyanPAKE5233-481_TP_V.webp','/demo-photos/Gemini_Generated_Image_dm6kcmdm6kcmdm6k.png'] },
-  { date: '2026-03-30', label: '3月30日', photos: ['/demo-photos/08redsugar720_TP_V.webp','/demo-photos/susipakuKYPKPAR52703_TP_V.webp','/demo-photos/CCIMG_8140_TP_V4.webp'] },
-  { date: '2026-03-25', label: '3月25日', photos: ['/demo-photos/TKLA__7DA5611_TP_V.jpg','/demo-photos/Family fun in winter wonderland.png','/demo-photos/pakutaso_go33036_TP_V.jpg'] },
+const DEMO_ALBUM_PHOTO_SETS = [
+  ['/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp','/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp','/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png'],
+  ['/demo-photos/nekocyanPAKE5233-481_TP_V.webp','/demo-photos/Gemini_Generated_Image_dm6kcmdm6kcmdm6k.png'],
+  ['/demo-photos/08redsugar720_TP_V.webp','/demo-photos/susipakuKYPKPAR52703_TP_V.webp','/demo-photos/CCIMG_8140_TP_V4.webp'],
+  ['/demo-photos/TKLA__7DA5611_TP_V.jpg','/demo-photos/Family fun in winter wonderland.png','/demo-photos/pakutaso_go33036_TP_V.jpg'],
 ]
 
-function getDemoAllPhotos() {
-  const all = []
-  for (const day of demoAlbumDays) {
-    for (const url of day.photos) all.push(url)
-  }
-  return all
-}
+const DEMO_VOICE_META = [
+  { parent: { dur: '0:42', seen: false }, child: { dur: '1:05', seen: false } },
+  { parent: { dur: '1:12', seen: true }, child: { dur: '0:58', seen: true } },
+  { parent: { dur: '0:33', seen: true }, child: null },
+  { parent: null, child: { dur: '0:27', seen: true } },
+  { parent: { dur: '0:45', seen: true }, child: { dur: '1:10', seen: true } },
+]
 
 const BLOCKED_PAIR_IDS = []
-
-const demoVoiceDays = [
-  { dateKey: '2026-04-03', label: '今日 · 4月3日', parent: { dur: '0:42', seen: false }, child: { dur: '1:05', seen: false } },
-  { dateKey: '2026-04-02', label: '4月2日', parent: { dur: '1:12', seen: true }, child: { dur: '0:58', seen: true } },
-  { dateKey: '2026-04-01', label: '4月1日', parent: { dur: '0:33', seen: true }, child: null },
-  { dateKey: '2026-03-31', label: '3月31日', parent: null, child: { dur: '0:27', seen: true } },
-  { dateKey: '2026-03-30', label: '3月30日', parent: { dur: '0:45', seen: true }, child: { dur: '1:10', seen: true } },
-]
 
 export default function AlbumPage({ lang = 'ja' }) {
   const navigate = useNavigate()
@@ -49,6 +41,48 @@ export default function AlbumPage({ lang = 'ja' }) {
   const rawPairId = outletContext?.pairId ?? null
   const isDemo = rawPairId === 'PAIR-DEMOTEST'
   const pairId = (!rawPairId || BLOCKED_PAIR_IDS.includes(rawPairId) || isDemo) ? null : rawPairId
+
+  const demoAlbumDays = useMemo(() => {
+    const today = new Date()
+    return DEMO_ALBUM_PHOTO_SETS.map((photos, i) => {
+      const d = new Date(today)
+      d.setDate(today.getDate() - i)
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return {
+        date: `${y}-${m}-${day}`,
+        label: `${d.getMonth() + 1}月${d.getDate()}日`,
+        photos,
+      }
+    })
+  }, [])
+
+  const demoAllPhotos = useMemo(() => {
+    const all = []
+    for (const day of demoAlbumDays) {
+      for (const url of day.photos) all.push(url)
+    }
+    return all
+  }, [demoAlbumDays])
+
+  const demoVoiceDays = useMemo(() => {
+    const today = new Date()
+    return DEMO_VOICE_META.map((meta, i) => {
+      const d = new Date(today)
+      d.setDate(today.getDate() - i)
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      const monthDay = `${d.getMonth() + 1}月${d.getDate()}日`
+      return {
+        dateKey: `${y}-${m}-${day}`,
+        label: i === 0 ? `今日 · ${monthDay}` : monthDay,
+        parent: meta.parent,
+        child: meta.child,
+      }
+    })
+  }, [])
 
   useEffect(() => {
     if (!pairId) { setLoading(false); return }
@@ -75,9 +109,9 @@ export default function AlbumPage({ lang = 'ja' }) {
       return flat
     }
     // Fallback: demo photos only for PAIR-DEMOTEST
-    if (isDemo) return getDemoAllPhotos().map((url) => ({ url, dateKey: '', storagePath: url }))
+    if (isDemo) return demoAllPhotos.map((url) => ({ url, dateKey: '', storagePath: url }))
     return []
-  }, [days])
+  }, [days, isDemo, demoAllPhotos])
 
   const openLightbox = useCallback((photo) => {
     const idx = allPhotos.findIndex((p) => p.storagePath === photo.storagePath)
@@ -366,7 +400,7 @@ export default function AlbumPage({ lang = 'ja' }) {
               {lang === 'en' ? 'Sample photos — your photos will appear here' : 'サンプル写真 — あなたの写真がここに表示されます'}
             </p>
             {demoAlbumDays.map((day) => {
-              const demoAll = getDemoAllPhotos()
+              const demoAll = demoAllPhotos
               return (
                 <section key={day.date} style={{ marginBottom: 28 }}>
                   <p style={{ fontSize: 13, fontWeight: 700, color: '#7a6a55', margin: '0 0 10px', letterSpacing: '0.03em' }}>{day.label}</p>
