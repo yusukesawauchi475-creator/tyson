@@ -557,7 +557,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
       </div>
 
       <main className="page-content page" style={{ flex: 1, maxWidth: 480, margin: '0 auto', width: '100%', paddingTop: 8 }}>
-        <WeeklySummary lang={lang} />
+        <WeeklySummary lang={lang} pairId={currentPairId} />
 
         {/* (1) Receive card — green */}
         <section style={{ width: '100%', background: '#b8f0d8', borderRadius: 20, padding: 16, boxShadow: '0 4px 0 0 #6bbf96', overflow: 'hidden', fontFamily: 'Nunito, sans-serif' }}>

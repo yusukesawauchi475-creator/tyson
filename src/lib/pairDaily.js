@@ -79,7 +79,7 @@ export function genRequestId() {
  * @param {string} dateKey
  * @param {string} [requestId] - 呼び出し側で生成したrequestId（省略時は内部生成）
  */
-export async function uploadAudio(blob, role, pairId = null, _dateKey, requestId = genRequestId()) {
+export async function uploadAudio(blob, role, pairId, _dateKey, requestId = genRequestId()) {
   if (!pairId) {
     return { success: false, error: 'ペアIDが見つかりません。招待リンクから再アクセスしてください。', requestId: requestId || 'NO-PAIR', errorCode: 'no_pair_id' };
   }
@@ -143,7 +143,7 @@ export async function uploadAudio(blob, role, pairId = null, _dateKey, requestId
  * @param {string} pairId
  * @param {string} dateKey
  */
-export async function fetchAudioForPlayback(listenRole, pairId = null, _dateKey, requestId = genRequestId()) {
+export async function fetchAudioForPlayback(listenRole, pairId, _dateKey, requestId = genRequestId()) {
   const dateKey = _dateKey || getDateKeyNY();
   console.log('[fetchAudio] start', { listenRole, pairId, dateKey, requestId });
   const idToken = await getIdTokenForApi();
@@ -242,7 +242,7 @@ export async function fetchAudioForPlayback(listenRole, pairId = null, _dateKey,
 }
 
 /** action=markSeen で seenAt を更新。再生開始時に呼ぶ */
-export async function markSeen(listenRole, pairId = null, _dateKey, requestId = genRequestId()) {
+export async function markSeen(listenRole, pairId, _dateKey, requestId = genRequestId()) {
   // 呼び出し側が dateKey を指定した場合はそれを使う（昨日分対応）
   const dateKey = _dateKey || getDateKeyNY();
   const idToken = await getIdTokenForApi();
@@ -261,7 +261,7 @@ export async function markSeen(listenRole, pairId = null, _dateKey, requestId = 
 }
 
 /** 相手の音声が存在するか確認（軽量チェック） */
-export async function hasTodayAudio(listenRole, pairId = null) {
+export async function hasTodayAudio(listenRole, pairId) {
   const dateKey = getDateKeyNY();
   const idToken = await getIdTokenForApi();
   if (!idToken) return false;
@@ -289,7 +289,7 @@ export async function hasTodayAudio(listenRole, pairId = null) {
 }
 
 /** streakを取得。戻り値 { count, lastDateKey, firstDateKey } */
-export async function getStreak(pairId = null) {
+export async function getStreak(pairId) {
   const idToken = await getIdTokenForApi();
   if (!idToken) return { count: 0, lastDateKey: null, firstDateKey: null };
   try {
@@ -306,7 +306,7 @@ export async function getStreak(pairId = null) {
 }
 
 /** streakを更新。親と子の両方が録音した日に呼ぶ */
-export async function updateStreak(pairId = null) {
+export async function updateStreak(pairId) {
   const idToken = await getIdTokenForApi();
   if (!idToken) return { success: false };
   try {
@@ -327,7 +327,7 @@ export async function updateStreak(pairId = null) {
 }
 
 /** hasAudio + isUnseen（未再生バッジ用）。updatedAt > seenAt または seenAt なしで未再生 */
-export async function getListenRoleMeta(listenRole, pairId = null) {
+export async function getListenRoleMeta(listenRole, pairId) {
   const todayKey = getDateKeyNY();
   console.log('[getListenRoleMeta] pairId:', pairId, 'listenRole:', listenRole, 'todayKey:', todayKey);
   const idToken = await getIdTokenForApi();

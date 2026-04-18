@@ -8,7 +8,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
   const [playingKey, setPlayingKey] = useState(null) // url
   const audioRef = useRef(null)
 
-  const effectivePairId = pairIdProp || null
+  const effectivePairId = pairIdProp
 
   useEffect(() => {
     let cancelled = false

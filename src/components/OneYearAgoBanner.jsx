@@ -28,17 +28,17 @@ function datesToCheck(daysAgo) {
   return [...new Set(dates)]
 }
 
-export default function OneYearAgoBanner({ lang = 'ja' }) {
+export default function OneYearAgoBanner({ lang = 'ja', pairId }) {
   const [result, setResult] = useState(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const audioRef = useRef(null)
 
   useEffect(() => {
+    if (!pairId) return
     ;(async () => {
       try {
         const idToken = await getIdTokenForApi()
         if (!idToken) return
-        const pairId = null
 
         // First check if 7 days of data exists (app usage check)
         const sevenDaysAgo = datesToCheck(7)
@@ -83,7 +83,7 @@ export default function OneYearAgoBanner({ lang = 'ja' }) {
         }
       } catch {}
     })()
-  }, [])
+  }, [pairId])
 
   if (!result) return null
 
