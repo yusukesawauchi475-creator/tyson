@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation, useOutletContext } from 'react-router-dom'
 import { fetchAlbum } from '../lib/journal'
 import VoiceLibrary from '../components/VoiceLibrary'
 import AlbumCalendar from '../components/AlbumCalendar'
@@ -35,6 +35,8 @@ const demoVoiceDays = [
 export default function AlbumPage({ lang = 'ja' }) {
   const navigate = useNavigate()
   const location = useLocation()
+  const outletContext = useOutletContext()
+  const slug = outletContext?.slug
   const scrollToDate = location.state?.scrollToDate ?? null
   const backPath = location.state?.from || '/'
   const [days, setDays] = useState([])
@@ -46,9 +48,11 @@ export default function AlbumPage({ lang = 'ja' }) {
   const [playingKey, setPlayingKey] = useState(null)
   const [playedKeys, setPlayedKeys] = useState({})
   const voiceAudioRef = useRef(null)
-  // URL pairId extraction: try react-router search, then hash fallback
+  // pairId extraction: outletContext (Phase 2 new flow) → URL → localStorage fallback
   const rawPairId = (() => {
     try {
+      // Phase 2: /pair/:slug/album route → outletContext から取得
+      if (outletContext?.pairId) return outletContext.pairId
       // react-router useLocation().search (works with navigate())
       const fromRouter = new URLSearchParams(location.search).get('pairId')?.trim()
       if (fromRouter) return fromRouter
@@ -59,7 +63,7 @@ export default function AlbumPage({ lang = 'ja' }) {
         const fromHash = new URLSearchParams(hash.slice(qi + 1)).get('pairId')?.trim()
         if (fromHash) return fromHash
       }
-      // fallback: localStorage（/pair/1 経由でpairIdが保存済みの場合）
+      // fallback: localStorage（旧URL経由でpairIdが保存済みの場合）
       const stored = getPairId()
       if (stored) return stored
       return null
@@ -149,11 +153,15 @@ export default function AlbumPage({ lang = 'ja' }) {
     const userRole = getUserRole()
     const inviteeRole = userRole === 'parent' ? 'child' : 'parent'
     let url = `https://www.humfamily.com/#/?pairId=${encodeURIComponent(rawPairId)}&role=${inviteeRole}&openExternalBrowser=1`
-    try {
-      const snap = await getDoc(doc(db, 'pairs', rawPairId))
-      const num = snap.data()?.number
-      if (num) url = `https://www.humfamily.com/pair/${num}?role=${inviteeRole}&openExternalBrowser=1`
-    } catch (_) {}
+    if (slug) {
+      url = `https://www.humfamily.com/pair/${slug}?role=${inviteeRole}&openExternalBrowser=1`
+    } else {
+      try {
+        const snap = await getDoc(doc(db, 'pairs', rawPairId))
+        const num = snap.data()?.number
+        if (num) url = `https://www.humfamily.com/pair/${num}?role=${inviteeRole}&openExternalBrowser=1`
+      } catch (_) {}
+    }
     const text = lang === 'en'
       ? 'Connect with your family every day with Hum. Open this link to get started.'
       : '毎日1分、声でつながるアプリHumです。このリンクを開いて始めてください。'
@@ -579,7 +587,7 @@ export default function AlbumPage({ lang = 'ja' }) {
 
       {/* Bottom nav */}
       <nav className="bottom-nav">
-        <button type="button" onClick={() => navigate(backPath)}><span style={{ fontSize: 20 }}>🏠</span><span>{lang === 'en' ? 'Home' : 'ホーム'}</span></button>
+        <button type="button" onClick={() => navigate(slug ? `/pair/${slug}` : backPath)}><span style={{ fontSize: 20 }}>🏠</span><span>{lang === 'en' ? 'Home' : 'ホーム'}</span></button>
         <button type="button" className="active"><span style={{ fontSize: 20 }}>🖼</span><span>{lang === 'en' ? 'Album' : 'アルバム'}</span></button>
         <button type="button" onClick={handleShare}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : '招待'}</span></button>
       </nav>

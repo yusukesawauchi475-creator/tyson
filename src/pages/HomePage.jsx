@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useOutletContext } from 'react-router-dom'
 import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, getPairId, getDateKey, genRequestId, getStreak, updateStreak } from '../lib/pairDaily'
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
@@ -16,6 +16,8 @@ import WeeklySummary from '../components/WeeklySummary'
 
 export default function HomePage({ lang = 'ja', onChangeRole }) {
   const navigate = useNavigate()
+  const outletContext = useOutletContext()
+  const slug = outletContext?.slug
   const [streakCount, setStreakCount] = useState(null)
   const [daysSinceStart, setDaysSinceStart] = useState(null)
   const [isRecording, setIsRecording] = useState(false)
@@ -88,7 +90,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
 
   const ROLE_PARENT = 'parent'
   const LISTEN_ROLE_CHILD = 'child'
-  const [currentPairId] = useState(() => getPairId())
+  const [currentPairId] = useState(() => outletContext?.pairId ?? getPairId())
   const isDemoTest = currentPairId === 'PAIR-DEMOTEST'
 
   const handleTopicChange = useCallback((topic) => {
@@ -130,7 +132,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
         const durationSec = recordStartRef.current
           ? Math.max(1, Math.min(6000, Math.round((Date.now() - recordStartRef.current) / 1000)))
           : null
-        const result = await uploadAudio(blob, ROLE_PARENT, getPairId(), getDateKey(), reqId)
+        const result = await uploadAudio(blob, ROLE_PARENT, currentPairId, getDateKey(), reqId)
         if (result.success) {
           if (oneLinerTimerRef.current) { clearTimeout(oneLinerTimerRef.current); oneLinerTimerRef.current = null }
           if (analysisTimerRef.current) { clearTimeout(analysisTimerRef.current); analysisTimerRef.current = null }
@@ -143,7 +145,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           setSentAt(new Date())
           setErrorLine(null)
           if (hasParentAudio === true) {
-            updateStreak(getPairId()).then(({ success, count }) => { if (success) setStreakCount(count) })
+            updateStreak(currentPairId).then(({ success, count }) => { if (success) setStreakCount(count) })
           }
           setOneLiner(t(lang, 'uploadSuccessThanks'))
           setOneLinerStage('immediate')
@@ -167,7 +169,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
               await fetch('/api/analysis-comment', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-                body: JSON.stringify({ pairId: getPairId(), dateKey: dateKeyForThisUpload, role: ROLE_PARENT, topic: topicRef.current, durationSec }),
+                body: JSON.stringify({ pairId: currentPairId, dateKey: dateKeyForThisUpload, role: ROLE_PARENT, topic: topicRef.current, durationSec }),
               })
             } catch {}
           })()
@@ -180,7 +182,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
               fetch('/api/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-                body: JSON.stringify({ pairId: getPairId(), dateKey: dateKeyForThisUpload, role: ROLE_PARENT, sourceVersion, version: sourceVersion }),
+                body: JSON.stringify({ pairId: currentPairId, dateKey: dateKeyForThisUpload, role: ROLE_PARENT, sourceVersion, version: sourceVersion }),
               }).catch(() => {})
             } catch {}
           })()
@@ -196,7 +198,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
                   const idToken = await getIdTokenForApi()
                   if (!idToken) return false
                   if (analysisReqSeqRef.current !== seq) return false
-                  const res = await fetch(`/api/analysis-comment?pairId=${getPairId()}&dateKey=${dateKeyForThisUpload}&role=${ROLE_PARENT}`, {
+                  const res = await fetch(`/api/analysis-comment?pairId=${currentPairId}&dateKey=${dateKeyForThisUpload}&role=${ROLE_PARENT}`, {
                     headers: { Authorization: `Bearer ${idToken}` },
                   })
                   if (analysisReqSeqRef.current !== seq) return false
@@ -276,14 +278,14 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
     try {
       const reqId = genRequestId()
       const toUpload = await resizeImageIfNeeded(file)
-      const result = await uploadJournalImage(toUpload, reqId, getPairId(), ROLE_PARENT, kind)
+      const result = await uploadJournalImage(toUpload, reqId, currentPairId, ROLE_PARENT, kind)
       setJournalUploading(false)
       if (result.success) {
         setJournalRequestId(result.requestId)
         if (kind === 'journal_image') {
           setJournalUploaded(true)
           if (result.dateKey) setJournalDateKey(result.dateKey)
-          fetchTodayJournalMeta(getPairId(), ROLE_PARENT).then((r) => {
+          fetchTodayJournalMeta(currentPairId, ROLE_PARENT).then((r) => {
             setJournalUploaded(!!r.hasImage)
             if (r.dateKey) setJournalDateKey(r.dateKey)
           })
@@ -292,7 +294,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
         }
         if (kind === 'generic_image') {
           setDailyPhotoLimitMessage(null)
-          const doRefresh = () => fetchTodayJournalMeta(getPairId(), ROLE_PARENT).then((r) => setPhotos((r.photos ?? []).filter((ph) => ph?.url)))
+          const doRefresh = () => fetchTodayJournalMeta(currentPairId, ROLE_PARENT).then((r) => setPhotos((r.photos ?? []).filter((ph) => ph?.url)))
           doRefresh()
           setTimeout(doRefresh, 400)
         }
@@ -337,17 +339,21 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
       if (!window.confirm(msg)) return
       stopRecording()
     }
-    const pid = getPairId()
+    const pid = currentPairId
     if (!pid) {
       alert(lang === 'en' ? 'Pair ID not found. Please open from your invite link.' : 'ペアIDが見つかりません。招待リンクからアクセスしてください。')
       return
     }
     let url = `https://www.humfamily.com/#/?pairId=${encodeURIComponent(pid)}&role=child&openExternalBrowser=1`
-    try {
-      const snap = await getDoc(doc(db, 'pairs', pid))
-      const num = snap.data()?.number
-      if (num) url = `https://www.humfamily.com/pair/${num}?role=child&openExternalBrowser=1`
-    } catch (_) {}
+    if (slug) {
+      url = `https://www.humfamily.com/pair/${slug}?role=child&openExternalBrowser=1`
+    } else {
+      try {
+        const snap = await getDoc(doc(db, 'pairs', pid))
+        const num = snap.data()?.number
+        if (num) url = `https://www.humfamily.com/pair/${num}?role=child&openExternalBrowser=1`
+      } catch (_) {}
+    }
     const text = lang === 'en'
       ? 'Connect with your family every day with Hum. Open this link to get started.'
       : '毎日1分、声でつながるアプリHumです。このリンクを開いて始めてください。'
@@ -383,7 +389,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
     setMyJournalLoading(true)
     setMyJournalError(null)
     try {
-      const url = await fetchJournalViewUrl(getPairId(), 'parent')
+      const url = await fetchJournalViewUrl(currentPairId, 'parent')
       setMyJournalUrl(url)
     } catch (e) {
       setMyJournalError(e?.message || String(e))
@@ -394,7 +400,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   }, [])
 
   useEffect(() => {
-    fetchTodayJournalMeta(getPairId())
+    fetchTodayJournalMeta(currentPairId)
       .then(({ hasImage, dateKey, photos: p }) => {
         setJournalUploaded(!!hasImage)
         if (dateKey) setJournalDateKey(dateKey)
@@ -407,7 +413,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   useEffect(() => { fetchMyJournal() }, [fetchMyJournal])
 
   useEffect(() => {
-    getStreak(getPairId()).then(({ count, firstDateKey }) => {
+    getStreak(currentPairId).then(({ count, firstDateKey }) => {
       setStreakCount(count)
       if (firstDateKey) {
         const first = new Date(firstDateKey + 'T00:00:00')
@@ -608,7 +614,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
             </p>
           )}
 
-          <DailyPromptCard pairId={getPairId()} role={ROLE_PARENT} onTopicChange={handleTopicChange} lang={lang} />
+          <DailyPromptCard pairId={currentPairId} role={ROLE_PARENT} onTopicChange={handleTopicChange} lang={lang} />
         </section>
 
         {/* (3) Photos card — purple */}
@@ -634,7 +640,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
               {photos.length > 0 && (
                 <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
                   {photos.slice(0, 6).map((ph, i) => (
-                    <button key={ph.storagePath + String(i)} type="button" onClick={() => navigate(lang === 'en' ? `/album/eng?pairId=${currentPairId}` : `/album?pairId=${currentPairId}`, { state: { scrollToDate: dateKey, from: window.location.hash.replace(/^#/, '') || '/' } })} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 10, overflow: 'hidden', flexShrink: 0 }} aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}>
+                    <button key={ph.storagePath + String(i)} type="button" onClick={() => navigate(slug ? `/pair/${slug}/album` : (lang === 'en' ? `/album/eng?pairId=${currentPairId}` : `/album?pairId=${currentPairId}`), { state: { scrollToDate: dateKey, from: window.location.hash.replace(/^#/, '') || '/' } })} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 10, overflow: 'hidden', flexShrink: 0 }} aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}>
                       <img src={ph.url || ''} alt="" width={48} height={48} style={{ width: 48, height: 48, objectFit: 'cover', display: 'block', borderRadius: 10 }} />
                     </button>
                   ))}
@@ -665,7 +671,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
             if (!window.confirm(msg)) return
             stopRecording()
           }
-          navigate(lang === 'en' ? `/album/eng?pairId=${currentPairId}` : `/album?pairId=${currentPairId}`, { state: { from: window.location.hash.replace(/^#/, '') || '/' } })
+          navigate(slug ? `/pair/${slug}/album` : (lang === 'en' ? `/album/eng?pairId=${currentPairId}` : `/album?pairId=${currentPairId}`), { state: { from: window.location.hash.replace(/^#/, '') || '/' } })
         }}><span style={{ fontSize: 20 }}>🖼</span><span>{lang === 'en' ? 'Album' : 'アルバム'}</span></button>
         <button type="button" onClick={handleShare}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : '招待'}</span></button>
       </nav>

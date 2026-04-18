@@ -2,12 +2,11 @@ import { useEffect, useState } from 'react'
 import { useParams, Outlet, Link } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
 import { db, getIdTokenForApi } from '../lib/firebase'
-import { PAIR_ID_STORAGE_KEY } from '../lib/pairDaily'
 
 /**
  * PairWorld — /pair/:slug route のコンテキストプロバイダ。
  * slug を Firestore pair_numbers から pairId に解決し、子ルートへ Outlet context として渡す。
- * Phase 1 では既存ページ互換のため localStorage にも書き込む（Phase 2 で削除予定）。
+ * Phase 2: localStorage 書き込みを削除（公理1: URL = Source of Truth に準拠）。
  */
 export default function PairWorld() {
   const { slug } = useParams()
@@ -36,8 +35,6 @@ export default function PairWorld() {
           setLoading(false)
           return
         }
-        // TODO Phase 2 cleanup: remove this localStorage write (公理1一時妥協)
-        localStorage.setItem(PAIR_ID_STORAGE_KEY, resolvedPairId)
         setPairId(resolvedPairId)
         setLoading(false)
       } catch (e) {
