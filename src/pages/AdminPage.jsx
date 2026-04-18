@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { getIdTokenForApi, db } from '../lib/firebase.js'
 import { getDateKey, genRequestId } from '../lib/pairDaily.js'
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore'
@@ -152,6 +152,9 @@ function PairCard({ pair, secret, numberMap }) {
 }
 
 export default function AdminPage({ lang = 'ja' }) {
+  // Phase 2 final: pair context は URL クエリ ?pair=PAIR-X から取得（localStorage 廃止）
+  const [searchParams] = useSearchParams()
+  const targetPairId = searchParams.get('pair')?.trim() || null
   const [secret, setSecret] = useState('')
   const [unlocked, setUnlocked] = useState(false)
   const [pairs, setPairs] = useState(null)
@@ -242,7 +245,7 @@ export default function AdminPage({ lang = 'ja' }) {
       const res = await fetch(`/api/admin-${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}`, 'X-Request-Id': reqId },
-        body: JSON.stringify({ pairId: null, dateKey: getDateKey() }),
+        body: JSON.stringify({ pairId: targetPairId, dateKey: getDateKey() }),
       })
       const data = await res.json().catch(() => ({}))
       setActionResult({ ok: data.success, msg: data.message || data.error || (data.success ? 'OK' : 'Failed') })
@@ -290,16 +293,16 @@ export default function AdminPage({ lang = 'ja' }) {
       </div>
 
       <div className="card" style={{ padding: '12px 16px' }}>
-        <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 8 }}>{null} · {getDateKey()}</div>
+        <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginBottom: 8 }}>{targetPairId || '（?pair=PAIR-XXXXXX を指定）'} · {getDateKey()}</div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button type="button" onClick={() => handleAction('reset')} disabled={actionLoading} style={{
+          <button type="button" onClick={() => handleAction('reset')} disabled={actionLoading || !targetPairId} style={{
             flex: 1, padding: '8px 0', fontSize: 13, fontWeight: 600,
-            background: actionLoading ? 'var(--color-border)' : 'var(--color-danger)',
+            background: (actionLoading || !targetPairId) ? 'var(--color-border)' : 'var(--color-danger)',
             color: '#fff', border: 'none', borderRadius: 'var(--radius-sm)',
           }}>リセット</button>
-          <button type="button" onClick={() => handleAction('restore')} disabled={actionLoading} style={{
+          <button type="button" onClick={() => handleAction('restore')} disabled={actionLoading || !targetPairId} style={{
             flex: 1, padding: '8px 0', fontSize: 13, fontWeight: 600,
-            background: actionLoading ? 'var(--color-border)' : 'var(--color-success)',
+            background: (actionLoading || !targetPairId) ? 'var(--color-border)' : 'var(--color-success)',
             color: '#fff', border: 'none', borderRadius: 'var(--radius-sm)',
           }}>復元</button>
         </div>

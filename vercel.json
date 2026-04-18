@@ -1,8 +1,4 @@
 {
-  "redirects": [
-    { "source": "/demo", "destination": "/#/demo", "permanent": false },
-    { "source": "/landing", "destination": "/#/landing", "permanent": false }
-  ],
   "headers": [
     {
       "source": "/",
