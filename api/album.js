@@ -1,5 +1,6 @@
 import admin from 'firebase-admin';
 import { parseFirebaseServiceAccount } from './lib/parseFirebaseServiceAccount.js';
+import { isTysonOnlyBlocked } from './lib/pair-access.js';
 
 let adminApp;
 let firestore;
@@ -98,8 +99,9 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, error: 'Unauthorized', requestId });
   }
 
+  let uid;
   try {
-    await verifyIdToken(idToken);
+    ({ uid } = await verifyIdToken(idToken));
   } catch (e) {
     console.error('[album] verifyIdToken error:', e.message);
     return res.status(401).json({ success: false, error: 'Invalid token', requestId });
@@ -113,13 +115,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ success: false, error: 'month must be YYYY-MM', requestId });
   }
 
-  // Block TYSON-ZH90 access from humfamily.com
-  const TYSON_ONLY_PAIR_IDS = ['TYSON-ZH90'];
-  if (TYSON_ONLY_PAIR_IDS.includes(pairId)) {
-    const origin = (req.headers.origin || req.headers.referer || '').toLowerCase();
-    if (origin.includes('humfamily.com')) {
-      return res.status(403).json({ success: false, error: 'Access denied', requestId });
-    }
+  if (isTysonOnlyBlocked(pairId, uid)) {
+    return res.status(403).json({ success: false, error: 'Access denied', requestId });
   }
 
   console.log('[album] request', { pairId, month: month || 'all', requestId });

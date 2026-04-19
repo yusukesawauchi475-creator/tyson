@@ -34,6 +34,7 @@ import admin from 'firebase-admin';
 import {
   parseFirebaseServiceAccount,
 } from './lib/parseFirebaseServiceAccount.js';
+import { isTysonOnlyBlocked } from './lib/pair-access.js';
 
 let adminApp;
 let firestore;
@@ -191,15 +192,6 @@ function isPairAllowed(uid, pairId) {
   return true;
 }
 
-/** pairIds isolated to tyson-two.vercel.app — block access from humfamily.com */
-const TYSON_ONLY_PAIR_IDS = ['TYSON-ZH90'];
-
-function isTysonOnlyBlocked(req, pairId) {
-  if (!TYSON_ONLY_PAIR_IDS.includes(pairId)) return false;
-  const origin = (req.headers.origin || req.headers.referer || '').toLowerCase();
-  return origin.includes('humfamily.com');
-}
-
 /** Vercel serverless 用: JSON body を読み取り */
 async function readJsonBody(req) {
   return new Promise((resolve, reject) => {
@@ -249,10 +241,6 @@ async function handleGet(req, res) {
     return res.status(400).json({ success: false, error: 'pairId is required', requestId: reqId });
   }
 
-  if (isTysonOnlyBlocked(req, pairId)) {
-    return res.status(403).json({ success: false, error: 'Access denied', requestId: reqId });
-  }
-
   if (role !== 'parent' && role !== 'child') {
     logObserve({ requestId: reqId, stage: 'journal_get', status: 'error', pairId, role, clientDateKey, serverDateKey, storagePath: null, firestoreDocPath, httpStatus: 400, errorCode: 'invalid_role', errorMessage: 'role must be parent or child' });
     return res.status(400).json({ success: false, error: 'role must be parent or child', requestId: reqId });
@@ -267,6 +255,9 @@ async function handleGet(req, res) {
 
   try {
     const { uid } = await verifyIdToken(idToken);
+    if (isTysonOnlyBlocked(pairId, uid)) {
+      return res.status(403).json({ success: false, error: 'Access denied', requestId: reqId });
+    }
     if (!isPairAllowed(uid, pairId)) {
       return res.status(403).json({ success: false, error: 'Not a pair member', requestId: reqId });
     }
@@ -409,7 +400,7 @@ async function handlePost(req, res) {
     }
 
     const pairId = body.pairId || body.pair_id || 'demo';
-    if (isTysonOnlyBlocked(req, pairId)) {
+    if (isTysonOnlyBlocked(pairId, uid)) {
       return res.status(403).json({ success: false, error: 'Access denied', requestId: reqId });
     }
     if (pairId === 'PAIR-DEMOTEST') {
