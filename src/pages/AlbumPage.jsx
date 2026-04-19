@@ -4,6 +4,7 @@ import { fetchAlbum } from '../lib/journal'
 import VoiceLibrary from '../components/VoiceLibrary'
 import AlbumCalendar from '../components/AlbumCalendar'
 import { getUserRole } from '../lib/pairDaily'
+import { buildInviteUrl, copyInviteLink } from '../lib/invite'
 
 const DEMO_ALBUM_PHOTO_SETS = [
   ['/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp','/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp','/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png'],
@@ -36,6 +37,7 @@ export default function AlbumPage({ lang = 'ja' }) {
   const [internalScrollDate, setInternalScrollDate] = useState(null)
   const [playingKey, setPlayingKey] = useState(null)
   const [playedKeys, setPlayedKeys] = useState({})
+  const [toastMsg, setToastMsg] = useState(null)
   const voiceAudioRef = useRef(null)
   // pairId は /pair/:slug/album ルート下の outletContext から取得（公理1: URL = Source of Truth）
   const rawPairId = outletContext?.pairId ?? null
@@ -159,23 +161,16 @@ export default function AlbumPage({ lang = 'ja' }) {
 
   const handleShare = async () => {
     if (!slug) {
-      alert(lang === 'en' ? 'Cannot share: slug not available. Please open from a valid pair URL.' : '共有できません。有効なペアURLからアクセスしてください。')
+      setToastMsg(lang === 'en' ? 'Cannot share: invalid pair URL' : '共有できません。有効なペアURLからアクセスしてください')
+      setTimeout(() => setToastMsg(null), 2500)
       return
     }
-    const url = `https://www.humfamily.com/pair/${slug}?openExternalBrowser=1`
-    const text = lang === 'en'
-      ? 'Connect with your family every day with Hum. Open this link to get started.'
-      : '毎日1分、声でつながるアプリHumです。このリンクを開いて始めてください。'
-    if (navigator.share) {
-      try { await navigator.share({ title: 'Hum', text, url }) } catch (_) {}
-    } else {
-      try {
-        await navigator.clipboard.writeText(url)
-        alert(lang === 'en' ? 'Link copied!' : 'リンクをコピーしました')
-      } catch (_) {
-        alert(lang === 'en' ? 'Copy failed' : 'コピーに失敗しました')
-      }
-    }
+    const url = buildInviteUrl(slug)
+    const result = await copyInviteLink(url)
+    setToastMsg(result.success
+      ? (lang === 'en' ? 'Link copied' : 'リンクをコピーしました')
+      : (lang === 'en' ? 'Failed to copy' : 'コピーに失敗しました'))
+    setTimeout(() => setToastMsg(null), 2500)
   }
 
   const handleTouchEnd = useCallback((e) => {
@@ -592,6 +587,10 @@ export default function AlbumPage({ lang = 'ja' }) {
         <button type="button" className="active"><span style={{ fontSize: 20 }}>🖼</span><span>{lang === 'en' ? 'Album' : 'アルバム'}</span></button>
         <button type="button" onClick={handleShare}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : '招待'}</span></button>
       </nav>
+
+      {toastMsg && (
+        <div style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.75)', color: '#fff', fontSize: 14, padding: '8px 20px', borderRadius: 20, zIndex: 20000, whiteSpace: 'nowrap', pointerEvents: 'none' }}>{toastMsg}</div>
+      )}
     </div>
   )
 }
