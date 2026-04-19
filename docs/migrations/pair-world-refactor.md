@@ -191,6 +191,56 @@ Verification System（nightly 自動検証）の実装を別途開始する。�
 ### βユーザーへの影響
 なし。移行期間中の βユーザー 0 前提で実施したため、既存 localStorage 喪失・旧URL非互換化のコストを許容できた。
 
+## Known Debt / Phase 3 Candidate
+
+Phase 2 Final 完了時点で認識された技術負債 backlog。各項目は段階1〜6 の実装過程で露呈。
+Phase 3 Refactor で整理予定、YC Summer 応募完了後に着手判断する。現時点では対症療法で進行、
+docs に記録することで将来の設計判断材料とする。
+
+### 1. Role management ambiguity
+
+- **現状**: role マスターが URL param (`?role=X`) / localStorage (`tyson_userRole`) / Firestore (UID→role マッピングなし) の3層に散在
+- **段階4 での変更**: URL param 削除、localStorage が実質マスター化
+- **残課題**: localStorage はクライアント端末属性、別端末アクセス時の整合性未設計
+- **Phase 3 検討事項**:
+  - マスター層の明確化
+  - Firestore に UID→role 正規化を持たせるか
+  - または localStorage 一本で良いかの設計判断
+
+### 2. Pair ID naming inconsistency
+
+- **現状の命名バリアント**:
+  - レガシー: `TYSON-ZH90`（Yusuke 家族）
+  - 新規正規: `PAIR-XXX`（PAIR-FSEAN5, PAIR-NY5XTF, PAIR-DEMOTEST 等）
+  - 旧テスト: `ulf1q6`, `h06m0g`, `2habi5`（英数字6文字、prefix なし）
+  - 番号: `/pair/N` → NumberResolver 解決
+- **問題**: 新規 pair 作成時の命名規則が不明確、将来エンジニアが読んで即理解できない
+- **Phase 3 検討事項**:
+  - 正規命名規則（`PAIR-` prefix 強制）
+  - legacy alias 設計
+  - 番号 URL との関係整理
+
+### 3. Demo pair special-casing scattered
+
+- **現状**: `pairId === 'PAIR-DEMOTEST'` 判定分岐が以下に点在
+  - `src/pages/AlbumPage.jsx`（段階1 で `demoVoiceDays` / `DEMO_ALBUM_PHOTO_SETS` / `DEMO_VOICE_META` 導入）
+  - `src/pages/HomePage.jsx`（段階2 で parent audio demo 分岐 4箇所追加）
+  - `src/components/AlbumCalendar.jsx`（段階3 で Calendar 件数バッジの demo 分岐、feature/calendar-count-badges に留保中）
+- **問題**: 将来 demo pair を複数化（日本語 demo と英語 demo 等）する際、全箇所に分岐追加が必要
+- **Phase 3 検討事項**:
+  - `isDemoPair(pairId)` helper を `src/lib` に一元化
+  - 全箇所を helper 経由に置換
+  - demo ID は array 化で複数対応
+
+### 4. Allowlist per-pair access control
+
+- **現状**: TYSON-ZH90 のみ UID allowlist 制限、他 pair は UID 制限なし
+- **実装**: `api/lib/pair-access.js` に TYSON-ZH90 専用の allowlist ロジックがハードコード
+- **問題**: 他家族 pair も UID 制限したくなった場合、pair ごとに `pair-access.js` を改修する必要
+- **Phase 3 検討事項**:
+  - `pairs/{id}.allowedUids` 的な Firestore 構造で一般化
+  - `pair-access.js` は generic な allowlist 判定のみ担当
+
 ## Lessons Learned
 
 ### セカンドオピニオンの有効性
