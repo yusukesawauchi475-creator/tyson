@@ -92,6 +92,13 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   const [currentPairId] = useState(() => outletContext?.pairId ?? null)
   const isDemoTest = currentPairId === 'PAIR-DEMOTEST'
 
+  useEffect(() => {
+    if (isDemoTest) {
+      setHasParentAudio(true)
+      setParentAudioUrl('/demo-audio.mp3')
+    }
+  }, [isDemoTest])
+
   const handleTopicChange = useCallback((topic) => {
     setDailyTopic(topic)
     topicRef.current = topic
@@ -365,6 +372,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   }
 
   const refreshParentStatus = () => {
+    if (isDemoTest) { setHasParentAudio(true); return }
     setHasParentAudio(null)
     setIsParentUnseen(false)
     getListenRoleMeta(LISTEN_ROLE_CHILD).then(({ hasAudio, isUnseen, dateKey: dk }) => {
@@ -426,6 +434,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   }, [])
 
   useEffect(() => {
+    if (isDemoTest) return
     let cancelled = false
     getListenRoleMeta(LISTEN_ROLE_CHILD)
       .then(({ hasAudio, isUnseen, dateKey: dk }) => {
@@ -436,6 +445,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   }, [])
 
   useEffect(() => {
+    if (isDemoTest) return
     const tick = () => {
       if (document.visibilityState !== 'visible') return
       if (uploadingRef.current || loadingParentRef.current || playingParentRef.current) return
@@ -467,6 +477,13 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
     const el = parentAudioRef.current
     if (el) { el.pause(); el.src = ''; el.load() }
     setParentAudioUrl(null)
+    if (isDemoTest) {
+      setParentAudioUrl('/demo-audio.mp3')
+      setIsLoadingParent(false)
+      const el2 = parentAudioRef.current
+      if (el2) { el2.src = '/demo-audio.mp3'; el2.currentTime = 0; await el2.play(); setIsPlayingParent(true) }
+      return
+    }
     const result = await fetchAudioForPlayback(LISTEN_ROLE_CHILD)
     if (result.error) {
       console.error('[handlePlayParent] fetchAudio error:', result.errorCode, result.error)
