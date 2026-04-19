@@ -84,6 +84,24 @@ export default function AlbumPage({ lang = 'ja' }) {
     })
   }, [])
 
+  const demoPhotoCountMap = useMemo(() => {
+    if (!isDemo) return undefined
+    const map = {}
+    for (const d of demoAlbumDays) {
+      map[d.date] = Array.isArray(d.photos) ? d.photos.length : 0
+    }
+    return map
+  }, [isDemo, demoAlbumDays])
+
+  const demoVoiceCountMap = useMemo(() => {
+    if (!isDemo) return undefined
+    const map = {}
+    for (const d of demoVoiceDays) {
+      map[d.dateKey] = (d.parent ? 1 : 0) + (d.child ? 1 : 0)
+    }
+    return map
+  }, [isDemo, demoVoiceDays])
+
   useEffect(() => {
     if (!pairId) { setLoading(false); return }
     fetchAlbum(pairId)
@@ -293,17 +311,13 @@ export default function AlbumPage({ lang = 'ja' }) {
       <main style={{ padding: '16px', maxWidth: 480, margin: '0 auto' }}>
 
       {/* Calendar tab */}
-      {pairId && !isDemo && activeTab === 'calendar' && (
+      {activeTab === 'calendar' && (pairId || isDemo) && (
         <AlbumCalendar
-          pairId={pairId}
+          pairId={isDemo ? 'PAIR-DEMOTEST' : pairId}
           lang={lang}
           onDateClick={(dateKey) => { setInternalScrollDate(dateKey); setActiveTab('photo') }}
+          {...(isDemo ? { photoCountMap: demoPhotoCountMap, voiceCountMap: demoVoiceCountMap } : {})}
         />
-      )}
-      {isDemo && activeTab === 'calendar' && (
-        <p style={{ textAlign: 'center', color: '#999', fontSize: 12, margin: '24px 0', fontStyle: 'italic' }}>
-          {lang === 'en' ? 'Calendar view is available once you have data.' : 'カレンダーはデータが蓄積されると表示されます'}
-        </p>
       )}
 
       {/* Voice tab */}

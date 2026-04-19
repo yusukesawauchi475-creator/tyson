@@ -6,16 +6,19 @@ import { fetchVoiceMonth, getDateKeyNY } from '../lib/pairDaily'
  * AlbumCalendar — 月次カレンダーで写真・音声の有無を俯瞰。
  * Philosophy #2: pairId は props のみから受け取り、localStorage は読み書きしない。
  */
-export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick }) {
+export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoCountMap, voiceCountMap }) {
   const today = getDateKeyNY()
   const todayMonth = today.slice(0, 7)
   const [currentMonth, setCurrentMonth] = useState(todayMonth)
-  const [photoMap, setPhotoMap] = useState({})
-  const [voiceMap, setVoiceMap] = useState({})
+  const [fetchedPhotoCount, setFetchedPhotoCount] = useState({})
+  const [fetchedVoiceCount, setFetchedVoiceCount] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  const skipFetch = photoCountMap !== undefined && voiceCountMap !== undefined
+
   useEffect(() => {
+    if (skipFetch) { setLoading(false); return }
     if (!pairId) { setLoading(false); return }
     let cancelled = false
     setLoading(true)
@@ -25,20 +28,18 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick }) {
       fetchVoiceMonth(pairId, currentMonth).catch((e) => { throw e }),
     ]).then(([albumRes, voiceRes]) => {
       if (cancelled) return
-      const pm = {}
+      const pc = {}
       for (const day of albumRes.days || []) {
         const photos = day.photos || []
-        if (photos.length > 0) {
-          const sorted = [...photos].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
-          pm[day.dateKey] = sorted[0].url
-        }
+        if (photos.length > 0) pc[day.dateKey] = photos.length
       }
-      const vm = {}
+      const vc = {}
       for (const day of voiceRes.days || []) {
-        vm[day.date] = { hasParent: !!day.hasParent, hasChild: !!day.hasChild }
+        const count = (day.hasParent ? 1 : 0) + (day.hasChild ? 1 : 0)
+        if (count > 0) vc[day.date] = count
       }
-      setPhotoMap(pm)
-      setVoiceMap(vm)
+      setFetchedPhotoCount(pc)
+      setFetchedVoiceCount(vc)
       setLoading(false)
     }).catch((e) => {
       if (cancelled) return
@@ -46,7 +47,10 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick }) {
       setLoading(false)
     })
     return () => { cancelled = true }
-  }, [pairId, currentMonth])
+  }, [pairId, currentMonth, skipFetch])
+
+  const photoCounts = photoCountMap ?? fetchedPhotoCount
+  const voiceCounts = voiceCountMap ?? fetchedVoiceCount
 
   const cells = useMemo(() => {
     const [y, m] = currentMonth.split('-').map(Number)
@@ -139,9 +143,9 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick }) {
       {!loading && !error && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
           {cells.map(({ dateKey, day, inMonth }) => {
-            const photoUrl = photoMap[dateKey]
-            const voice = voiceMap[dateKey]
-            const hasContent = !!photoUrl || !!voice
+            const photoCount = photoCounts[dateKey] || 0
+            const voiceCount = voiceCounts[dateKey] || 0
+            const hasContent = photoCount > 0 || voiceCount > 0
             const isToday = dateKey === today
             const borderColor = isToday ? '#FF80C0' : 'transparent'
             const borderWidth = isToday ? 2 : 0
@@ -160,9 +164,7 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick }) {
                   padding: 0,
                   border: `${borderWidth}px solid ${borderColor}`,
                   borderRadius: 8,
-                  background: photoUrl
-                    ? `url(${photoUrl}) center/cover`
-                    : voice ? '#F0E8FF' : '#FAFAFA',
+                  background: hasContent ? '#F0E8FF' : '#FAFAFA',
                   cursor: clickable ? 'pointer' : 'default',
                   opacity,
                   overflow: 'hidden',
@@ -178,17 +180,19 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick }) {
                   left: 4,
                   fontSize: 10,
                   fontWeight: 700,
-                  color: photoUrl ? '#fff' : inMonth ? '#555' : '#999',
-                  textShadow: photoUrl ? '0 1px 2px rgba(0,0,0,0.6)' : 'none',
+                  color: inMonth ? '#555' : '#999',
                   lineHeight: 1,
                 }}>{day}</span>
-                {/* Voice-only center icon */}
-                {!photoUrl && voice && (
-                  <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🎙</span>
-                )}
-                {/* Photo + voice badge */}
-                {photoUrl && voice && (
-                  <span style={{ position: 'absolute', bottom: 2, right: 2, fontSize: 10, background: 'rgba(255,255,255,0.85)', borderRadius: 6, padding: '0 3px', lineHeight: 1.2 }}>🎙</span>
+                {/* Count badges */}
+                {hasContent && (
+                  <div style={{ position: 'absolute', bottom: 3, left: 3, right: 3, display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'flex-start' }}>
+                    {photoCount > 0 && (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: '#B04080', lineHeight: 1 }}>📷{photoCount}</span>
+                    )}
+                    {voiceCount > 0 && (
+                      <span style={{ fontSize: 10, fontWeight: 700, color: '#2A8050', lineHeight: 1 }}>🎙{voiceCount}</span>
+                    )}
+                  </div>
                 )}
               </button>
             )
