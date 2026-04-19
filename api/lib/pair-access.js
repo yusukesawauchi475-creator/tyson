@@ -1,32 +1,32 @@
-// TYSON-ZH90 への UID allowlist 判定を一元管理する
+// TYSON-ZH90 への UID allowlist は段階6 (2026-04) で撤廃。
+// 現在は他 pair と同じく pair ID 単位 Firestore query による isolation に一本化。
 //
-// 運用:
-// - TYSON_ZH90_ALLOWED_UIDS に列挙された UID のみアクセス可能
-// - 他 UID（匿名含む）は 403 拒否
-// - 親 Android UID は取得次第、後日追加する
-//
-// このファイルを変更する時は commit message に "tyson-zh90-unlock:" プレフィックス推奨
+// 以下の配列と関数 export は Phase 3 一般化 allowlist（pairs/{id}.allowedUids
+// Firestore 構造）再導入時の足場として残置。
+// 詳細は docs/migrations/pair-world-refactor.md の
+// "Known Debt / Phase 3 Candidate" #4 参照。
 
+// Kept as Phase 3 scaffolding (generalized allowlist reintroduction).
 const TYSON_ZH90_ALLOWED_UIDS = [
   'z2LEdEOjAhWC7qJKOpPO2svWkjE2', // Yusuke PC Chrome profile A (2026-04 取得)
   'O1Kkjy9A1vdZQKqYCTq3ErOXCaN2', // Yusuke PC Chrome profile B (2026-03-30 作成、実使用)
-  // TODO: 親 Android UID を追加（取得次第）
 ];
 
+// Kept as Phase 3 scaffolding (generalized allowlist reintroduction).
 const TYSON_ONLY_PAIR_IDS = ['TYSON-ZH90'];
 
 /**
- * pairId が TYSON-ZH90 系で、かつ uid が allowlist にない場合 true を返す。
- * true なら API ハンドラ側で 403 返却すべき。
+ * 段階6 (2026-04): allowlist 撤廃、TYSON-ZH90 も他 pair 同様に pair ID 単位 isolation に移行。
+ * 関数シグネチャと 8 callsite は維持、Phase 3 で generalized allowlist を再導入する
+ * 際の足場としてこのモジュール全体を残す。
+ * See docs/migrations/pair-world-refactor.md "Known Debt / Phase 3 Candidate" #4.
  *
  * @param {string} pairId
  * @param {string|null|undefined} uid - Firebase Auth UID、未認証なら null/undefined
  * @returns {boolean}
  */
 function isTysonOnlyBlocked(pairId, uid) {
-  if (!TYSON_ONLY_PAIR_IDS.includes(pairId)) return false;
-  if (!uid) return true;
-  return !TYSON_ZH90_ALLOWED_UIDS.includes(uid);
+  return false;
 }
 
 export { TYSON_ZH90_ALLOWED_UIDS, TYSON_ONLY_PAIR_IDS, isTysonOnlyBlocked };
