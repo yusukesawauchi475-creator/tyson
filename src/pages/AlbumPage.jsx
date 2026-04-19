@@ -162,9 +162,7 @@ export default function AlbumPage({ lang = 'ja' }) {
       alert(lang === 'en' ? 'Cannot share: slug not available. Please open from a valid pair URL.' : '共有できません。有効なペアURLからアクセスしてください。')
       return
     }
-    const userRole = getUserRole()
-    const inviteeRole = userRole === 'parent' ? 'child' : 'parent'
-    const url = `https://www.humfamily.com/pair/${slug}?role=${inviteeRole}&openExternalBrowser=1`
+    const url = `https://www.humfamily.com/pair/${slug}?openExternalBrowser=1`
     const text = lang === 'en'
       ? 'Connect with your family every day with Hum. Open this link to get started.'
       : '毎日1分、声でつながるアプリHumです。このリンクを開いて始めてください。'

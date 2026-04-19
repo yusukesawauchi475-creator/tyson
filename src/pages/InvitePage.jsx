@@ -19,11 +19,11 @@ export default function InvitePage() {
       alert(lang === 'en' ? 'Pair ID not found. Please open from your invite link.' : 'ペアIDが見つかりません。招待リンクからアクセスしてください。')
       return
     }
-    let url = `https://www.humfamily.com/#/?pairId=${encodeURIComponent(pairId)}&role=child&openExternalBrowser=1`
+    let url = `https://www.humfamily.com/#/?pairId=${encodeURIComponent(pairId)}&openExternalBrowser=1`
     try {
       const snap = await getDoc(doc(db, 'pairs', pairId))
       const num = snap.data()?.number
-      if (num) url = `https://www.humfamily.com/pair/${num}?role=child&openExternalBrowser=1`
+      if (num) url = `https://www.humfamily.com/pair/${num}?openExternalBrowser=1`
     } catch (_) {}
     const text = lang === 'en'
       ? 'Connect with your family every day with Hum. Open this link to get started.'
