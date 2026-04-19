@@ -240,6 +240,14 @@ docs に記録することで将来の設計判断材料とする。
 - **Phase 3 検討事項**:
   - `pairs/{id}.allowedUids` 的な Firestore 構造で一般化
   - `pair-access.js` は generic な allowlist 判定のみ担当
+- **段階6 (2026-04-19) での更新**: TYSON-ZH90 allowlist は撤廃済み。pair ID 単位 Firestore query による標準 isolation に統一。Phase 3 で `pairs/{id}.allowedUids` 的な Firestore ベース構造で一般化再導入を検討する。`api/lib/pair-access.js` の配列・関数・8 callsite は Phase 3 足場として残置中。
+
+### 5. Firestore / Storage rules are authenticated-only
+
+- **現状**: `firestore.rules` と `storage.rules` が「認証済みユーザーなら全 document 読み書き可能」の設計
+- **問題**: pair 単位の access control がルールレベルで存在しない、クライアント直接 Firestore access（`src/lib/invite.js`, `src/components/PairWorld.jsx`, `src/pages/AdminPage.jsx` 等）が既に複数経路存在するため、API 層の allowlist では万全でなかった
+- **段階6 での影響**: allowlist 撤廃によりこの既存課題が可視化された（allowlist が元から穴あり状態だった事実）
+- **Phase 3 検討事項**: Firestore rules を pair 単位 access control に強化、例えば `allow read: if request.auth.uid in resource.data.allowedUids` 的な構造、Debt #4 の Firestore 化と一体で設計
 
 ## Lessons Learned
 
