@@ -8,7 +8,8 @@
 // このファイルを変更する時は commit message に "tyson-zh90-unlock:" プレフィックス推奨
 
 const TYSON_ZH90_ALLOWED_UIDS = [
-  'z2LEdEOjAhWC7qJKOpPO2svWkjE2', // Yusuke PC Chrome (2026-04 取得)
+  'z2LEdEOjAhWC7qJKOpPO2svWkjE2', // Yusuke PC Chrome profile A (2026-04 取得)
+  'O1Kkjy9A1vdZQKqYCTq3ErOXCaN2', // Yusuke PC Chrome profile B (2026-03-30 作成、実使用)
   // TODO: 親 Android UID を追加（取得次第）
 ];
 
