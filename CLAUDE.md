@@ -91,6 +91,12 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 | `src/components/VoiceLibrary.jsx` | 声の履歴一覧 (アルバム声タブ用) |
 | `src/components/PwaInstallBanner.jsx` | Android PWAインストールバナー |
 | `src/components/WeeklySummary.jsx` | 週次サマリー (日曜のみ) |
+| `src/components/FamilyInsightCard.jsx` | 家族インサイトカード (過去7日のアクティビティをAIで1行コメント化) |
+| `src/components/AlbumCalendar.jsx` | アルバムカレンダービュー |
+| `src/components/OneYearAgoBanner.jsx` | 1年前の思い出バナー |
+| `src/components/UploadErrorModal.jsx` | アップロードエラー再試行モーダル |
+| `src/components/LanguageSwitch.jsx` | 言語切り替えUI |
+| `src/components/PairWorld.jsx` | PairWorldコンテキストラッパー |
 | `src/lib/pairDaily.js` | getPairId, getUserRole, markSeen, uploadAudio, fetchAudio 等 |
 | `src/lib/journal.js` | 写真アップロード, fetchTodayJournalMeta, fetchAlbum |
 | `src/lib/firebase.js` | Firebase初期化, getIdTokenForApi (匿名認証) |
@@ -106,6 +112,8 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 | `api/invite.js` | ペア発行(create-numbered), スラグ解決(resolve) |
 | `api/streak.js` | 連続記録ストリーク |
 | `api/daily-theme.js` | AI話題生成 |
+| `api/family-insight.js` | 過去7日アクティビティをOpenAI GPT-4o-miniで家族インサイント1行コメント生成 (GET) |
+| `api/journal-analysis.js` | journal_image写真をOpenAI Vision APIでOCR+AI解析 (POST, 管理者専用) |
 | `api/admin-reset.js` | 管理リセット |
 | `api/admin-restore.js` | 管理復元 |
 | `api/admin-pairs.js` | ペアダッシュボード |
