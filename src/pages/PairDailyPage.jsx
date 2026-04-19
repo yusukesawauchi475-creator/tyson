@@ -705,8 +705,8 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
     const url = buildInviteUrl(slug)
     const result = await copyInviteLink(url)
     setToastMsg(result.success
-      ? (lang === 'en' ? 'Link copied!' : 'リンクをコピーしました')
-      : (lang === 'en' ? 'Copy failed' : 'コピーに失敗しました'))
+      ? (lang === 'en' ? 'Link copied' : 'リンクをコピーしました')
+      : (lang === 'en' ? 'Failed to copy' : 'コピーに失敗しました'))
     setTimeout(() => setToastMsg(null), 2500)
   }
 

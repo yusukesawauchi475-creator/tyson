@@ -22,8 +22,8 @@ export default function InvitePage() {
     const url = await resolveAndBuildInviteUrl(pairId)
     const result = await copyInviteLink(url)
     setToastMsg(result.success
-      ? (lang === 'en' ? 'Link copied!' : 'リンクをコピーしました')
-      : (lang === 'en' ? 'Copy failed' : 'コピーに失敗しました'))
+      ? (lang === 'en' ? 'Link copied' : 'リンクをコピーしました')
+      : (lang === 'en' ? 'Failed to copy' : 'コピーに失敗しました'))
     setTimeout(() => setToastMsg(null), 2500)
   }
 
