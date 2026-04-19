@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { getDateKey, fetchAudioForPlayback, hasTodayAudio, getListenRoleMeta, markSeen, uploadAudio, genRequestId, getStreak, updateStreak } from '../lib/pairDaily'
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
+import { buildInviteUrl, copyInviteLink } from '../lib/invite'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import { t } from '../lib/i18n'
 import DailyPromptCard, { getCountry, cycleCountry } from '../components/DailyPromptCard'
@@ -697,23 +698,16 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
       stopRecording()
     }
     if (!slug) {
-      alert(lang === 'en' ? 'Cannot share: slug not available. Please open from a valid pair URL.' : '共有できません。有効なペアURLからアクセスしてください。')
+      setToastMsg(lang === 'en' ? 'Cannot share: invalid pair URL' : '共有できません。有効なペアURLからアクセスしてください')
+      setTimeout(() => setToastMsg(null), 2500)
       return
     }
-    const url = `https://www.humfamily.com/pair/${slug}?openExternalBrowser=1`
-    const text = lang === 'en'
-      ? 'Connect with your family every day with Hum. Open this link to get started.'
-      : '毎日1分、声でつながるアプリHumです。このリンクを開いて始めてください。'
-    if (navigator.share) {
-      try { await navigator.share({ title: 'Hum', text, url }) } catch (_) {}
-    } else {
-      try {
-        await navigator.clipboard.writeText(url)
-        alert(lang === 'en' ? 'Link copied!' : 'リンクをコピーしました')
-      } catch (_) {
-        alert(lang === 'en' ? 'Copy failed' : 'コピーに失敗しました')
-      }
-    }
+    const url = buildInviteUrl(slug)
+    const result = await copyInviteLink(url)
+    setToastMsg(result.success
+      ? (lang === 'en' ? 'Link copied!' : 'リンクをコピーしました')
+      : (lang === 'en' ? 'Copy failed' : 'コピーに失敗しました'))
+    setTimeout(() => setToastMsg(null), 2500)
   }
 
   const handleRecordClick = () => {
@@ -756,7 +750,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {onChangeRole && (
-            <button type="button" onClick={onChangeRole} style={{ padding: '2px 6px', fontSize: 10, color: '#8070A0', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+            <button type="button" onClick={onChangeRole} style={{ padding: '6px 10px', fontSize: 14, color: '#8070A0', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
               {lang === 'en' ? 'Switch' : '変更'}
             </button>
           )}

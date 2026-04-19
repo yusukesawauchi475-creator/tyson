@@ -23,6 +23,11 @@ export default function RoleSelectPage({ onSelect, lang = 'ja' }) {
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 8px' }}>
           {lang === 'en' ? 'Who are you?' : 'あなたは？'}
         </h1>
+        <p style={{ fontSize: 13, color: '#555', margin: '0 0 12px', lineHeight: 1.5 }}>
+          {lang === 'en'
+            ? 'Ask the person who invited you whether you are the parent or the child.'
+            : '招待してくれた人に、あなたが「親」か「子」か聞いてください'}
+        </p>
         <p style={{ fontSize: 12, color: '#AAA', margin: '0 0 40px', whiteSpace: 'nowrap' }}>
           {lang === 'en'
             ? 'You can change later.'

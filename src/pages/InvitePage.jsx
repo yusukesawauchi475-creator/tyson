@@ -1,46 +1,30 @@
 import { useState } from 'react'
 import { useOutletContext, Link } from 'react-router-dom'
-import { doc, getDoc } from 'firebase/firestore'
-import { db } from '../lib/firebase'
+import { resolveAndBuildInviteUrl, copyInviteLink } from '../lib/invite'
 
 /**
  * InvitePage — /pair/:slug/invite route.
- * HomePage.handleShare ロジックをコピー、pairId を Outlet context から受け取る（Phase 1 最小調整）。
+ * 段階5 で helper (src/lib/invite.js) に統一、navigator.share 撤去、clipboard + toast 一本化。
  * Phase 3 で URL 形式統一・lang 対応を行う予定。
  */
 export default function InvitePage() {
   const { pairId, slug } = useOutletContext()
-  const [message, setMessage] = useState(null)
+  const [toastMsg, setToastMsg] = useState(null)
   // TODO Phase 3: lang を context/URL 経由で受け取る。Phase 1 は ja 固定。
   const lang = 'ja'
 
   const handleShare = async () => {
     if (!pairId) {
-      alert(lang === 'en' ? 'Pair ID not found. Please open from your invite link.' : 'ペアIDが見つかりません。招待リンクからアクセスしてください。')
+      setToastMsg(lang === 'en' ? 'Pair ID not found' : 'ペアIDが見つかりません')
+      setTimeout(() => setToastMsg(null), 2500)
       return
     }
-    let url = `https://www.humfamily.com/#/?pairId=${encodeURIComponent(pairId)}&openExternalBrowser=1`
-    try {
-      const snap = await getDoc(doc(db, 'pairs', pairId))
-      const num = snap.data()?.number
-      if (num) url = `https://www.humfamily.com/pair/${num}?openExternalBrowser=1`
-    } catch (_) {}
-    const text = lang === 'en'
-      ? 'Connect with your family every day with Hum. Open this link to get started.'
-      : '毎日1分、声でつながるアプリHumです。このリンクを開いて始めてください。'
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'Hum', text, url })
-        setMessage(lang === 'en' ? 'Shared!' : '共有を開始しました')
-      } catch (_) {}
-    } else {
-      try {
-        await navigator.clipboard.writeText(url)
-        setMessage(lang === 'en' ? 'Link copied!' : 'リンクをコピーしました')
-      } catch (_) {
-        setMessage(lang === 'en' ? 'Copy failed' : 'コピーに失敗しました')
-      }
-    }
+    const url = await resolveAndBuildInviteUrl(pairId)
+    const result = await copyInviteLink(url)
+    setToastMsg(result.success
+      ? (lang === 'en' ? 'Link copied!' : 'リンクをコピーしました')
+      : (lang === 'en' ? 'Copy failed' : 'コピーに失敗しました'))
+    setTimeout(() => setToastMsg(null), 2500)
   }
 
   return (
@@ -55,12 +39,13 @@ export default function InvitePage() {
       >
         {lang === 'en' ? 'Start sharing' : '共有を開始'}
       </button>
-      {message && (
-        <p style={{ fontSize: 13, color: '#7050C0', margin: 0, fontWeight: 600 }}>{message}</p>
-      )}
       <Link to={`/pair/${slug}`} style={{ fontSize: 14, color: '#7050C0', textDecoration: 'none' }}>
         ← {lang === 'en' ? 'Back to Home' : 'ホームへ戻る'}
       </Link>
+
+      {toastMsg && (
+        <div style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.75)', color: '#fff', fontSize: 14, padding: '8px 20px', borderRadius: 20, zIndex: 20000, whiteSpace: 'nowrap', pointerEvents: 'none' }}>{toastMsg}</div>
+      )}
     </div>
   )
 }
