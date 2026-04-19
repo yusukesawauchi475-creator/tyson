@@ -4,6 +4,7 @@ import {
   CODE_PARSE_ERROR,
   CODE_EMPTY,
 } from './lib/parseFirebaseServiceAccount.js';
+import { isTysonOnlyBlocked } from './lib/pair-access.js';
 
 let adminApp;
 let firestore;
@@ -137,15 +138,6 @@ function isPairAllowed(uid, pairId) {
 }
 
 const READ_ONLY_PAIR_IDS = ['PAIR-DEMOTEST'];
-
-/** pairIds isolated to tyson-two.vercel.app — block access from humfamily.com */
-const TYSON_ONLY_PAIR_IDS = ['TYSON-ZH90'];
-
-function isTysonOnlyBlocked(req, pairId) {
-  if (!TYSON_ONLY_PAIR_IDS.includes(pairId)) return false;
-  const origin = (req.headers.origin || req.headers.referer || '').toLowerCase();
-  return origin.includes('humfamily.com');
-}
 
 /**
  * Parse multipart form-data (Vercel serverless compatible)
@@ -283,11 +275,12 @@ async function handleVoiceHistory(req, res) {
   const authHeader = req.headers.authorization || '';
   const idToken = authHeader.replace(/^Bearer\s+/i, '').trim();
   if (!idToken) return res.status(401).json({ error: 'Unauthorized' });
-  try { await verifyIdToken(idToken); } catch { return res.status(401).json({ error: 'Invalid token' }); }
+  let uid;
+  try { ({ uid } = await verifyIdToken(idToken)); } catch { return res.status(401).json({ error: 'Invalid token' }); }
 
   const pairId = req.query?.pairId;
   if (!pairId) return res.status(400).json({ error: 'pairId is required' });
-  if (isTysonOnlyBlocked(req, pairId)) return res.status(403).json({ error: 'Access denied' });
+  if (isTysonOnlyBlocked(pairId, uid)) return res.status(403).json({ error: 'Access denied' });
   const limit = Math.min(parseInt(req.query?.limit) || 7, 30);
 
   try {
@@ -366,13 +359,14 @@ async function handleVoiceHistory(req, res) {
 async function handleVoiceMonth(req, res) {
   const idToken = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
   if (!idToken) return res.status(401).json({ error: 'Unauthorized' });
-  try { await verifyIdToken(idToken); } catch { return res.status(401).json({ error: 'Invalid token' }); }
+  let uid;
+  try { ({ uid } = await verifyIdToken(idToken)); } catch { return res.status(401).json({ error: 'Invalid token' }); }
 
   const pairId = req.query?.pairId;
   const month = req.query?.month;
   if (!pairId) return res.status(400).json({ error: 'pairId is required' });
   if (!month || !/^\d{4}-\d{2}$/.test(month)) return res.status(400).json({ error: 'month must be YYYY-MM' });
-  if (isTysonOnlyBlocked(req, pairId)) return res.status(403).json({ error: 'Access denied' });
+  if (isTysonOnlyBlocked(pairId, uid)) return res.status(403).json({ error: 'Access denied' });
 
   try {
     initFirebaseAdmin();
@@ -429,10 +423,6 @@ async function handleGet(req, res) {
     });
   }
 
-  if (isTysonOnlyBlocked(req, pairId)) {
-    return res.status(403).json({ success: false, error: 'Access denied', requestId: reqId });
-  }
-
   if (!listenRole || (listenRole !== 'parent' && listenRole !== 'child')) {
     logObserve({ requestId: reqId, stage: 'get_validate', status: 'error', pairId, role: listenRole || null, clientDateKey, serverDateKey, storagePath: null, firestoreDocPath, httpStatus: 400, errorCode: 'invalid_role', errorMessage: 'listenRole must be parent or child' });
     return res.status(400).json({
@@ -455,6 +445,9 @@ async function handleGet(req, res) {
 
   try {
     const { uid } = await verifyIdToken(idToken);
+    if (isTysonOnlyBlocked(pairId, uid)) {
+      return res.status(403).json({ success: false, error: 'Access denied', requestId: reqId });
+    }
     if (!isPairAllowed(uid, pairId)) {
       return res.status(403).json({
         success: false,
@@ -631,7 +624,7 @@ async function handlePost(req, res) {
 
     const pairId = fields.pairId || fields.pair_id || 'demo';
 
-    if (isTysonOnlyBlocked(req, pairId)) {
+    if (isTysonOnlyBlocked(pairId, uid)) {
       return res.status(403).json({ success: false, error: 'Access denied', requestId: reqId });
     }
     if (READ_ONLY_PAIR_IDS.includes(pairId)) {
@@ -763,9 +756,6 @@ async function handlePatch(req, res) {
   const role = req.query?.listenRole || req.query?.listen_role || req.query?.role;
   const firestoreDocPath = pairId && dateKey ? `pair_media/${pairId}/days/${dateKey}` : null;
 
-  if (isTysonOnlyBlocked(req, pairId)) {
-    return res.status(403).json({ success: false, error: 'Access denied', requestId: reqId });
-  }
   if (READ_ONLY_PAIR_IDS.includes(pairId)) {
     return res.status(403).json({ success: false, error: 'This pair is read-only', requestId: reqId });
   }
@@ -785,6 +775,9 @@ async function handlePatch(req, res) {
 
   try {
     const { uid } = await verifyIdToken(idToken);
+    if (isTysonOnlyBlocked(pairId, uid)) {
+      return res.status(403).json({ success: false, error: 'Access denied', requestId: reqId });
+    }
     if (!isPairAllowed(uid, pairId)) {
       return res.status(403).json({ success: false, error: 'Not a pair member', requestId: reqId });
     }
