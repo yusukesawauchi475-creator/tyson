@@ -6,6 +6,7 @@ import AdminPage from './pages/AdminPage'
 import AlbumPage from './pages/AlbumPage'
 import DemoPage from './pages/DemoPage'
 import LandingPage from './pages/LandingPage'
+import InstallRecoveryPage from './pages/InstallRecoveryPage'
 import RoleSelectPage from './pages/RoleSelectPage'
 import PairWorld from './components/PairWorld'
 import InvitePage from './pages/InvitePage'
@@ -14,6 +15,23 @@ import PwaInstallBanner, { BANNER_HEIGHT } from './components/PwaInstallBanner'
 
 function RootOrLanding({ lang = 'ja' }) {
   const navigate = useNavigate()
+
+  // 段階8: PWA standalone 起動時 + localStorage 空の場合は InstallRecoveryPage を表示。
+  // iOS Safari の standalone は Safari タブと別 storage context を使う Apple 仕様のため、
+  // 段階7 の redirect が効かず LandingPage の demo CTA に誘導される bug への対処。
+  // useState 初期化で同期判定し、LandingPage のフラッシュを避ける。
+  const [showRecovery] = useState(() => {
+    try {
+      const stored = localStorage.getItem('hum_last_slug')
+      if (stored && /^[A-Za-z0-9_-]{2,32}$/.test(stored)) return false
+    } catch (_) {}
+    try {
+      return window.matchMedia('(display-mode: standalone)').matches
+        || window.navigator.standalone === true
+    } catch (_) {
+      return false
+    }
+  })
 
   useEffect(() => {
     try {
@@ -26,6 +44,7 @@ function RootOrLanding({ lang = 'ja' }) {
     }
   }, [navigate])
 
+  if (showRecovery) return <InstallRecoveryPage lang={lang} />
   return <LandingPage lang={lang} />
 }
 
