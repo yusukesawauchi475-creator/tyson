@@ -46,6 +46,20 @@ export default function PairWorld() {
     return () => { cancelled = true }
   }, [slug])
 
+  // 段階7: pair 解決成功時のみ slug を localStorage に保存
+  // PWA install 後の / アクセスで App.jsx RootOrLanding が読み取り、/pair/:slug に復元する
+  // slug（URL 公開値）のみ保存、pairId は保存しない（公理1: URL = Source of Truth 維持）
+  useEffect(() => {
+    if (!slug || !pairId) return
+    try {
+      if (/^[A-Za-z0-9_-]{2,32}$/.test(slug)) {
+        localStorage.setItem('hum_last_slug', slug)
+      }
+    } catch (_) {
+      // localStorage 書き込み失敗は無視
+    }
+  }, [slug, pairId])
+
   if (loading) {
     return (
       <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8070A0', fontFamily: 'var(--font-sans)' }}>

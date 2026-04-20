@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { BrowserRouter as Router, Routes, Route, useSearchParams } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { BrowserRouter as Router, Routes, Route, useSearchParams, useNavigate } from 'react-router-dom'
 import PairDailyPage from './pages/PairDailyPage'
 import HomePage from './pages/HomePage'
 import AdminPage from './pages/AdminPage'
@@ -13,6 +13,19 @@ import { getUserRole, setUserRole, clearUserRole } from './lib/pairDaily'
 import PwaInstallBanner, { BANNER_HEIGHT } from './components/PwaInstallBanner'
 
 function RootOrLanding({ lang = 'ja' }) {
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('hum_last_slug')
+      if (stored && /^[A-Za-z0-9_-]{2,32}$/.test(stored)) {
+        navigate(`/pair/${stored}`, { replace: true })
+      }
+    } catch (_) {
+      // localStorage 例外（private mode 等）は無視し、LandingPage を表示
+    }
+  }, [navigate])
+
   return <LandingPage lang={lang} />
 }
 
