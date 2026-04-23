@@ -51,22 +51,24 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 進行中の将来機能: Memory Surfacing（docs/features/memory-surfacing.md 参照）
 
 ## スタック
-- **フロントエンド**: Vite + React (HashRouter), インラインCSS中心
+- **フロントエンド**: Vite + React (BrowserRouter), インラインCSS中心
 - **バックエンド**: Vercel Serverless Functions (`api/` ディレクトリ)
 - **データ**: Firebase Firestore + Firebase Storage
 - **認証**: Firebase Anonymous Auth
 - **デプロイ**: Vercel Pro（mainブランチ push で自動デプロイ）
 - **フォント**: Nunito (Google Fonts, 700/800)
 
-## ルーティング (HashRouter)
+## ルーティング (BrowserRouter)
 | パス | コンポーネント | 説明 |
 |------|-------------|------|
-| `/#/` | RootOrLanding → RootRoute | pairId有→ホーム, 無→ランディング |
-| `/#/?number=X` | NumberResolver → RootRoute | /pair/X 経由のスラグ解決 |
-| `/#/album` | AlbumPage | 写真・声アルバム |
-| `/#/admin` | AdminPage | 管理画面 |
-| `/#/demo` | DemoPage | デモ |
-| `/#/landing` | LandingPage | ランディングページ |
+| `/` | RootOrLanding | localStorage slug復元→/pair/:slug, 無→LandingPage |
+| `/admin` | AdminPage | 管理画面 |
+| `/demo` | DemoPage | デモ |
+| `/landing` | LandingPage | ランディングページ |
+| `/pair/:slug` | PairWorld (Outlet) | ペアコンテキスト wrapper |
+| `/pair/:slug` (index) | RootRoute | role未設定→RoleSelect, 親→HomePage, 子→PairDailyPage |
+| `/pair/:slug/album` | AlbumPage | 写真・声アルバム |
+| `/pair/:slug/invite` | InvitePage | 招待リンクシェア |
 
 ## ペアの仕組み
 - 公開URL: `humfamily.com/pair/{6文字スラグ}` (例: /pair/ulf1q6)
@@ -79,7 +81,7 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 ### フロントエンド
 | ファイル | 役割 |
 |---------|------|
-| `src/App.jsx` | ルーティング, NumberResolver, RootRoute (role振り分け) |
+| `src/App.jsx` | BrowserRouter ルーティング, RootOrLanding (PWA slug復元), RootRoute (role振り分け) |
 | `src/pages/HomePage.jsx` | 親のホーム画面 (緑/ピンク/紫の3カード) |
 | `src/pages/PairDailyPage.jsx` | 子のホーム画面 (同上) |
 | `src/pages/AlbumPage.jsx` | アルバム (写真タブ/声タブ, ライトボックス) |
@@ -87,14 +89,30 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 | `src/pages/RoleSelectPage.jsx` | 親/子の役割選択 |
 | `src/pages/LandingPage.jsx` | 初回訪問ランディング |
 | `src/pages/DemoPage.jsx` | デモ体験 |
+| `src/pages/InvitePage.jsx` | 招待リンクシェア画面 |
+| `src/components/PairWorld.jsx` | /pair/:slug コンテキスト wrapper (slug→pairId解決, Outlet) |
 | `src/components/DailyPromptCard.jsx` | 今日の話題pill (AI話題 + 別の話題ボタン) |
 | `src/components/VoiceLibrary.jsx` | 声の履歴一覧 (アルバム声タブ用) |
+| `src/components/AlbumCalendar.jsx` | アルバムカレンダービュー |
+| `src/components/FamilyInsightCard.jsx` | 家族インサイトカード (OpenAI GPT生成) |
+| `src/components/OneYearAgoBanner.jsx` | 1年前の思い出バナー |
+| `src/components/UploadErrorModal.jsx` | アップロードエラー再試行モーダル |
+| `src/components/LanguageSwitch.jsx` | 言語切り替えUI |
 | `src/components/PwaInstallBanner.jsx` | Android PWAインストールバナー |
 | `src/components/WeeklySummary.jsx` | 週次サマリー (日曜のみ) |
-| `src/lib/pairDaily.js` | getPairId, getUserRole, markSeen, uploadAudio, fetchAudio 等 |
+| `src/components/AdminAuth.jsx` | **dead code** — /api/admin/verify(_disabled)への依存、未使用 |
+| `src/lib/pairDaily.js` | getUserRole, setUserRole, markSeen, uploadAudio, fetchAudio 等 |
 | `src/lib/journal.js` | 写真アップロード, fetchTodayJournalMeta, fetchAlbum |
 | `src/lib/firebase.js` | Firebase初期化, getIdTokenForApi (匿名認証) |
 | `src/lib/i18n.js` | 日英翻訳 |
+| `src/lib/invite.js` | 招待URL生成, slug共有ヘルパー |
+| `src/lib/dateFormat.js` | NY時間ベース日付フォーマット |
+| `src/lib/indexedDB.js` | 音声一時保存 (IndexedDB) |
+| `src/lib/fcm.js` | Firebase Cloud Messaging (プッシュ通知) |
+| `src/lib/tysonThemes.js` | カラーテーマ定数 |
+| `src/lib/uiCopy.js` | UI文言定数 |
+| `src/lib/useAudioLevel.js` | 録音レベルメーター hook |
+| `src/lib/deployHealthCheck.js` | デプロイ後ヘルスチェック |
 | `src/index.css` | グローバルCSS (.page, .bottom-nav 等) |
 
 ### API (Vercel Serverless)
@@ -106,9 +124,12 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 | `api/invite.js` | ペア発行(create-numbered), スラグ解決(resolve) |
 | `api/streak.js` | 連続記録ストリーク |
 | `api/daily-theme.js` | AI話題生成 |
+| `api/family-insight.js` | 7日間アクティビティ→OpenAI GPT-4o-miniで家族インサイト生成 (GET) |
+| `api/journal-analysis.js` | journal写真をOpenAI Vision APIでOCR+AI解析 (POST, 管理者専用) |
 | `api/admin-reset.js` | 管理リセット |
 | `api/admin-restore.js` | 管理復元 |
 | `api/admin-pairs.js` | ペアダッシュボード |
+| `api/lib/pair-access.js` | isTysonOnlyBlocked() — Phase 3足場 (現在常にfalse返却) |
 
 ### 設定
 | ファイル | 役割 |
@@ -135,12 +156,13 @@ journal/{pairId}/{YYYY-MM}/{YYYY-MM-DD}/{role}/generic_image/photo-0{N}.{ext}
 ```
 
 ## 重要な制約
-- **TYSON-ZH90**: テスト用ペア。データ・コードともに絶対に触らない
+- **TYSON-ZH90**: 本番ファミリーペア。データ・コードともに絶対に触らない。段階6でUID allowlistを撤廃し、他pairと同じ標準isolation（pair ID単位）に移行済み
 - **PAIR-DEMOTEST**: デモ用。READ_ONLY_PAIR_IDS で書き込みブロック
 - **日付**: 全てNY時間 (America/New_York) の YYYY-MM-DD
 - **音声**: 同じ日に複数回録音可能 (recording_{HHMM}.ext)
 - **写真**: 1日3枚まで (generic_images配列)
 - **認証**: Firebase Anonymous Auth。API は Admin SDK の verifyIdToken で検証
+- **PWA slug復元**: `RootOrLanding` が `localStorage['hum_last_slug']` でPWAインストール後の復元を行う。公理1例外として承認済み（slug=URL公開値であり内部pairIdは保存しない）
 
 ## 開発コマンド
 ```bash
@@ -154,13 +176,12 @@ firebase deploy --only firestore:rules,storage  # ルールデプロイ
 
 ### 1. セキュリティ & データ漏洩
 - firestore.rules を読む
-- TYSON-ZH90 が外部からアクセスできる経路がないか確認
 - PAIR-DEMOTEST への書き込みが全APIでブロックされてるか確認
-- getPairId() が null/invalid 時にフォールバックしてないか確認
-- pairId='demo' でAPIを叩いたとき PAIR-DEMOTEST のデータが返らないか確認
+- pairId未指定リクエストが `|| 'demo'` fallbackでサイレント処理されてないか確認（4ファイル: pair-media.js/journal.js/admin-reset.js/admin-restore.js — 既知未修正）
+- pairId='demo' でAPIを叩いたとき他ペアのデータが返らないか確認
 
 ### 2. データ整合性
-- api/pair-media.js の set() が全て merge:true なしか確認
+- api/pair-media.js の set() に merge:true があるか確認（同一dateKeyに親子両データが共存するため意図的に使用中）
 - 「送信しました」表示がFirestore書き込み確認後のみか確認
 - Firebase Admin Storage が全て admin.storage().bucket(storageBucketName) か確認
 
@@ -176,7 +197,7 @@ firebase deploy --only firestore:rules,storage  # ルールデプロイ
 
 ### 5. UIの一貫性
 - BottomNavがHomePage/AlbumPage/PairDailyPageに存在するか確認
-- HashRouter形式（/#/path）が全リンクで使われてるか確認
+- BrowserRouter形式（/pair/:slug/path）が全リンクで使われてるか確認（ハッシュ形式 `/#/` は廃止済み）
 - pairId=PAIR-DEMOTESTでデモ写真・音声のフォールバックがあるか確認（他pairIdに漏れてないか）
 
 ### 6. Firestore インデックス
