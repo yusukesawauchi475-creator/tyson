@@ -131,18 +131,6 @@ async function verifyIdToken(idToken) {
   return { uid: decoded.uid };
 }
 
-/**
- * 段階10-a: User-Agent から device 種別を簡易推定。audit 用の diagnostic hint。
- * 返り値: 'ios-safari' / 'android-chrome' / 'pc-chrome' / 'unknown'
- */
-function deriveDeviceHint(userAgent) {
-  if (!userAgent || typeof userAgent !== 'string') return 'unknown';
-  if (/iPhone|iPad|iPod/.test(userAgent)) return 'ios-safari';
-  if (/Android/.test(userAgent)) return 'android-chrome';
-  if (/Windows|Macintosh|Linux/.test(userAgent)) return 'pc-chrome';
-  return 'unknown';
-}
-
 /** MVP: pairId=demo は誰でもアクセス可。後でinvite token方式に戻す */
 function isPairAllowed(uid, pairId) {
   if (pairId === 'demo') return true;
@@ -342,18 +330,7 @@ async function handleVoiceHistory(req, res) {
               url = signedUrl;
             }
           } catch (_) {}
-          if (url) items.push({
-            url,
-            hhmm: r.hhmm || null,
-            version: r.version || null,
-            mimeType: r.mimeType || 'audio/mp4',
-            // 段階10-a: item-level metadata を response に含める（admin UI で表示）。
-            // 既存 record で欠落する場合は undefined、client 側で graceful 処理。
-            uploadedBy: r.uploadedBy || null,
-            roleAtUpload: r.roleAtUpload || null,
-            deviceHint: r.deviceHint || null,
-            movedFrom: r.movedFrom || null,
-          });
+          if (url) items.push({ url, hhmm: r.hhmm || null, version: r.version || null, mimeType: r.mimeType || 'audio/mp4' });
         }
         if (items.length === 0) continue;
 
@@ -688,22 +665,11 @@ async function handlePost(req, res) {
     const objectPath = `pair-media/${pairId}/${dateKey}/${role}/recording_${hhmm}.${ext}`;
     // NOTE: 過去の録音は削除しない（複数録音保存のため）
     const version = Date.now();
-    // 段階10-a: device hint を User-Agent から推定
-    const deviceHint = deriveDeviceHint(req.headers['user-agent'] || '');
     try {
       const fileRef = storageBucket.file(objectPath);
       await fileRef.save(audioFile.buffer, {
         contentType: mimeType,
         resumable: false,
-        // 段階10-a: Storage 側にも uploader 情報を記録（Firestore 喪失時の diagnostic 保険）
-        metadata: {
-          metadata: {
-            uploadedBy: uid,
-            roleAtUpload: role,
-            uploadedAtMs: String(version),
-            deviceHint,
-          },
-        },
       });
       logObserve({ requestId: reqId, stage: 'post_storage', status: 'ok', pairId, role, clientDateKey, serverDateKey, ...(dateKeyNormalized ? { note: 'dateKey_normalized' } : {}), storagePath: objectPath, firestoreDocPath: docPath, httpStatus: 200, errorCode: null, errorMessage: null });
     } catch (uploadErr) {
@@ -721,19 +687,7 @@ async function handlePost(req, res) {
       const existingRole = existingSnap.exists ? (existingSnap.data()?.[role] || {}) : {};
       const existingArray = Array.isArray(existingRole.audioPath) ? existingRole.audioPath : [];
 
-      // 段階10-a: item-level metadata を追加（uploadedBy / roleAtUpload / deviceHint / movedFrom）
-      // 30-year sustainability のため、1 family = 複数 device 対応。
-      const newEntry = {
-        path: objectPath,
-        hhmm,
-        version,
-        mimeType,
-        ext,
-        uploadedBy: uid,
-        roleAtUpload: role,
-        deviceHint,
-        movedFrom: null,
-      };
+      const newEntry = { path: objectPath, hhmm, version, mimeType, ext };
       const audioPathArray = [newEntry, ...existingArray.filter(e => e?.path !== objectPath)];
 
       const uploadedAtTs = admin.firestore.FieldValue.serverTimestamp();
@@ -792,112 +746,9 @@ async function handlePost(req, res) {
 }
 
 /** PATCH: action=markSeen で seenAt を serverTimestamp に更新 */
-/**
- * 段階10-a: admin による voice 移動 (parent <-> child role 間で audioPath[] item を移動)。
- * 4/23 05:31 のような誤格納を管理者権限で修正可能にする。Storage ファイル自体は移動しない、
- * Firestore metadata のみ書き換え。item は削除せず `movedFrom` 履歴を付けて相手 role に追加。
- * 認証: X-Admin-Password ヘッダ (ADMIN_PASSWORD env と一致必須)。
- */
-async function handleMove(req, res) {
-  const reqId = req.headers['x-request-id'] || genRequestId();
-
-  const provided = (req.headers['x-admin-password'] || '').trim();
-  const validPasswords = [process.env.ADMIN_PASSWORD, process.env.VITE_RESET_SECRET].filter(Boolean);
-  if (!provided || !validPasswords.includes(provided)) {
-    return res.status(401).json({ success: false, error: 'Unauthorized', requestId: reqId });
-  }
-
-  let body = req.body;
-  if (!body || typeof body !== 'object') {
-    try {
-      const chunks = [];
-      for await (const chunk of req) chunks.push(chunk);
-      body = chunks.length > 0 ? JSON.parse(Buffer.concat(chunks).toString('utf8')) : {};
-    } catch (e) {
-      return res.status(400).json({ success: false, error: 'Invalid JSON body', requestId: reqId });
-    }
-  }
-
-  const { pairId, dateKey, hhmm, fromRole, toRole } = body || {};
-  if (!pairId || !dateKey || !hhmm || !fromRole || !toRole) {
-    return res.status(400).json({ success: false, error: 'pairId, dateKey, hhmm, fromRole, toRole required', requestId: reqId });
-  }
-  if (fromRole === toRole) {
-    return res.status(400).json({ success: false, error: 'fromRole and toRole must differ', requestId: reqId });
-  }
-  if (!['parent', 'child'].includes(fromRole) || !['parent', 'child'].includes(toRole)) {
-    return res.status(400).json({ success: false, error: 'fromRole/toRole must be parent or child', requestId: reqId });
-  }
-  if (READ_ONLY_PAIR_IDS.includes(pairId)) {
-    return res.status(403).json({ success: false, error: 'This pair is read-only', requestId: reqId });
-  }
-
-  try {
-    initFirebaseAdmin();
-    const docRef = firestore.collection('pair_media').doc(pairId).collection('days').doc(dateKey);
-    const snap = await docRef.get();
-    if (!snap.exists) {
-      return res.status(404).json({ success: false, error: 'Day document not found', requestId: reqId });
-    }
-    const data = snap.data();
-    const fromData = data[fromRole] || {};
-    const toData = data[toRole] || {};
-    const fromItems = Array.isArray(fromData.audioPath) ? fromData.audioPath : [];
-
-    const idx = fromItems.findIndex(it => it && it.hhmm === hhmm);
-    if (idx === -1) {
-      return res.status(404).json({ success: false, error: `Item with hhmm=${hhmm} not found in ${fromRole}`, requestId: reqId });
-    }
-    const movingItem = fromItems[idx];
-    // 段階10-a: movedFrom / movedAt / movedBy 履歴を item レベルで記録
-    const migratedItem = {
-      ...movingItem,
-      movedFrom: fromRole,
-      movedAt: Date.now(),
-      movedBy: 'admin',
-    };
-
-    const newFromItems = fromItems.filter((_, i) => i !== idx);
-    const toItemsExisting = Array.isArray(toData.audioPath) ? toData.audioPath : [];
-    // hhmm 降順（最新を先頭）で既存パターンに合わせる
-    const newToItems = [migratedItem, ...toItemsExisting.filter(it => it?.path !== movingItem.path)]
-      .sort((a, b) => (b?.hhmm || '').localeCompare(a?.hhmm || ''));
-
-    // 新 document 全体を構築（絶対ルール: set() のみ、merge:true 使わない）
-    const newDoc = {
-      ...data,
-      [fromRole]: { ...fromData, audioPath: newFromItems },
-      [toRole]: { ...toData, audioPath: newToItems },
-      latestUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
-    };
-    // 移動後に from 側 latestAudioPath が残骸になる可能性を修正（配列先頭を参照）
-    if (newFromItems.length > 0 && newFromItems[0]?.path) {
-      newDoc[fromRole].latestAudioPath = newFromItems[0].path;
-    } else if (newFromItems.length === 0) {
-      newDoc[fromRole].latestAudioPath = null;
-    }
-    if (newToItems.length > 0 && newToItems[0]?.path) {
-      newDoc[toRole].latestAudioPath = newToItems[0].path;
-    }
-
-    await docRef.set(newDoc);
-
-    logObserve({ requestId: reqId, stage: 'move', status: 'ok', pairId, role: fromRole, dateKey, firestoreDocPath: `pair_media/${pairId}/days/${dateKey}`, httpStatus: 200, errorCode: null, errorMessage: null, note: `moved hhmm=${hhmm} from ${fromRole} to ${toRole}` });
-    return res.status(200).json({ success: true, moved: { hhmm, fromRole, toRole, path: movingItem.path }, requestId: reqId });
-  } catch (e) {
-    const msg = (e?.message || String(e)).substring(0, 150);
-    logObserve({ requestId: reqId, stage: 'move', status: 'error', pairId, role: fromRole, dateKey, httpStatus: 500, errorCode: 'move_failed', errorMessage: msg });
-    return res.status(500).json({ success: false, error: msg, requestId: reqId });
-  }
-}
-
 async function handlePatch(req, res) {
   const reqId = req.headers['x-request-id'] || genRequestId();
   const action = req.query?.action;
-
-  // 段階10-a: admin voice move は PATCH 経由で routing（既存 markSeen と同列）
-  if (action === 'move') return handleMove(req, res);
-
   const pairId = req.query?.pairId || req.query?.pair_id;
   const clientDateKey = req.query?.dateKey || req.query?.date_key;
   const serverDateKey = getDateKeyNY();
@@ -966,7 +817,7 @@ export default async function handler(req, res) {
   
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Request-Id, X-Admin-Password');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Request-Id');
   res.setHeader('Access-Control-Expose-Headers', 'X-Audio-DateKey, X-Audio-Version, X-Audio-UpdatedAt, X-Audio-SeenAt, X-Audio-MimeType, X-Request-Id');
 
   if (req.method === 'OPTIONS') return res.status(200).end();

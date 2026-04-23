@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { markSeen } from '../lib/pairDaily'
 import { getIdTokenForApi } from '../lib/firebase'
 
-export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pairIdProp, onDataLoaded, adminMode = false, onMove }) {
+export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pairIdProp, onDataLoaded }) {
   const [days, setDays] = useState([])
   const [loading, setLoading] = useState(true)
   const [playingKey, setPlayingKey] = useState(null) // url
@@ -49,9 +49,9 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
     el.currentTime = 0
     el.play().then(() => {
       setPlayingKey(key)
-      // Mark as seen when playing partner's recording（段階10-a: admin mode では markSeen 発火させない）
+      // Mark as seen when playing partner's recording
       const partnerRole = role === 'parent' ? 'child' : 'parent'
-      if (!adminMode && r === partnerRole) {
+      if (r === partnerRole) {
         markSeen(r, effectivePairId, dateKey)
         setDays(prev => prev.map(d => {
           if (d.dateKey !== dateKey) return d
@@ -168,29 +168,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
                   }}
                   aria-label={lang === 'en' ? 'Download voice' : '音声を保存'}
                 >⬇</a>
-                {/* 段階10-a: admin mode で反対 role への移動ボタン */}
-                {adminMode && onMove && (
-                  <button
-                    type="button"
-                    onClick={() => onMove(dateKey, item.hhmm, r, r === 'parent' ? 'child' : 'parent')}
-                    style={{
-                      padding: '4px 8px', fontSize: 10, fontWeight: 600,
-                      color: '#fff', background: '#C080FF', borderRadius: 6,
-                      border: 'none', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {r === 'parent' ? '→子' : '→親'}
-                  </button>
-                )}
               </div>
-              {/* 段階10-a: admin mode で uploader UID / device hint / movedFrom 履歴を表示 */}
-              {adminMode && (item.uploadedBy || item.deviceHint || item.movedFrom) && (
-                <div style={{ fontSize: 10, color: '#999', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                  {item.uploadedBy && <span>uid ...{item.uploadedBy.slice(-6)}</span>}
-                  {item.deviceHint && <span>[{item.deviceHint}]</span>}
-                  {item.movedFrom && <span style={{ color: '#C08040' }}>(moved from {item.movedFrom})</span>}
-                </div>
-              )}
             </div>
           )
         })}
