@@ -130,30 +130,46 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
           // 未再生マークは最新の1件にのみ表示
           const showUnseen = dayUnseen && idx === latestIdx
           const borderColor = showUnseen ? '#E04040' : '#30A870'
+          // 段階9: 保存用ファイル名 hum_{pairId}_{dateKey}_{role}[_{hhmm}].mp3
+          const filename = `hum_${effectivePairId || 'pair'}_${dateKey}_${r}${item.hhmm ? `_${item.hhmm}` : ''}.mp3`
           return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => handlePlay(dateKey, r, item.url)}
-              style={{
-                width: '100%', padding: '8px 10px', fontSize: 12, fontWeight: 600,
-                color: '#555', background: isPlaying ? '#E8E0FF' : '#fff',
-                border: `2px solid ${borderColor}`,
-                borderRadius: 10, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 5,
-              }}
-            >
-              <span style={{ fontSize: 13 }}>{showUnseen ? '🔴' : '✅'}</span>
-              <span>{label}</span>
-              {item.hhmm && (
-                <span style={{ fontSize: 10, color: '#8070A0', marginLeft: 'auto' }}>
-                  {formatTime(item.hhmm)}
-                </span>
-              )}
-              {isPlaying && (
-                <span style={{ fontSize: 11, marginLeft: item.hhmm ? 4 : 'auto' }}>▶</span>
-              )}
-            </button>
+            <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <button
+                type="button"
+                onClick={() => handlePlay(dateKey, r, item.url)}
+                style={{
+                  width: '100%', padding: '8px 10px', fontSize: 12, fontWeight: 600,
+                  color: '#555', background: isPlaying ? '#E8E0FF' : '#fff',
+                  border: `2px solid ${borderColor}`,
+                  borderRadius: 10, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 5,
+                }}
+              >
+                <span style={{ fontSize: 13 }}>{showUnseen ? '🔴' : '✅'}</span>
+                <span>{label}</span>
+                {item.hhmm && (
+                  <span style={{ fontSize: 10, color: '#8070A0', marginLeft: 'auto' }}>
+                    {formatTime(item.hhmm)}
+                  </span>
+                )}
+                {isPlaying && (
+                  <span style={{ fontSize: 11, marginLeft: item.hhmm ? 4 : 'auto' }}>▶</span>
+                )}
+              </button>
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <audio controls preload="none" src={item.url} style={{ flex: 1, height: 28 }} />
+                <a
+                  href={item.url}
+                  download={filename}
+                  style={{
+                    display: 'inline-block', padding: '4px 8px', fontSize: 11, fontWeight: 600,
+                    color: '#8070A0', background: '#F5F0FF', borderRadius: 6,
+                    textDecoration: 'none', flexShrink: 0,
+                  }}
+                  aria-label={lang === 'en' ? 'Download voice' : '音声を保存'}
+                >⬇</a>
+              </div>
+            </div>
           )
         })}
       </div>

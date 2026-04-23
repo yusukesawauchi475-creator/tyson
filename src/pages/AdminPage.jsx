@@ -7,7 +7,7 @@ import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore'
 const STORAGE_KEY = 'tyson_admin_secret'
 
 /** pairIds hidden from admin dashboard (isolated to tyson-two.vercel.app) */
-const HIDDEN_PAIR_IDS = ['TYSON-ZH90']
+const HIDDEN_PAIR_IDS = []
 
 function daysAgo(dateStr) {
   if (!dateStr) return '-'
@@ -29,7 +29,9 @@ function PairCard({ pair, secret, numberMap }) {
   const todayParent = today?.parent
   const todayChild = today?.child
   const t = pair.totals || {}
-  const num = numberMap[pair.pairId]
+  const entry = numberMap[pair.pairId] || {}
+  const num = entry.slug
+  const memo = entry.memo
 
   const handleOcr = async (dateKey) => {
     setOcrLoading(dateKey)
@@ -58,12 +60,17 @@ function PairCard({ pair, secret, numberMap }) {
     <div className="card" style={{ padding: '14px 16px' }}>
       <div
         onClick={() => setOpen(!open)}
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, cursor: 'pointer' }}
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, cursor: 'pointer', gap: 8 }}
       >
-        <div>
-          {num && <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-primary)', marginRight: 6 }}>#{num}</span>}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
+          {num && (
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-primary)' }}>#{num}</span>
+          )}
           <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)' }}>{pair.pairId}</span>
-          <span style={{ fontSize: 12, color: 'var(--color-text-muted)', marginLeft: 8 }}>
+          {memo && (
+            <span style={{ fontSize: 12, color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{memo}</span>
+          )}
+          <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
             {daysAgo(pair.lastActivity)}
           </span>
         </div>
@@ -75,38 +82,17 @@ function PairCard({ pair, secret, numberMap }) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 16, marginBottom: 10, fontSize: 13 }}>
-        <div>
-          <span>👴親 </span>
-          <span style={{ color: todayParent?.voice ? 'var(--color-success)' : 'var(--color-text-muted)' }}>声{todayParent?.voice ? '○' : '×'}</span>
-          <span style={{ color: todayParent?.photo ? 'var(--color-success)' : 'var(--color-text-muted)' }}> 写真{todayParent?.photo ? '○' : '×'}</span>
-          <span style={{ fontSize: 11, color: 'var(--color-text-muted)', marginLeft: 6 }}>計 声{t.parentVoice||0} 📷{t.parentGeneric||0}</span>
+      <div style={{ display: 'flex', gap: 16, marginBottom: 4, fontSize: 13 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span>👴親</span>
+          {t.parentVoice > 0 && <span>🎙️{t.parentVoice}</span>}
+          {t.parentGeneric > 0 && <span>📷{t.parentGeneric}</span>}
         </div>
-        <div>
-          <span>🧑子 </span>
-          <span style={{ color: todayChild?.voice ? 'var(--color-success)' : 'var(--color-text-muted)' }}>声{todayChild?.voice ? '○' : '×'}</span>
-          <span style={{ color: todayChild?.photo ? 'var(--color-success)' : 'var(--color-text-muted)' }}> 写真{todayChild?.photo ? '○' : '×'}</span>
-          <span style={{ fontSize: 11, color: 'var(--color-text-muted)', marginLeft: 6 }}>計 声{t.childVoice||0} 📷{t.childGeneric||0}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span>🧑子</span>
+          {t.childVoice > 0 && <span>🎙️{t.childVoice}</span>}
+          {t.childGeneric > 0 && <span>📷{t.childGeneric}</span>}
         </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
-        {pair.calendar.map(day => {
-          const hasP = !!day.parent
-          const hasC = !!day.child
-          const color = (hasP && hasC)
-            ? 'var(--color-success)'
-            : (hasP || hasC)
-              ? 'var(--color-primary)'
-              : 'var(--color-border)'
-          return (
-            <span
-              key={day.date}
-              title={day.date}
-              style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }}
-            />
-          )
-        })}
       </div>
 
       {open && (
@@ -172,8 +158,9 @@ export default function AdminPage({ lang = 'ja' }) {
         const snap = await getDocs(collection(db, 'pair_numbers'))
         const map = {}
         snap.forEach(doc => {
-          const pid = doc.data()?.pairId
-          if (pid) map[pid] = doc.id
+          const data = doc.data() || {}
+          const pid = data.pairId
+          if (pid) map[pid] = { slug: doc.id, memo: data.memo || '' }
         })
         setNumberMap(map)
       } catch (_) {}
