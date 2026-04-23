@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { getIdTokenForApi, db } from '../lib/firebase.js'
 import { getDateKey, genRequestId } from '../lib/pairDaily.js'
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore'
+import VoiceLibrary from '../components/VoiceLibrary'
 
 const STORAGE_KEY = 'tyson_admin_secret'
 
@@ -25,6 +26,9 @@ function PairCard({ pair, secret, numberMap }) {
   const [open, setOpen] = useState(false)
   const [ocrLoading, setOcrLoading] = useState(null)
   const [ocrResult, setOcrResult] = useState(null)
+  // 段階10-a: VoiceLibrary を admin mode で再マウントするための key + 移動結果通知
+  const [voiceRefreshKey, setVoiceRefreshKey] = useState(0)
+  const [moveResult, setMoveResult] = useState(null)
   const today = pair.calendar[pair.calendar.length - 1]
   const todayParent = today?.parent
   const todayChild = today?.child
@@ -32,6 +36,30 @@ function PairCard({ pair, secret, numberMap }) {
   const entry = numberMap[pair.pairId] || {}
   const num = entry.slug
   const memo = entry.memo
+
+  // 段階10-a: admin voice 移動（parent <-> child 誤格納修正）
+  const handleMove = async (dateKey, hhmm, fromRole, toRole) => {
+    const fromJa = fromRole === 'parent' ? '親' : '子'
+    const toJa = toRole === 'parent' ? '親' : '子'
+    if (!window.confirm(`${dateKey} ${hhmm} の音声を ${fromJa}側 → ${toJa}側 に移動しますか？\n（ファイルは削除されません、Firestore metadata のみ書換）`)) return
+    setMoveResult(null)
+    try {
+      const res = await fetch('/api/pair-media?action=move', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': secret },
+        body: JSON.stringify({ pairId: pair.pairId, dateKey, hhmm, fromRole, toRole }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && data.success) {
+        setMoveResult({ ok: true, msg: `${dateKey} ${hhmm}: ${fromJa}→${toJa} 移動完了` })
+        setVoiceRefreshKey(k => k + 1)
+      } else {
+        setMoveResult({ ok: false, msg: data.error || `移動失敗 (status=${res.status})` })
+      }
+    } catch (e) {
+      setMoveResult({ ok: false, msg: e?.message || String(e) })
+    }
+  }
 
   const handleOcr = async (dateKey) => {
     setOcrLoading(dateKey)
@@ -131,6 +159,29 @@ function PairCard({ pair, secret, numberMap }) {
               <strong>{ocrResult.dateKey}</strong>: {ocrResult.msg}
             </div>
           )}
+
+          {/* 段階10-a: admin voice 管理（移動のみ、削除機能なし） */}
+          <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed var(--color-border)' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', margin: '0 0 6px', letterSpacing: '0.06em' }}>
+              🎧 VOICE ADMIN
+            </p>
+            {moveResult && (
+              <div style={{ marginBottom: 8, padding: '6px 10px', fontSize: 11, borderRadius: 6,
+                background: moveResult.ok ? 'var(--color-success-bg, #f0fff0)' : 'var(--color-danger-bg, #fff0f0)',
+                color: moveResult.ok ? 'var(--color-text)' : 'var(--color-danger)',
+              }}>
+                {moveResult.msg}
+              </div>
+            )}
+            <VoiceLibrary
+              key={voiceRefreshKey}
+              lang="ja"
+              role="admin"
+              pairId={pair.pairId}
+              adminMode={true}
+              onMove={handleMove}
+            />
+          </div>
         </div>
       )}
     </div>
