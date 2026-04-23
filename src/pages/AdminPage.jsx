@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { getIdTokenForApi, db } from '../lib/firebase.js'
 import { getDateKey, genRequestId } from '../lib/pairDaily.js'
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore'
+import VoiceLibrary from '../components/VoiceLibrary'
 
 const STORAGE_KEY = 'tyson_admin_secret'
 
@@ -25,6 +26,9 @@ function PairCard({ pair, secret, numberMap }) {
   const [open, setOpen] = useState(false)
   const [ocrLoading, setOcrLoading] = useState(null)
   const [ocrResult, setOcrResult] = useState(null)
+  // 段階10-a: 訂正後の VoiceLibrary 再マウント + 通知
+  const [voiceRefreshKey, setVoiceRefreshKey] = useState(0)
+  const [correctResult, setCorrectResult] = useState(null)
   const today = pair.calendar[pair.calendar.length - 1]
   const todayParent = today?.parent
   const todayChild = today?.child
@@ -32,6 +36,53 @@ function PairCard({ pair, secret, numberMap }) {
   const entry = numberMap[pair.pairId] || {}
   const num = entry.slug
   const memo = entry.memo
+
+  // 段階10-a: admin による voice role 訂正（immutable 追記）
+  const handleCorrect = async (dateKey, hhmm, currentEffectiveRole) => {
+    const newRole = currentEffectiveRole === 'parent' ? 'child' : 'parent'
+    const reasons = ['role誤タップ', '誤録音', 'その他']
+    const reasonIdx = window.prompt(
+      `訂正理由を選択してください (1-3):\n1. role 誤タップ\n2. 誤録音\n3. その他`,
+      '1'
+    )
+    if (!reasonIdx || !['1','2','3'].includes(reasonIdx)) return
+    const reason = reasons[parseInt(reasonIdx, 10) - 1]
+    let detail = ''
+    if (reason === 'その他') {
+      detail = window.prompt('訂正理由の詳細 (100字以内):', '') || ''
+      if (detail.length > 100) {
+        alert('100字以内で入力してください')
+        return
+      }
+    }
+    const roleLabel = r => r === 'parent' ? '親' : '子'
+    const confirmMsg = `${dateKey} ${hhmm} の音声を ${roleLabel(currentEffectiveRole)}側 → ${roleLabel(newRole)}側 に訂正します。\n理由: ${reason}${detail ? ` (${detail})` : ''}\n\n元 data は書き換えず、訂正履歴として追記されます。`
+    if (!window.confirm(confirmMsg)) return
+    setCorrectResult(null)
+    try {
+      const res = await fetch('/api/pair-media?action=correct', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-Admin-Password': secret },
+        body: JSON.stringify({
+          pairId: pair.pairId,
+          dateKey,
+          hhmm,
+          correctedRole: newRole,
+          correctionReason: reason,
+          correctionReasonDetail: detail || null,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok && data.success) {
+        setCorrectResult({ ok: true, msg: `${dateKey} ${hhmm}: ${roleLabel(currentEffectiveRole)}→${roleLabel(newRole)} 訂正追記完了` })
+        setVoiceRefreshKey(k => k + 1)
+      } else {
+        setCorrectResult({ ok: false, msg: data.error || `訂正失敗 (status=${res.status})` })
+      }
+    } catch (e) {
+      setCorrectResult({ ok: false, msg: e?.message || String(e) })
+    }
+  }
 
   const handleOcr = async (dateKey) => {
     setOcrLoading(dateKey)
@@ -131,6 +182,29 @@ function PairCard({ pair, secret, numberMap }) {
               <strong>{ocrResult.dateKey}</strong>: {ocrResult.msg}
             </div>
           )}
+
+          {/* 段階10-a: admin voice 管理（訂正のみ、削除機能なし、immutable 追記モデル） */}
+          <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed var(--color-border)' }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', margin: '0 0 6px', letterSpacing: '0.06em' }}>
+              🎧 VOICE ADMIN
+            </p>
+            {correctResult && (
+              <div style={{ marginBottom: 8, padding: '6px 10px', fontSize: 11, borderRadius: 6,
+                background: correctResult.ok ? 'var(--color-success-bg, #f0fff0)' : 'var(--color-danger-bg, #fff0f0)',
+                color: correctResult.ok ? 'var(--color-text)' : 'var(--color-danger)',
+              }}>
+                {correctResult.msg}
+              </div>
+            )}
+            <VoiceLibrary
+              key={voiceRefreshKey}
+              lang="ja"
+              role="admin"
+              pairId={pair.pairId}
+              adminMode={true}
+              onCorrect={handleCorrect}
+            />
+          </div>
         </div>
       )}
     </div>
