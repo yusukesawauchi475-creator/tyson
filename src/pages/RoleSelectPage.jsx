@@ -1,8 +1,9 @@
 import { setUserRole } from '../lib/pairDaily'
 
-export default function RoleSelectPage({ onSelect, lang = 'ja' }) {
+export default function RoleSelectPage({ onSelect, lang = 'ja', pairId = null }) {
   const handle = (role) => {
-    setUserRole(role)
+    // 段階10-a-ext: role_history に 'initial' reason で immutable 記録
+    setUserRole(role, 'initial', pairId)
     onSelect(role)
   }
 
