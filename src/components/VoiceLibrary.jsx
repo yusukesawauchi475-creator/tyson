@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { markSeen } from '../lib/pairDaily'
 import { getIdTokenForApi } from '../lib/firebase'
+import { getEffectiveRole, isCorrected } from '../lib/voiceRole'
 
-export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pairIdProp, onDataLoaded }) {
+export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pairIdProp, onDataLoaded, adminMode = false, onCorrect }) {
   const [days, setDays] = useState([])
   const [loading, setLoading] = useState(true)
   const [playingKey, setPlayingKey] = useState(null) // url
@@ -49,9 +50,9 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
     el.currentTime = 0
     el.play().then(() => {
       setPlayingKey(key)
-      // Mark as seen when playing partner's recording
+      // Mark as seen when playing partner's recording（段階10-a: admin mode では markSeen 発火せず）
       const partnerRole = role === 'parent' ? 'child' : 'parent'
-      if (r === partnerRole) {
+      if (!adminMode && r === partnerRole) {
         markSeen(r, effectivePairId, dateKey)
         setDays(prev => prev.map(d => {
           if (d.dateKey !== dateKey) return d
@@ -96,6 +97,30 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
     </section>
   )
 
+  // 段階10-a: effectiveRole (correctedRole ?? roleAtUpload ?? fallback) で audioPath[] item を再分類。
+  // 訂正された item は原始位置 (parent/child 配列) を離れて、訂正後の列に render される。
+  const reclassifyDay = (day) => {
+    const dayParentItems = []
+    const dayChildItems = []
+    const collectOrigin = (origin) => {
+      const od = day[origin]
+      const rawItems = od?.items ? od.items : (od?.url ? [{ url: od.url, hhmm: null }] : [])
+      for (const item of rawItems) {
+        const eff = getEffectiveRole(item, origin)
+        // _originRole は訂正処理で「どの配列から来たか」を保持（correction API 呼び出し時 hhmm で特定するが debug 用）
+        const tagged = { ...item, _originRole: origin }
+        if (eff === 'parent') dayParentItems.push(tagged)
+        else if (eff === 'child') dayChildItems.push(tagged)
+      }
+    }
+    collectOrigin('parent')
+    collectOrigin('child')
+    return {
+      parent: dayParentItems.length > 0 ? { ...day.parent, items: dayParentItems, isUnseen: day.parent?.isUnseen } : null,
+      child: dayChildItems.length > 0 ? { ...day.child, items: dayChildItems, isUnseen: day.child?.isUnseen } : null,
+    }
+  }
+
   const renderRoleColumn = (dateKey, r, roleData, label) => {
     // items 配列を優先、なければ url から1件作成
     const rawItems = roleData?.items
@@ -130,30 +155,81 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
           // 未再生マークは最新の1件にのみ表示
           const showUnseen = dayUnseen && idx === latestIdx
           const borderColor = showUnseen ? '#E04040' : '#30A870'
+          // 段階9: 保存用ファイル名 hum_{pairId}_{dateKey}_{role}[_{hhmm}].mp3
+          const filename = `hum_${effectivePairId || 'pair'}_${dateKey}_${r}${item.hhmm ? `_${item.hhmm}` : ''}.mp3`
           return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => handlePlay(dateKey, r, item.url)}
-              style={{
-                width: '100%', padding: '8px 10px', fontSize: 12, fontWeight: 600,
-                color: '#555', background: isPlaying ? '#E8E0FF' : '#fff',
-                border: `2px solid ${borderColor}`,
-                borderRadius: 10, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', gap: 5,
-              }}
-            >
-              <span style={{ fontSize: 13 }}>{showUnseen ? '🔴' : '✅'}</span>
-              <span>{label}</span>
-              {item.hhmm && (
-                <span style={{ fontSize: 10, color: '#8070A0', marginLeft: 'auto' }}>
-                  {formatTime(item.hhmm)}
-                </span>
+            <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <button
+                type="button"
+                onClick={() => handlePlay(dateKey, r, item.url)}
+                style={{
+                  width: '100%', padding: '8px 10px', fontSize: 12, fontWeight: 600,
+                  color: '#555', background: isPlaying ? '#E8E0FF' : '#fff',
+                  border: `2px solid ${borderColor}`,
+                  borderRadius: 10, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 5,
+                }}
+              >
+                <span style={{ fontSize: 13 }}>{showUnseen ? '🔴' : '✅'}</span>
+                <span>{label}</span>
+                {item.hhmm && (
+                  <span style={{ fontSize: 10, color: '#8070A0', marginLeft: 'auto' }}>
+                    {formatTime(item.hhmm)}
+                  </span>
+                )}
+                {isPlaying && (
+                  <span style={{ fontSize: 11, marginLeft: item.hhmm ? 4 : 'auto' }}>▶</span>
+                )}
+              </button>
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                <audio controls preload="none" src={item.url} style={{ flex: 1, height: 28 }} />
+                <a
+                  href={item.url}
+                  download={filename}
+                  style={{
+                    display: 'inline-block', padding: '4px 8px', fontSize: 11, fontWeight: 600,
+                    color: '#8070A0', background: '#F5F0FF', borderRadius: 6,
+                    textDecoration: 'none', flexShrink: 0,
+                  }}
+                  aria-label={lang === 'en' ? 'Download voice' : '音声を保存'}
+                >⬇</a>
+                {/* 段階10-a: admin mode で反対 role への訂正ボタン（immutable 追記） */}
+                {adminMode && onCorrect && (
+                  <button
+                    type="button"
+                    onClick={() => onCorrect(dateKey, item.hhmm, r)}
+                    style={{
+                      padding: '4px 8px', fontSize: 10, fontWeight: 600,
+                      color: '#fff', background: '#C080FF', borderRadius: 6,
+                      border: 'none', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
+                    }}
+                  >
+                    訂正
+                  </button>
+                )}
+                {/* 段階10-a: 非 admin mode でも訂正済 item には小さく ✏️ を表示 */}
+                {!adminMode && isCorrected(item) && (
+                  <span
+                    title={lang === 'en' ? 'Corrected' : '訂正済'}
+                    style={{ fontSize: 11, color: '#C08040', flexShrink: 0 }}
+                  >✏️</span>
+                )}
+              </div>
+              {/* 段階10-a: admin mode で item metadata 表示（uid / deviceHint / 訂正履歴） */}
+              {adminMode && (item.uploadedBy || item.deviceHint || isCorrected(item)) && (
+                <div style={{ fontSize: 10, color: '#999', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {item.uploadedBy && <span>uid ...{item.uploadedBy.slice(-6)}</span>}
+                  {item.deviceHint && <span>[{item.deviceHint}]</span>}
+                  {isCorrected(item) && (
+                    <span style={{ color: '#C08040' }}>
+                      ✏️ 訂正済 ({item.roleAtUpload || '?'}→{item.correctedRole}
+                      {item.correctionReason ? `, ${item.correctionReason}` : ''}
+                      {item.correctionReasonDetail ? `: ${item.correctionReasonDetail}` : ''})
+                    </span>
+                  )}
+                </div>
               )}
-              {isPlaying && (
-                <span style={{ fontSize: 11, marginLeft: item.hhmm ? 4 : 'auto' }}>▶</span>
-              )}
-            </button>
+            </div>
           )
         })}
       </div>
@@ -167,13 +243,17 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
       </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {days.map(({ dateKey, parent, child }) => (
-          <div key={dateKey} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0', borderBottom: '1px solid #EEE8FF' }}>
-            <span style={{ fontSize: 12, color: '#8070A0', fontWeight: 600, minWidth: 50, paddingTop: 8 }}>{formatDate(dateKey)}</span>
-            {renderRoleColumn(dateKey, 'parent', parent, lang === 'en' ? 'Parent' : '親')}
-            {renderRoleColumn(dateKey, 'child', child, lang === 'en' ? 'Child' : '子')}
-          </div>
-        ))}
+        {days.map((day) => {
+          // 段階10-a: effectiveRole で再分類（訂正済 item は訂正後の列に移動して render）
+          const { parent, child } = reclassifyDay(day)
+          return (
+            <div key={day.dateKey} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0', borderBottom: '1px solid #EEE8FF' }}>
+              <span style={{ fontSize: 12, color: '#8070A0', fontWeight: 600, minWidth: 50, paddingTop: 8 }}>{formatDate(day.dateKey)}</span>
+              {renderRoleColumn(day.dateKey, 'parent', parent, lang === 'en' ? 'Parent' : '親')}
+              {renderRoleColumn(day.dateKey, 'child', child, lang === 'en' ? 'Child' : '子')}
+            </div>
+          )
+        })}
       </div>
 
       <audio ref={audioRef} onEnded={handleEnded} onPause={() => setPlayingKey(null)} style={{ display: 'none' }} />

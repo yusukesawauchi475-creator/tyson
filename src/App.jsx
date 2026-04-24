@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, useSearchParams, useNavigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useSearchParams, useNavigate, useOutletContext } from 'react-router-dom'
 import PairDailyPage from './pages/PairDailyPage'
 import HomePage from './pages/HomePage'
 import AdminPage from './pages/AdminPage'
@@ -31,19 +31,22 @@ function RootOrLanding({ lang = 'ja' }) {
 
 function RootRoute({ lang = 'ja' }) {
   const [searchParams] = useSearchParams()
+  // 段階10-a-ext: PairWorld の outlet context から pairId を取得、role_history 記録に渡す
+  const outletContext = useOutletContext()
+  const pairId = outletContext?.pairId ?? null
   const [role, setRole] = useState(() => {
     const roleFromUrl = searchParams.get('role')?.trim()
     if (roleFromUrl === 'parent' || roleFromUrl === 'child') {
-      setUserRole(roleFromUrl)
+      setUserRole(roleFromUrl, 'url-param', pairId)
       return roleFromUrl
     }
     return getUserRole()
   })
 
   const handleSelect = (selectedRole) => setRole(selectedRole)
-  const handleChangeRole = () => { clearUserRole(); setRole(null) }
+  const handleChangeRole = () => { clearUserRole('switch-button', pairId); setRole(null) }
 
-  if (!role) return <RoleSelectPage onSelect={handleSelect} lang={lang} />
+  if (!role) return <RoleSelectPage onSelect={handleSelect} lang={lang} pairId={pairId} />
   if (role === 'parent') return <HomePage lang={lang} onChangeRole={handleChangeRole} />
   return <PairDailyPage lang={lang} onChangeRole={handleChangeRole} role={role} />
 }

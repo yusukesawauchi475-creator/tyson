@@ -49,11 +49,56 @@ export const USER_ROLE_STORAGE_KEY = 'tyson_userRole';
 export function getUserRole() {
   try { const v = localStorage.getItem(USER_ROLE_STORAGE_KEY); return (v === 'parent' || v === 'child') ? v : null; } catch { return null; }
 }
-export function setUserRole(role) {
-  try { localStorage.setItem(USER_ROLE_STORAGE_KEY, role); } catch {}
+
+/**
+ * 段階10-a: role 切替の immutable 履歴を Firestore に追記する fire-and-forget helper。
+ * pairId が取得できない呼び出しでは記録スキップ（API 側で pairId 必須のため）。
+ * UI block しない、失敗時は console.warn のみ。
+ *
+ * @param {string|null} pairId - 呼び出し側で取得できれば渡す。null なら API 呼ばず skip。
+ * @param {'parent'|'child'|null} fromRole
+ * @param {'parent'|'child'|null} toRole
+ * @param {string} reason - 'initial' / 'switch-button' / 'url-param' / 'admin-override' / 'other' / 'unknown'
+ */
+export function recordRoleHistory(pairId, fromRole, toRole, reason) {
+  if (!pairId) return; // pairId 不明なら記録せず（infrastructure 保留）
+  (async () => {
+    try {
+      const idToken = await getIdTokenForApi();
+      if (!idToken) return;
+      await fetch('/api/pair-media?action=role-history-record', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ pairId, fromRole, toRole, reason }),
+      });
+    } catch (e) {
+      if (typeof console !== 'undefined' && console.warn) console.warn('[recordRoleHistory] failed:', e?.message);
+    }
+  })();
 }
-export function clearUserRole() {
+
+/**
+ * @param {'parent'|'child'} role
+ * @param {string} [reason='unknown'] - 段階10-a: immutable 履歴記録用 reason
+ * @param {string|null} [pairId=null] - 段階10-a: 履歴記録の pair scope
+ */
+export function setUserRole(role, reason = 'unknown', pairId = null) {
+  const oldRole = getUserRole();
+  try { localStorage.setItem(USER_ROLE_STORAGE_KEY, role); } catch {}
+  recordRoleHistory(pairId, oldRole, role, reason);
+}
+
+/**
+ * @param {string} [reason='unknown']
+ * @param {string|null} [pairId=null]
+ */
+export function clearUserRole(reason = 'unknown', pairId = null) {
+  const oldRole = getUserRole();
   try { localStorage.removeItem(USER_ROLE_STORAGE_KEY); } catch {}
+  recordRoleHistory(pairId, oldRole, null, reason);
 }
 
 /** ランダムなユニーク pairId を生成: "PAIR-" + 6文字（誤読しにくい文字のみ）*/
