@@ -13,6 +13,7 @@ import { formatDeployedAtLocal, getBuildHash } from '../lib/dateFormat'
 import { useAudioLevel } from '../lib/useAudioLevel'
 import UploadErrorModal from '../components/UploadErrorModal'
 import WeeklySummary from '../components/WeeklySummary'
+import RoleBadge from '../components/RoleBadge'
 
 export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child' }) {
   const outletContext = useOutletContext()
@@ -749,10 +750,9 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
           <span style={{ fontSize: 11, fontStyle: 'italic', color: '#9080B0' }}>{lang === 'en' ? '1 min a day, connected by voice' : '毎日1分、声でつながる'}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {/* 段階10-b: Switch button を RoleBadge に吸収（常時 role 表示 + tap で変更） */}
           {onChangeRole && (
-            <button type="button" onClick={onChangeRole} style={{ padding: '6px 10px', fontSize: 14, color: '#8070A0', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
-              {lang === 'en' ? 'Switch' : '変更'}
-            </button>
+            <RoleBadge role={role} lang={lang} onClick={onChangeRole} />
           )}
           <button type="button" onClick={() => { cycleCountry(); window.location.reload() }} style={{ padding: '2px 6px', fontSize: 10, color: '#8070A0', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
             {getCountry().toUpperCase()}
@@ -787,6 +787,10 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
             <span style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🎙</span>
             <span style={{ fontSize: 15, fontWeight: 800, color: '#6b2a3a' }}>{lang === 'en' ? 'Record & send your voice' : '声を録って送る'}</span>
           </div>
+          {/* 段階10-b: 録音直上に role 確認 text、誤 upload 防止 */}
+          <p style={{ textAlign: 'center', fontSize: 12, color: '#6b2a3a', margin: '0 0 8px', fontWeight: 600 }}>
+            ▶ {lang === 'en' ? 'Recording as Child' : '子として録音します'}
+          </p>
           <button type="button" onClick={handleRecordClick} disabled={isUploading} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#fff', background: isUploading ? '#B0A0C8' : isRecording ? '#E04040' : '#c0536e', border: 'none', borderRadius: 14, cursor: isUploading ? 'wait' : 'pointer', boxShadow: isUploading ? 'none' : isRecording ? '0 4px 0 #901010' : '0 4px 0 #8a2a42', fontFamily: 'Nunito, sans-serif' }}>
             {isUploading ? t(lang, 'sending') : isRecording ? (lang === 'en' ? '⏹ Recording...' : '⏹ 録音中…') : (lang === 'en' ? '🎙 Record' : '🎙 録音')}
           </button>

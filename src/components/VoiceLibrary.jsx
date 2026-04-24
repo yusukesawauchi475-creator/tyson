@@ -158,38 +158,47 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
           // 段階9: 保存用ファイル名 hum_{pairId}_{dateKey}_{role}[_{hhmm}].mp3
           const filename = `hum_${effectivePairId || 'pair'}_${dateKey}_${r}${item.hhmm ? `_${item.hhmm}` : ''}.mp3`
           return (
-            <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <button
-                type="button"
-                onClick={() => handlePlay(dateKey, r, item.url)}
-                style={{
-                  width: '100%', padding: '8px 10px', fontSize: 12, fontWeight: 600,
-                  color: '#555', background: isPlaying ? '#E8E0FF' : '#fff',
-                  border: `2px solid ${borderColor}`,
-                  borderRadius: 10, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: 5,
-                }}
-              >
-                <span style={{ fontSize: 13 }}>{showUnseen ? '🔴' : '✅'}</span>
-                <span>{label}</span>
-                {item.hhmm && (
-                  <span style={{ fontSize: 10, color: '#8070A0', marginLeft: 'auto' }}>
-                    {formatTime(item.hhmm)}
-                  </span>
-                )}
-                {isPlaying && (
-                  <span style={{ fontSize: 11, marginLeft: item.hhmm ? 4 : 'auto' }}>▶</span>
-                )}
-              </button>
-              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                <audio controls preload="none" src={item.url} style={{ flex: 1, height: 28 }} />
+            <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {/* 段階10-b: 緑ボックス tap で再生 + 右端に DL アイコンのみ + admin 訂正ボタン / 訂正済マーク */}
+              <div style={{ display: 'flex', alignItems: 'stretch', gap: 4 }}>
+                <button
+                  type="button"
+                  onClick={() => handlePlay(dateKey, r, item.url)}
+                  style={{
+                    flex: 1, padding: '8px 10px', fontSize: 12, fontWeight: 600,
+                    color: '#555', background: isPlaying ? '#E8E0FF' : '#fff',
+                    border: `2px solid ${borderColor}`,
+                    borderRadius: 10, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 5,
+                  }}
+                >
+                  <span style={{ fontSize: 13 }}>{showUnseen ? '🔴' : '✅'}</span>
+                  <span>{label}</span>
+                  {item.hhmm && (
+                    <span style={{ fontSize: 10, color: '#8070A0', marginLeft: 'auto' }}>
+                      {formatTime(item.hhmm)}
+                    </span>
+                  )}
+                  {isPlaying && (
+                    <span style={{ fontSize: 11, marginLeft: item.hhmm ? 4 : 'auto' }}>▶</span>
+                  )}
+                  {/* 段階10-b: 非 admin でも訂正済 item には ✏️ マーク（緑ボックス内右側に表示） */}
+                  {!adminMode && isCorrected(item) && (
+                    <span
+                      title={lang === 'en' ? 'Corrected' : '訂正済'}
+                      style={{ fontSize: 11, color: '#C08040', marginLeft: 4 }}
+                    >✏️</span>
+                  )}
+                </button>
                 <a
                   href={item.url}
                   download={filename}
+                  onClick={(e) => e.stopPropagation()}
+                  title={lang === 'en' ? 'Download' : 'ダウンロード'}
                   style={{
-                    display: 'inline-block', padding: '4px 8px', fontSize: 11, fontWeight: 600,
-                    color: '#8070A0', background: '#F5F0FF', borderRadius: 6,
-                    textDecoration: 'none', flexShrink: 0,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '0 8px', fontSize: 16, color: '#8070A0',
+                    textDecoration: 'none', flexShrink: 0, borderRadius: 8,
                   }}
                   aria-label={lang === 'en' ? 'Download voice' : '音声を保存'}
                 >⬇</a>
@@ -199,20 +208,13 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
                     type="button"
                     onClick={() => onCorrect(dateKey, item.hhmm, r)}
                     style={{
-                      padding: '4px 8px', fontSize: 10, fontWeight: 600,
-                      color: '#fff', background: '#C080FF', borderRadius: 6,
+                      padding: '0 10px', fontSize: 11, fontWeight: 600,
+                      color: '#fff', background: '#C080FF', borderRadius: 8,
                       border: 'none', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
                     }}
                   >
                     訂正
                   </button>
-                )}
-                {/* 段階10-a: 非 admin mode でも訂正済 item には小さく ✏️ を表示 */}
-                {!adminMode && isCorrected(item) && (
-                  <span
-                    title={lang === 'en' ? 'Corrected' : '訂正済'}
-                    style={{ fontSize: 11, color: '#C08040', flexShrink: 0 }}
-                  >✏️</span>
                 )}
               </div>
               {/* 段階10-a: admin mode で item metadata 表示（uid / deviceHint / 訂正履歴） */}

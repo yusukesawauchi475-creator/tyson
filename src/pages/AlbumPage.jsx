@@ -5,6 +5,7 @@ import VoiceLibrary from '../components/VoiceLibrary'
 import AlbumCalendar from '../components/AlbumCalendar'
 import { getUserRole } from '../lib/pairDaily'
 import { buildInviteUrl, copyInviteLink } from '../lib/invite'
+import RoleBadge from '../components/RoleBadge'
 
 const DEMO_ALBUM_PHOTO_SETS = [
   ['/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp','/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp','/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png'],
@@ -263,9 +264,11 @@ export default function AlbumPage({ lang = 'ja' }) {
         >
           ←
         </button>
-        <h1 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#333' }}>
+        <h1 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#333', flex: 1 }}>
           {lang === 'en' ? 'Album' : 'アルバム'}
         </h1>
+        {/* 段階10-b: Album は read-only view、RoleBadge は clickable にしない（onClick 渡さず） */}
+        <RoleBadge role={getUserRole()} lang={lang} />
       </header>
 
       {/* Pill Tabs */}
