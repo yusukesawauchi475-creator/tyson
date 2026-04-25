@@ -134,6 +134,31 @@ export default function AlbumPage({ lang = 'ja' }) {
     return []
   }, [days, isDemo, demoAllPhotos])
 
+  // Phase D: dense grid 用の flat 写真配列（dateKey + role を維持、API 順を尊重）
+  const flatPhotos = useMemo(() => {
+    if (days.length > 0) {
+      const all = []
+      for (const day of days) {
+        for (const photo of day.photos) {
+          all.push({ ...photo, dateKey: day.dateKey })
+        }
+      }
+      return all
+    }
+    if (isDemo) {
+      const all = []
+      for (const day of demoAlbumDays) {
+        const photos = day.photos || []
+        for (let i = 0; i < photos.length; i++) {
+          const url = photos[i]
+          all.push({ url, dateKey: day.date, role: i % 2 === 0 ? 'parent' : 'child', storagePath: url })
+        }
+      }
+      return all
+    }
+    return []
+  }, [days, isDemo, demoAlbumDays])
+
   const openLightbox = useCallback((photo) => {
     const idx = allPhotos.findIndex((p) => p.storagePath === photo.storagePath)
     setLightboxIndex(idx >= 0 ? idx : 0)
@@ -215,6 +240,14 @@ export default function AlbumPage({ lang = 'ja' }) {
     if (!dateKey) return ''
     const [, m, d] = dateKey.split('-').map(Number)
     return lang === 'en' ? `${new Date(2000, m - 1).toLocaleString('en', { month: 'short' })} ${d}` : `${m}月${d}日`
+  }
+
+  // Phase D: dense grid 用の overlay 表記（4/24 形式）
+  const formatTinyDate = (dateKey) => {
+    if (!dateKey) return ''
+    const parts = dateKey.split('-')
+    if (parts.length < 3) return dateKey
+    return `${parseInt(parts[1], 10)}/${parseInt(parts[2], 10)}`
   }
 
   const currentPhoto = lightboxIndex != null ? allPhotos[lightboxIndex] : null
@@ -398,7 +431,7 @@ export default function AlbumPage({ lang = 'ja' }) {
             <p style={{ fontSize: 13, color: '#E04040', textAlign: 'center', margin: 0 }}>{error}</p>
           </section>
         )}
-        {!loading && !error && days.length === 0 && !isDemo && (
+        {!loading && !error && flatPhotos.length === 0 && !isDemo && (
           <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {lang === 'en' ? '📷 Photos' : '📷 写真'}
@@ -408,82 +441,65 @@ export default function AlbumPage({ lang = 'ja' }) {
             </p>
           </section>
         )}
-        {!loading && !error && days.length === 0 && isDemo && (
+        {!loading && !error && flatPhotos.length > 0 && (
           <>
-            <p style={{ textAlign: 'center', color: '#999', fontSize: 12, margin: '16px 0 20px', fontStyle: 'italic' }}>
-              {lang === 'en' ? 'Sample photos — your photos will appear here' : 'サンプル写真 — あなたの写真がここに表示されます'}
-            </p>
-            {demoAlbumDays.map((day) => {
-              const demoAll = demoAllPhotos
-              return (
-                <section key={day.date} style={{ marginBottom: 28 }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: '#7a6a55', margin: '0 0 10px', letterSpacing: '0.03em' }}>{day.label}</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
-                    {day.photos.map((url, i) => {
-                      const globalIdx = demoAll.indexOf(url)
-                      return (
-                        <button key={url + i} type="button" onClick={() => setLightboxIndex(globalIdx >= 0 ? globalIdx : 0)} style={{ padding: 0, border: 'none', background: '#E8E0FF', cursor: 'pointer', borderRadius: 8, overflow: 'hidden', aspectRatio: '1', display: 'block' }}>
-                          <img src={url} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                        </button>
-                      )
-                    })}
-                  </div>
-                </section>
-              )
-            })}
+            {isDemo && (
+              <p style={{ textAlign: 'center', color: '#999', fontSize: 12, margin: '16px 0 12px', fontStyle: 'italic' }}>
+                {lang === 'en' ? 'Sample photos — your photos will appear here' : 'サンプル写真 — あなたの写真がここに表示されます'}
+              </p>
+            )}
+            {/* Phase D: iPhone カメラロール風 dense grid（3 列、gap 2px、左下に M/D + 親/子 overlay） */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
+              {flatPhotos.map((photo, idx) => {
+                const isFirstOfDate = idx === 0 || flatPhotos[idx - 1].dateKey !== photo.dateKey
+                const roleLabel = photo.role === 'parent' ? '👴'
+                  : photo.role === 'child' ? '🧒' : ''
+                return (
+                  <button
+                    key={(photo.storagePath || photo.url) + String(idx)}
+                    type="button"
+                    id={isFirstOfDate && photo.dateKey ? `date-${photo.dateKey}` : undefined}
+                    onClick={() => openLightbox(photo)}
+                    style={{
+                      position: 'relative',
+                      aspectRatio: '1 / 1',
+                      padding: 0,
+                      border: 'none',
+                      background: '#F5F0FF',
+                      cursor: 'pointer',
+                      overflow: 'hidden',
+                      display: 'block',
+                    }}
+                    aria-label={lang === 'en' ? 'Enlarge photo' : '写真を拡大'}
+                  >
+                    <img
+                      src={photo.url}
+                      alt=""
+                      loading="lazy"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    />
+                    <div style={{
+                      position: 'absolute',
+                      left: 0,
+                      bottom: 0,
+                      padding: '3px 7px',
+                      background: 'rgba(0,0,0,0.55)',
+                      color: '#fff',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      letterSpacing: 0.3,
+                      borderTopRightRadius: 6,
+                      fontFamily: 'Nunito, sans-serif',
+                      pointerEvents: 'none',
+                    }}>
+                      {formatTinyDate(photo.dateKey)} {roleLabel}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
           </>
         )}
-        {!loading && days.map(({ dateKey, photos }) => {
-          const parentPhotos = photos.filter((p) => p.role === 'parent')
-          const childPhotos = photos.filter((p) => p.role === 'child')
-          return (
-            <section key={dateKey} id={`date-${dateKey}`} style={{ marginBottom: 28 }}>
-              <p style={{ fontSize: 13, fontWeight: 700, color: '#7a6a55', margin: '0 0 10px', letterSpacing: '0.03em' }}>
-                {formatDate(dateKey)}
-              </p>
-              {parentPhotos.length > 0 && (
-                <div style={{ marginBottom: 10 }}>
-                  <p style={{ fontSize: 12, color: '#999', margin: '0 0 6px' }}>
-                    {lang === 'en' ? 'From Parent' : '親から'}
-                  </p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {parentPhotos.map((photo, i) => (
-                      <button
-                        key={photo.storagePath + String(i)}
-                        type="button"
-                        onClick={() => openLightbox(photo)}
-                        style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 8, overflow: 'hidden', display: 'block' }}
-                        aria-label={lang === 'en' ? 'Enlarge photo' : '写真を拡大'}
-                      >
-                        <img src={photo.url} alt="" width={88} height={88} style={{ width: 88, height: 88, objectFit: 'cover', display: 'block', borderRadius: 8 }} />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {childPhotos.length > 0 && (
-                <div>
-                  <p style={{ fontSize: 12, color: '#999', margin: '0 0 6px' }}>
-                    {lang === 'en' ? 'From Child' : '子から'}
-                  </p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {childPhotos.map((photo, i) => (
-                      <button
-                        key={photo.storagePath + String(i)}
-                        type="button"
-                        onClick={() => openLightbox(photo)}
-                        style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 8, overflow: 'hidden', display: 'block' }}
-                        aria-label={lang === 'en' ? 'Enlarge photo' : '写真を拡大'}
-                      >
-                        <img src={photo.url} alt="" width={88} height={88} style={{ width: 88, height: 88, objectFit: 'cover', display: 'block', borderRadius: 8 }} />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </section>
-          )
-        })}
       </>)}
       </main>
 
