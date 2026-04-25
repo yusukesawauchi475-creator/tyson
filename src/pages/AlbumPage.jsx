@@ -105,6 +105,16 @@ export default function AlbumPage({ lang = 'ja' }) {
     return map
   }, [isDemo, demoVoiceDays])
 
+  // 段階13: demo カレンダー cell に表示する写真 URL（その日の最初の 1 枚）
+  const demoPhotoUrlMap = useMemo(() => {
+    if (!isDemo) return undefined
+    const map = {}
+    for (const d of demoAlbumDays) {
+      if (Array.isArray(d.photos) && d.photos.length > 0) map[d.date] = d.photos[0]
+    }
+    return map
+  }, [isDemo, demoAlbumDays])
+
   useEffect(() => {
     if (!pairId) { setLoading(false); return }
     fetchAlbum(pairId)
@@ -349,7 +359,7 @@ export default function AlbumPage({ lang = 'ja' }) {
           pairId={isDemo ? 'PAIR-DEMOTEST' : pairId}
           lang={lang}
           onDateClick={(dateKey) => { setInternalScrollDate(dateKey); setActiveTab('photo') }}
-          {...(isDemo ? { photoCountMap: demoPhotoCountMap, voiceCountMap: demoVoiceCountMap } : {})}
+          {...(isDemo ? { photoCountMap: demoPhotoCountMap, voiceCountMap: demoVoiceCountMap, photoUrlMap: demoPhotoUrlMap } : {})}
         />
       )}
 

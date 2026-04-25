@@ -6,12 +6,13 @@ import { fetchVoiceMonth, getDateKeyNY } from '../lib/pairDaily'
  * AlbumCalendar — 月次カレンダーで写真・音声の有無を俯瞰。
  * Philosophy #2: pairId は props のみから受け取り、localStorage は読み書きしない。
  */
-export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoCountMap, voiceCountMap }) {
+export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoCountMap, voiceCountMap, photoUrlMap }) {
   const today = getDateKeyNY()
   const todayMonth = today.slice(0, 7)
   const [currentMonth, setCurrentMonth] = useState(todayMonth)
   const [fetchedPhotoCount, setFetchedPhotoCount] = useState({})
   const [fetchedVoiceCount, setFetchedVoiceCount] = useState({})
+  const [fetchedPhotoUrl, setFetchedPhotoUrl] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -29,9 +30,18 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoC
     ]).then(([albumRes, voiceRes]) => {
       if (cancelled) return
       const pc = {}
+      const pu = {}
       for (const day of albumRes.days || []) {
         const photos = day.photos || []
-        if (photos.length > 0) pc[day.dateKey] = photos.length
+        if (photos.length === 0) continue
+        pc[day.dateKey] = photos.length
+        // 段階13: 時系列最初の写真 URL を 1 枚選定（uploadedAt 昇順、なければ配列順）
+        const sorted = [...photos].sort((a, b) => {
+          const ta = a.uploadedAt || a.hhmm || ''
+          const tb = b.uploadedAt || b.hhmm || ''
+          return String(ta).localeCompare(String(tb))
+        })
+        if (sorted[0]?.url) pu[day.dateKey] = sorted[0].url
       }
       const vc = {}
       for (const day of voiceRes.days || []) {
@@ -40,6 +50,7 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoC
       }
       setFetchedPhotoCount(pc)
       setFetchedVoiceCount(vc)
+      setFetchedPhotoUrl(pu)
       setLoading(false)
     }).catch((e) => {
       if (cancelled) return
@@ -51,6 +62,7 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoC
 
   const photoCounts = photoCountMap ?? fetchedPhotoCount
   const voiceCounts = voiceCountMap ?? fetchedVoiceCount
+  const photoUrls = photoUrlMap ?? fetchedPhotoUrl
 
   const cells = useMemo(() => {
     const [y, m] = currentMonth.split('-').map(Number)
@@ -146,6 +158,7 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoC
             const photoCount = photoCounts[dateKey] || 0
             const voiceCount = voiceCounts[dateKey] || 0
             const hasContent = photoCount > 0 || voiceCount > 0
+            const photoUrl = photoUrls[dateKey] || null
             const isToday = dateKey === today
             const borderColor = isToday ? '#FF80C0' : 'transparent'
             const borderWidth = isToday ? 2 : 0
@@ -159,7 +172,6 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoC
                 onClick={clickable ? () => onDateClick?.(dateKey) : undefined}
                 disabled={!clickable}
                 style={{
-                  position: 'relative',
                   aspectRatio: '1',
                   padding: 0,
                   border: `${borderWidth}px solid ${borderColor}`,
@@ -169,31 +181,41 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoC
                   opacity,
                   overflow: 'hidden',
                   display: 'flex',
-                  alignItems: 'flex-start',
-                  justifyContent: 'flex-start',
+                  flexDirection: 'column',
                 }}
               >
-                {/* Day number */}
-                <span style={{
-                  position: 'absolute',
-                  top: 2,
-                  left: 4,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: inMonth ? '#555' : '#999',
-                  lineHeight: 1,
-                }}>{day}</span>
-                {/* Count badges */}
-                {hasContent && (
-                  <div style={{ position: 'absolute', bottom: 3, left: 3, right: 3, display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'flex-start' }}>
-                    {photoCount > 0 && (
-                      <span style={{ fontSize: 10, fontWeight: 700, color: '#B04080', lineHeight: 1 }}>📷{photoCount}</span>
-                    )}
-                    {voiceCount > 0 && (
-                      <span style={{ fontSize: 10, fontWeight: 700, color: '#2A8050', lineHeight: 1 }}>🎙{voiceCount}</span>
-                    )}
-                  </div>
-                )}
+                {/* 段階13: 上 1/3 = 日付 + 件数バッジ（左右配置） */}
+                <div style={{
+                  height: '33%',
+                  padding: '2px 4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 2,
+                  boxSizing: 'border-box',
+                }}>
+                  <span style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: inMonth ? '#555' : '#999',
+                    lineHeight: 1,
+                  }}>{day}</span>
+                  {hasContent && (
+                    <div style={{ display: 'flex', gap: 2, alignItems: 'center', whiteSpace: 'nowrap', overflow: 'hidden' }}>
+                      {photoCount > 0 && (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: '#B04080', lineHeight: 1 }}>📷{photoCount}</span>
+                      )}
+                      {voiceCount > 0 && (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: '#2A8050', lineHeight: 1 }}>🎙{voiceCount}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {/* 段階13: 下 2/3 = 写真サムネ（あれば object-fit: cover 相当）、なければ cell 背景 */}
+                <div style={{
+                  flex: 1,
+                  background: photoUrl ? `url(${photoUrl}) center/cover no-repeat` : 'transparent',
+                }} />
               </button>
             )
           })}
