@@ -3,7 +3,7 @@ import { useNavigate, useLocation, useOutletContext } from 'react-router-dom'
 import { fetchAlbum } from '../lib/journal'
 import VoiceLibrary from '../components/VoiceLibrary'
 import AlbumCalendar from '../components/AlbumCalendar'
-import { getUserRole } from '../lib/pairDaily'
+import { getUserRole, clearUserRole } from '../lib/pairDaily'
 import { buildInviteUrl, copyInviteLink } from '../lib/invite'
 import RoleBadge from '../components/RoleBadge'
 
@@ -267,8 +267,12 @@ export default function AlbumPage({ lang = 'ja' }) {
         <h1 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#333', flex: 1 }}>
           {lang === 'en' ? 'Album' : 'アルバム'}
         </h1>
-        {/* 段階10-b: Album は read-only view、RoleBadge は clickable にしない（onClick 渡さず） */}
-        <RoleBadge role={getUserRole()} lang={lang} />
+        {/* 段階10-b-fix: tap で role clear → /pair/:slug に戻り RootRoute が RoleSelectPage を表示 */}
+        <RoleBadge
+          role={getUserRole()}
+          lang={lang}
+          onClick={slug ? () => { clearUserRole('switch-button', pairId); navigate(`/pair/${slug}`, { replace: true }) } : undefined}
+        />
       </header>
 
       {/* Pill Tabs */}
