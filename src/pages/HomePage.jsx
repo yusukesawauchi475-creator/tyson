@@ -596,7 +596,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           </div>
           {/* 段階10-b: 録音直上に role 確認 text、誤 upload 防止 */}
           <p style={{ textAlign: 'center', fontSize: 12, color: '#6b2a3a', margin: '0 0 8px', fontWeight: 600 }}>
-            ▶ {lang === 'en' ? 'Recording as Parent' : '親として録音します'}
+            ▶ {lang === 'en' ? 'Recording as Parent' : '親として録音します'} 👴🏻👵🏻
           </p>
           <button type="button" onClick={handleClick} disabled={isUploading} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#fff', background: isUploading ? '#B0A0C8' : isRecording ? '#E04040' : '#c0536e', border: 'none', borderRadius: 14, cursor: isUploading ? 'wait' : 'pointer', boxShadow: isUploading ? 'none' : isRecording ? '0 4px 0 #901010' : '0 4px 0 #8a2a42', fontFamily: 'Nunito, sans-serif' }}>
             {isUploading ? t(lang, 'sending') : isRecording ? (lang === 'en' ? '⏹ Recording...' : '⏹ 録音中…') : (lang === 'en' ? '🎙 Record' : '🎙 録音')}

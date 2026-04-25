@@ -452,8 +452,25 @@ export default function AlbumPage({ lang = 'ja' }) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
               {flatPhotos.map((photo, idx) => {
                 const isFirstOfDate = idx === 0 || flatPhotos[idx - 1].dateKey !== photo.dateKey
-                const roleLabel = photo.role === 'parent' ? '👴'
-                  : photo.role === 'child' ? '🧒' : ''
+                const isParent = photo.role === 'parent'
+                const isChild = photo.role === 'child'
+                const roleEmoji = isParent ? '👴🏻👵🏻' : isChild ? '👦👧' : ''
+                const overlayStyle = {
+                  position: 'absolute',
+                  left: 0,
+                  bottom: 0,
+                  padding: '3px 7px',
+                  background: isParent ? 'rgba(245, 245, 245, 0.92)' : isChild ? 'rgba(250, 199, 117, 0.92)' : 'rgba(0,0,0,0.55)',
+                  color: isParent ? '#444' : isChild ? '#633806' : '#fff',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: 0.3,
+                  borderTopRightRadius: 6,
+                  borderTop: isParent ? '1px solid rgba(0, 0, 0, 0.08)' : 'none',
+                  borderRight: isParent ? '1px solid rgba(0, 0, 0, 0.08)' : 'none',
+                  fontFamily: 'Nunito, sans-serif',
+                  pointerEvents: 'none',
+                }
                 return (
                   <button
                     key={(photo.storagePath || photo.url) + String(idx)}
@@ -478,21 +495,8 @@ export default function AlbumPage({ lang = 'ja' }) {
                       loading="lazy"
                       style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                     />
-                    <div style={{
-                      position: 'absolute',
-                      left: 0,
-                      bottom: 0,
-                      padding: '3px 7px',
-                      background: 'rgba(0,0,0,0.55)',
-                      color: '#fff',
-                      fontSize: 12,
-                      fontWeight: 700,
-                      letterSpacing: 0.3,
-                      borderTopRightRadius: 6,
-                      fontFamily: 'Nunito, sans-serif',
-                      pointerEvents: 'none',
-                    }}>
-                      {formatTinyDate(photo.dateKey)} {roleLabel}
+                    <div style={overlayStyle}>
+                      {formatTinyDate(photo.dateKey)} {roleEmoji}
                     </div>
                   </button>
                 )
