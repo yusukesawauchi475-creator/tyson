@@ -452,8 +452,8 @@ export default function AlbumPage({ lang = 'ja' }) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2 }}>
               {flatPhotos.map((photo, idx) => {
                 const isFirstOfDate = idx === 0 || flatPhotos[idx - 1].dateKey !== photo.dateKey
-                const roleLabel = photo.role === 'parent' ? (lang === 'en' ? 'P' : '親')
-                  : photo.role === 'child' ? (lang === 'en' ? 'C' : '子') : ''
+                const roleLabel = photo.role === 'parent' ? '👴'
+                  : photo.role === 'child' ? '🧒' : ''
                 return (
                   <button
                     key={(photo.storagePath || photo.url) + String(idx)}
@@ -482,13 +482,14 @@ export default function AlbumPage({ lang = 'ja' }) {
                       position: 'absolute',
                       left: 0,
                       bottom: 0,
-                      padding: '2px 6px',
+                      padding: '3px 7px',
                       background: 'rgba(0,0,0,0.55)',
                       color: '#fff',
-                      fontSize: 11,
-                      fontWeight: 600,
+                      fontSize: 12,
+                      fontWeight: 700,
                       letterSpacing: 0.3,
-                      borderTopRightRadius: 4,
+                      borderTopRightRadius: 6,
+                      fontFamily: 'Nunito, sans-serif',
                       pointerEvents: 'none',
                     }}>
                       {formatTinyDate(photo.dateKey)} {roleLabel}
