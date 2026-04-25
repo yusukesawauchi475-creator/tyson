@@ -183,28 +183,31 @@ function PairCard({ pair, secret, numberMap }) {
             </div>
           )}
 
-          {/* 段階10-a: admin voice 管理（訂正のみ、削除機能なし、immutable 追記モデル） */}
-          <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed var(--color-border)' }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', margin: '0 0 6px', letterSpacing: '0.06em' }}>
-              🎧 VOICE ADMIN
-            </p>
+          {/* 段階10-a: admin voice 管理（訂正のみ、削除機能なし、immutable 追記モデル）
+              段階10-b: 通常使わない section のため <details> で折り畳み化、デフォルト閉 */}
+          <details style={{ marginTop: 12, paddingTop: 10, borderTop: '1px dashed var(--color-border)' }}>
+            <summary style={{ cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--color-text-muted)', margin: '0 0 6px', letterSpacing: '0.06em', userSelect: 'none' }}>
+              🎧 VOICE ADMIN（タップで展開）
+            </summary>
             {correctResult && (
-              <div style={{ marginBottom: 8, padding: '6px 10px', fontSize: 11, borderRadius: 6,
+              <div style={{ marginTop: 6, marginBottom: 8, padding: '6px 10px', fontSize: 11, borderRadius: 6,
                 background: correctResult.ok ? 'var(--color-success-bg, #f0fff0)' : 'var(--color-danger-bg, #fff0f0)',
                 color: correctResult.ok ? 'var(--color-text)' : 'var(--color-danger)',
               }}>
                 {correctResult.msg}
               </div>
             )}
-            <VoiceLibrary
-              key={voiceRefreshKey}
-              lang="ja"
-              role="admin"
-              pairId={pair.pairId}
-              adminMode={true}
-              onCorrect={handleCorrect}
-            />
-          </div>
+            <div style={{ marginTop: 6 }}>
+              <VoiceLibrary
+                key={voiceRefreshKey}
+                lang="ja"
+                role="admin"
+                pairId={pair.pairId}
+                adminMode={true}
+                onCorrect={handleCorrect}
+              />
+            </div>
+          </details>
         </div>
       )}
     </div>
