@@ -152,6 +152,7 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoC
             const opacity = inMonth ? 1 : 0.28
             const clickable = inMonth && hasContent
 
+            const badgeFontSize = (photoCount > 0 && voiceCount > 0) ? 16 : 18
             return (
               <button
                 key={dateKey}
@@ -159,9 +160,8 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoC
                 onClick={clickable ? () => onDateClick?.(dateKey) : undefined}
                 disabled={!clickable}
                 style={{
-                  position: 'relative',
                   aspectRatio: '1',
-                  padding: 0,
+                  padding: 4,
                   border: `${borderWidth}px solid ${borderColor}`,
                   borderRadius: 8,
                   background: hasContent ? '#F0E8FF' : '#FAFAFA',
@@ -169,28 +169,27 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoC
                   opacity,
                   overflow: 'hidden',
                   display: 'flex',
-                  alignItems: 'flex-start',
-                  justifyContent: 'flex-start',
+                  flexDirection: 'column',
+                  alignItems: 'stretch',
+                  boxSizing: 'border-box',
                 }}
               >
                 {/* Day number */}
                 <span style={{
-                  position: 'absolute',
-                  top: 2,
-                  left: 4,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: inMonth ? '#555' : '#999',
+                  alignSelf: 'flex-start',
+                  fontSize: 11,
+                  fontWeight: 400,
+                  color: hasContent ? '#444' : inMonth ? '#888' : '#BBB',
                   lineHeight: 1,
                 }}>{day}</span>
-                {/* Count badges */}
+                {/* 段階12: 件数バッジ大型化、cell 中央配置 */}
                 {hasContent && (
-                  <div style={{ position: 'absolute', bottom: 3, left: 3, right: 3, display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, flexWrap: 'wrap' }}>
                     {photoCount > 0 && (
-                      <span style={{ fontSize: 10, fontWeight: 700, color: '#B04080', lineHeight: 1 }}>📷{photoCount}</span>
+                      <span style={{ fontSize: badgeFontSize, fontWeight: 500, color: '#B04080', fontFamily: 'Nunito, sans-serif', lineHeight: 1 }}>📷{photoCount}</span>
                     )}
                     {voiceCount > 0 && (
-                      <span style={{ fontSize: 10, fontWeight: 700, color: '#2A8050', lineHeight: 1 }}>🎙{voiceCount}</span>
+                      <span style={{ fontSize: badgeFontSize, fontWeight: 500, color: '#2A8050', fontFamily: 'Nunito, sans-serif', lineHeight: 1 }}>🎙{voiceCount}</span>
                     )}
                   </div>
                 )}

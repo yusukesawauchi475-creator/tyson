@@ -174,6 +174,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
                 >
                   <span style={{ fontSize: 13 }}>{showUnseen ? '🔴' : '✅'}</span>
                   <span>{label}</span>
+                  <span style={{ fontSize: 13 }}>{r === 'parent' ? '👴🏻👵🏻' : '👦👧'}</span>
                   {item.hhmm && (
                     <span style={{ fontSize: 10, color: '#8070A0', marginLeft: 'auto' }}>
                       {formatTime(item.hhmm)}
