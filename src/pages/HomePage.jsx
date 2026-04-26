@@ -370,7 +370,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
     if (isDemoTest) { setHasParentAudio(true); return }
     setHasParentAudio(null)
     setIsParentUnseen(false)
-    getListenRoleMeta(LISTEN_ROLE_CHILD).then(({ hasAudio, isUnseen, dateKey: dk }) => {
+    getListenRoleMeta(LISTEN_ROLE_CHILD, currentPairId).then(({ hasAudio, isUnseen, dateKey: dk }) => {
       setHasParentAudio(hasAudio)
       setIsParentUnseen(!!isUnseen)
       if (dk) partnerDateKeyRef.current = dk
@@ -431,7 +431,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   useEffect(() => {
     if (isDemoTest) return
     let cancelled = false
-    getListenRoleMeta(LISTEN_ROLE_CHILD)
+    getListenRoleMeta(LISTEN_ROLE_CHILD, currentPairId)
       .then(({ hasAudio, isUnseen, dateKey: dk }) => {
         if (!cancelled) { setHasParentAudio(hasAudio); setIsParentUnseen(!!isUnseen); if (dk) partnerDateKeyRef.current = dk }
       })
@@ -444,7 +444,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
     const tick = () => {
       if (document.visibilityState !== 'visible') return
       if (uploadingRef.current || loadingParentRef.current || playingParentRef.current) return
-      getListenRoleMeta(LISTEN_ROLE_CHILD).then(({ hasAudio, isUnseen, dateKey: dk }) => {
+      getListenRoleMeta(LISTEN_ROLE_CHILD, currentPairId).then(({ hasAudio, isUnseen, dateKey: dk }) => {
         setHasParentAudio(hasAudio)
         setIsParentUnseen(!!isUnseen)
         if (dk) partnerDateKeyRef.current = dk
@@ -479,7 +479,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
       if (el2) { el2.src = '/demo-audio.mp3'; el2.currentTime = 0; await el2.play(); setIsPlayingParent(true) }
       return
     }
-    const result = await fetchAudioForPlayback(LISTEN_ROLE_CHILD)
+    const result = await fetchAudioForPlayback(LISTEN_ROLE_CHILD, currentPairId)
     if (result.error) {
       console.error('[handlePlayParent] fetchAudio error:', result.errorCode, result.error)
       setErrorLine(`再生エラー: ${result.errorCode} - ${result.error}`)
@@ -501,7 +501,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
         console.log('[handlePlayParent] play() succeeded')
         setIsPlayingParent(true)
         const seenDateKey = result.dateKey || partnerDateKeyRef.current
-        markSeen(LISTEN_ROLE_CHILD, undefined, seenDateKey).then(() => setIsParentUnseen(false)).catch(() => {})
+        markSeen(LISTEN_ROLE_CHILD, currentPairId, seenDateKey).then(() => setIsParentUnseen(false)).catch(() => {})
       }
     } catch (playErr) {
       console.error('[handlePlayParent] play() FAILED:', playErr?.name, playErr?.message, playErr)
