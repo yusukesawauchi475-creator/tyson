@@ -102,7 +102,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
     if (isDemoTest) { setHasAudio(true); return }
     setHasAudio(null)
     setIsChildUnseen(false)
-    getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio, isUnseen, dateKey: dk }) => {
+    getListenRoleMeta(LISTEN_ROLE_PARENT, currentPairId).then(({ hasAudio, isUnseen, dateKey: dk }) => {
       setHasAudio(hasAudio)
       setIsChildUnseen(!!isUnseen)
       if (dk) partnerDateKeyRef.current = dk
@@ -270,7 +270,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
     setDateKey(currentDateKey)
     let cancelled = false
     if (!isDemoTest) {
-      getListenRoleMeta(LISTEN_ROLE_PARENT).then(({ hasAudio, isUnseen, dateKey: dk }) => {
+      getListenRoleMeta(LISTEN_ROLE_PARENT, currentPairId).then(({ hasAudio, isUnseen, dateKey: dk }) => {
         if (!cancelled) {
           setHasAudio(hasAudio)
           setIsChildUnseen(!!isUnseen)
@@ -338,7 +338,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
       return
     }
 
-    const result = await fetchAudioForPlayback(LISTEN_ROLE_PARENT)
+    const result = await fetchAudioForPlayback(LISTEN_ROLE_PARENT, currentPairId)
 
     if (result.error) {
       console.error('[handlePlay] fetchAudio error:', result.errorCode, result.error)
@@ -366,7 +366,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
         console.log('[handlePlay] play() succeeded')
         setIsPlaying(true)
         const seenDateKey = result.dateKey || partnerDateKeyRef.current
-        markSeen(LISTEN_ROLE_PARENT, undefined, seenDateKey).then(() => setIsChildUnseen(false)).catch(() => {})
+        markSeen(LISTEN_ROLE_PARENT, currentPairId, seenDateKey).then(() => setIsChildUnseen(false)).catch(() => {})
       }
     } catch (playErr) {
       console.error('[handlePlay] play() FAILED:', playErr?.name, playErr?.message, playErr)
