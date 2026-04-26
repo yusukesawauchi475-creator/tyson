@@ -72,7 +72,12 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
 
   const formatTime = (hhmm) => {
     if (!hhmm || hhmm.length !== 4) return ''
-    return `${hhmm.slice(0, 2)}:${hhmm.slice(2)}`
+    const hh = parseInt(hhmm.slice(0, 2), 10)
+    if (isNaN(hh)) return ''
+    const mm = hhmm.slice(2, 4)
+    const period = hh < 12 ? 'am' : 'pm'
+    const displayHour = hh === 0 ? 12 : hh > 12 ? hh - 12 : hh
+    return `${displayHour}:${mm}${period}`
   }
 
   // 配列 items から時刻昇順（古い→新しい）にソート。hhmm が null の場合は最後尾
@@ -170,12 +175,14 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
                     border: `2px solid ${borderColor}`,
                     borderRadius: 10, cursor: 'pointer',
                     display: 'flex', alignItems: 'center', gap: 5,
+                    whiteSpace: 'nowrap', overflow: 'hidden', minWidth: 0,
                   }}
                 >
-                  <span style={{ fontSize: 13 }}>{showUnseen ? '🔴' : '✅'}</span>
-                  <span>{label}</span>
+                  <span style={{ fontSize: 13, flexShrink: 0 }}>{showUnseen ? '🔴' : '✅'}</span>
+                  <span style={{ flexShrink: 0 }}>{label}</span>
+                  <span style={{ fontSize: 13, flexShrink: 0 }}>{r === 'parent' ? '👴🏻👵🏻' : '👦👧'}</span>
                   {item.hhmm && (
-                    <span style={{ fontSize: 10, color: '#8070A0', marginLeft: 'auto' }}>
+                    <span style={{ fontSize: 11, color: '#8070A0', marginLeft: 'auto', flexShrink: 0, fontFamily: 'Nunito, sans-serif', fontWeight: 500 }}>
                       {formatTime(item.hhmm)}
                     </span>
                   )}
