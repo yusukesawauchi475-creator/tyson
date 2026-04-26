@@ -1,5 +1,6 @@
 import admin from 'firebase-admin';
 import { parseFirebaseServiceAccount } from './lib/parseFirebaseServiceAccount.js';
+import { getEffectiveRole } from '../src/lib/voiceRole.js';
 
 let adminApp;
 let firestore;
@@ -92,11 +93,43 @@ async function calculateStreakFromUploads(pairId) {
   initFirebaseAdmin();
   const daysSnap = await firestore.collection('pair_media').doc(pairId).collection('days').get();
 
-  // parent・child両方が存在する日を抽出
+  // Phase I Bug 2 fix: effective role aware (correctedRole/roleAtUpload 反映)
+  // 段階10-a immutable correction で audioPath[] item に correctedRole 追記される。
+  // streak は raw な data.parent/data.child の存在ではなく、各 item の effective role
+  // (correctedRole ?? roleAtUpload ?? slot-side) で「実効的に両 role の voice がある日」を判定する。
+  const computeEffectiveSides = (data) => {
+    let hasEffectiveParent = false;
+    let hasEffectiveChild = false;
+    const visit = (items, defaultSide) => {
+      if (!Array.isArray(items)) return;
+      for (const item of items) {
+        const role = getEffectiveRole(item, defaultSide);
+        if (role === 'parent') hasEffectiveParent = true;
+        else if (role === 'child') hasEffectiveChild = true;
+        if (hasEffectiveParent && hasEffectiveChild) return;
+      }
+    };
+    visit(data?.parent?.audioPath, 'parent');
+    if (!(hasEffectiveParent && hasEffectiveChild)) {
+      visit(data?.child?.audioPath, 'child');
+    }
+    // legacy record (audioPath 配列なし、role slot に latestAudioPath 等のみの旧 schema)
+    // への graceful fallback: data.parent / data.child の存在で role 有とみなす
+    if (!hasEffectiveParent && data?.parent && !Array.isArray(data?.parent?.audioPath)) {
+      hasEffectiveParent = true;
+    }
+    if (!hasEffectiveChild && data?.child && !Array.isArray(data?.child?.audioPath)) {
+      hasEffectiveChild = true;
+    }
+    return { hasEffectiveParent, hasEffectiveChild };
+  };
+
+  // parent・child両方が effective に存在する日を抽出
   const bothDays = [];
   daysSnap.forEach(doc => {
     const data = doc.data();
-    if (data.parent && data.child) {
+    const { hasEffectiveParent, hasEffectiveChild } = computeEffectiveSides(data);
+    if (hasEffectiveParent && hasEffectiveChild) {
       bothDays.push(doc.id); // doc.id = dateKey (YYYY-MM-DD)
     }
   });
