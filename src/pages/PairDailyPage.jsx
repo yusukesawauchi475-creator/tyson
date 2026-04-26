@@ -14,6 +14,7 @@ import { useAudioLevel } from '../lib/useAudioLevel'
 import UploadErrorModal from '../components/UploadErrorModal'
 import WeeklySummary from '../components/WeeklySummary'
 import RoleBadge from '../components/RoleBadge'
+import DemoModal from '../components/DemoModal'
 
 export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child' }) {
   const outletContext = useOutletContext()
@@ -21,6 +22,8 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   const [today, setToday] = useState('')
   const [streakCount, setStreakCount] = useState(null)
   const [daysSinceStart, setDaysSinceStart] = useState(null)
+  // Phase X-2.5: DEMO link で write 系操作タップ時に表示する CTA モーダル
+  const [demoModalOpen, setDemoModalOpen] = useState(false)
   const [dateKey, setDateKey] = useState(getDateKey())
   const [hasAudio, setHasAudio] = useState(null)
   const [debugAuthInfo, setDebugAuthInfo] = useState('...')
@@ -153,7 +156,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   }, [dateKey])
 
   const handleJournalFile = async (file, kind = 'journal_image') => {
-    if (isDemoTest) { setToastMsg(lang === 'en' ? 'This is a demo. Photos will not be added.' : 'これはデモです。写真はアルバムに追加されません'); setTimeout(() => setToastMsg(null), 2500); return }
+    if (isDemoTest) { setDemoModalOpen(true); return }
     if (!file || journalUploading) return
     if (typeof file.type !== 'string' || !file.type.startsWith('image/')) {
       setJournalError(t(lang, 'selectImage'))
@@ -395,7 +398,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   }, [audioUrl])
 
   const startRecording = async () => {
-    if (isDemoTest) { setToastMsg(lang === 'en' ? 'This is a demo. Audio will not be sent.' : 'これはデモです。音声は送信されません'); setTimeout(() => setToastMsg(null), 2500); return }
+    if (isDemoTest) { setDemoModalOpen(true); return }
     if (isUploading) return
     setErrorLine(null)
     setSentAt(null)
@@ -815,7 +818,8 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
         </section>
 
         {/* (3) Photos card — purple */}
-        {!isDemoTest && <section style={{ width: '100%', background: '#d4bfff', borderRadius: 20, padding: 16, boxShadow: '0 4px 0 0 #8b6bd4', overflow: 'hidden', fontFamily: 'Nunito, sans-serif' }}>
+        {/* Phase X-2.5: DEMO でもセクション render、tap で CTA モーダル */}
+        <section style={{ width: '100%', background: '#d4bfff', borderRadius: 20, padding: 16, boxShadow: '0 4px 0 0 #8b6bd4', overflow: 'hidden', fontFamily: 'Nunito, sans-serif' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <span style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>📷</span>
             <span style={{ fontSize: 15, fontWeight: 800, color: '#3a1a7a' }}>
@@ -838,10 +842,10 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
 
           {dailyPhotoLimitMessage && <p style={{ fontSize: 11, color: '#5a3a8a', margin: '0 0 4px' }}>{dailyPhotoLimitMessage}</p>}
 
-          <button type="button" disabled={journalUploading} onClick={() => { if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#fff', background: '#7c4fd4', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 0 #4a2490', fontFamily: 'Nunito, sans-serif' }}>
+          <button type="button" disabled={journalUploading} onClick={() => { if (isDemoTest) { setDemoModalOpen(true); return } if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#fff', background: '#7c4fd4', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 0 #4a2490', fontFamily: 'Nunito, sans-serif' }}>
             {lang === 'en' ? '📷 Add Photo' : '📷 写真を追加する'}
           </button>
-        </section>}
+        </section>
 
         {errorLine && <p style={{ fontSize: 14, color: '#E04040', textAlign: 'center', margin: 0 }}>{errorLine}</p>}
       </main>
@@ -881,6 +885,9 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
       )}
 
       <UploadErrorModal visible={uploadErrorModal.visible} message={uploadErrorModal.message} onRetry={uploadErrorModal.onRetry} onClose={() => setUploadErrorModal({ visible: false, message: '', onRetry: null })} lang={lang} />
+
+      {/* Phase X-2.5: DEMO link 用 CTA モーダル */}
+      <DemoModal isOpen={demoModalOpen} onClose={() => setDemoModalOpen(false)} />
     </div>
   )
 }
