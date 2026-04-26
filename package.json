@@ -26,7 +26,8 @@
     "verify": "node scripts/verify_all.mjs",
     "soak:verify": "node scripts/soak_verify.mjs",
     "kill-orange": "node scripts/kill-orange.js",
-    "smoke:uiCopy": "node scripts/smoke_uiCopy.mjs"
+    "smoke:uiCopy": "node scripts/smoke_uiCopy.mjs",
+    "migrate-pair": "node scripts/migrate-pair.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
