@@ -85,6 +85,17 @@ function getPrevDateKey(dateKey) {
   return `${py}-${pm}-${pd}`;
 }
 
+/** YYYY-MM-DD の翌日を返す */
+function getNextDateKey(dateKey) {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  date.setUTCDate(date.getUTCDate() + 1);
+  const ny = date.getUTCFullYear();
+  const nm = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const nd = String(date.getUTCDate()).padStart(2, '0');
+  return `${ny}-${nm}-${nd}`;
+}
+
 /**
  * pair_mediaのFirestoreデータからparent・child両方がuploadした日を集計し、
  * 今日から遡って連続日数を計算する。
@@ -124,15 +135,48 @@ async function calculateStreakFromUploads(pairId) {
     return { hasEffectiveParent, hasEffectiveChild };
   };
 
-  // parent・child両方が effective に存在する日を抽出
-  const bothDays = [];
+  // 各 dateKey の effective sides を Map に集約 (隣接日 OR 判定で参照)
+  const dateKeyToSides = new Map();
   daysSnap.forEach(doc => {
-    const data = doc.data();
-    const { hasEffectiveParent, hasEffectiveChild } = computeEffectiveSides(data);
-    if (hasEffectiveParent && hasEffectiveChild) {
-      bothDays.push(doc.id); // doc.id = dateKey (YYYY-MM-DD)
-    }
+    dateKeyToSides.set(doc.id, computeEffectiveSides(doc.data()));
   });
+
+  // Phase I Bug 2-fix (Boss 判断 option C-fast 暫定): N=2 broader 判定
+  // bothDay = 「同 dateKey で両 role 揃う」OR「同 dateKey で片方 + 隣接日 (前日/翌日) に他 role」
+  //
+  // timezone 不整合の暫定対処:
+  // Yusuke (NY、UTC-4) と mom (JST、UTC+9) は 13h 差のため、mom の朝 JST upload は前日 NY-dateKey に乗る。
+  // 同 NY-dateKey に揃いにくい構造のため、隣接日 OR で「両 role の voice が ±1 日以内に交換された日」
+  // として streak 判定する。
+  //
+  // TODO(Phase X-3): pairTimezone 必須化で本実装に置き換え予定
+  //   - pair_numbers に pairTimezone field 追加
+  //   - 各 user の upload 時に pairTimezone の dateKey で記録
+  //   - streak 計算は同 dateKey 厳格判定に戻す (N=1)
+  //   - 本 broader 判定は legacy record の graceful fallback として残す
+  const bothDays = [];
+  for (const [dateKey, sides] of dateKeyToSides) {
+    // 同 dateKey で両 role 揃ってる場合 (基本ケース)
+    if (sides.hasEffectiveParent && sides.hasEffectiveChild) {
+      bothDays.push(dateKey);
+      continue;
+    }
+    // 同 dateKey で片方のみ → 隣接日 (前日/翌日) で他 role を探す (broader 判定)
+    const prevSides = dateKeyToSides.get(getPrevDateKey(dateKey));
+    const nextSides = dateKeyToSides.get(getNextDateKey(dateKey));
+    if (sides.hasEffectiveParent && !sides.hasEffectiveChild) {
+      if ((prevSides && prevSides.hasEffectiveChild) || (nextSides && nextSides.hasEffectiveChild)) {
+        bothDays.push(dateKey);
+        continue;
+      }
+    }
+    if (!sides.hasEffectiveParent && sides.hasEffectiveChild) {
+      if ((prevSides && prevSides.hasEffectiveParent) || (nextSides && nextSides.hasEffectiveParent)) {
+        bothDays.push(dateKey);
+        continue;
+      }
+    }
+  }
 
   // 全日付（parent or childいずれかが存在する日）を収集してfirstDateKeyを算出
   const anyDays = [];
