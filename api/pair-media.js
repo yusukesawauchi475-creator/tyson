@@ -143,6 +143,33 @@ function deriveDeviceHint(userAgent) {
   return 'unknown';
 }
 
+/**
+ * Phase X-3-A: audioPath[] 必須 metadata validation
+ *
+ * core-philosophy.md 軸 1 (upstream format 統一) + 軸 3 (物理的に違反生成不能) を
+ * data layer で enforce. write 時に必須 field の値が物理的に揃っていることを保証し、
+ * 欠落は code bug（default fill 失敗）として 500 reject + log。
+ *
+ * 必須 field:
+ *   - uploadedBy:    auth uid（認証で必ず存在）
+ *   - mimeType:      audio MIME type（POST handler で `|| 'audio/mp4'` default fill）
+ *   - deviceHint:    UA 由来 hint（deriveDeviceHint で常に non-empty string 返却）
+ *   - roleAtUpload:  'parent' | 'child'（POST handler L673 で validation 済）
+ *
+ * graceful fallback は read 側のみ維持（既存 record 前方互換、getEffectiveRole 等）。
+ *
+ * TODO(Phase X-3-B): pairTimezone 必須化を本 validation に追加予定
+ *   - pairTimezone field を必須 list に追加
+ *   - pair_numbers の pairTimezone から resolve した値を newEntry に含める
+ *   - 既存 record の graceful fallback は read 側で維持
+ */
+function validateAudioPathItem(item) {
+  const requiredFields = ['uploadedBy', 'mimeType', 'deviceHint', 'roleAtUpload'];
+  const missing = requiredFields.filter((f) => !item || !item[f]);
+  if (missing.length > 0) return { valid: false, missing };
+  return { valid: true };
+}
+
 /** MVP: pairId=demo は誰でもアクセス可。後でinvite token方式に戻す */
 function isPairAllowed(uid, pairId) {
   if (pairId === 'demo') return true;
@@ -746,6 +773,21 @@ async function handlePost(req, res) {
         correctionReason: null,
         correctionReasonDetail: null,
       };
+
+      // Phase X-3-A: audioPath[] 必須 metadata 物理 enforcement
+      // 欠落 = code bug（default fill 失敗）→ 500 で write を阻止
+      const validation = validateAudioPathItem(newEntry);
+      if (!validation.valid) {
+        console.error('[pair-media POST] audioPath metadata validation failed:', validation.missing, 'newEntry:', newEntry);
+        logObserve({ requestId: reqId, stage: 'post_validate_metadata', status: 'error', pairId, role, clientDateKey, serverDateKey, storagePath: objectPath, firestoreDocPath: docPath, httpStatus: 500, errorCode: 'metadata_incomplete', errorMessage: `missing: ${validation.missing.join(',')}` });
+        return res.status(500).json({
+          success: false,
+          error: 'Internal: audioPath metadata incomplete',
+          missing: validation.missing,
+          requestId: reqId,
+        });
+      }
+
       const audioPathArray = [newEntry, ...existingArray.filter(e => e?.path !== objectPath)];
 
       const uploadedAtTs = admin.firestore.FieldValue.serverTimestamp();
