@@ -80,7 +80,12 @@ export default async function handler(req, res) {
       if (!numDoc.exists) {
         return res.status(404).json({ success: false, error: 'Number not found', requestId });
       }
-      const resolvedPairId = numDoc.data()?.pairId;
+      const numData = numDoc.data() || {};
+      // 段階15: deactivated slug は 404 扱い（migratedTo は response 漏洩禁止）
+      if (numData.deactivated === true) {
+        return res.status(404).json({ success: false, error: 'Number not found', requestId });
+      }
+      const resolvedPairId = numData.pairId;
       if (!resolvedPairId) {
         return res.status(404).json({ success: false, error: 'pairId not found for number', requestId });
       }

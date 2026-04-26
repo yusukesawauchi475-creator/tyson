@@ -29,7 +29,15 @@ export default function PairWorld() {
           setLoading(false)
           return
         }
-        const resolvedPairId = snap.data()?.pairId
+        const data = snap.data() || {}
+        // 段階15: deactivated slug は 404 扱い（migratedTo は UI 漏洩禁止）
+        if (data.deactivated === true) {
+          try { localStorage.removeItem('hum_last_slug') } catch (_) {}
+          setError('Pair not found')
+          setLoading(false)
+          return
+        }
+        const resolvedPairId = data.pairId
         if (!resolvedPairId) {
           setError('Pair not found')
           setLoading(false)
