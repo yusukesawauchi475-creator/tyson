@@ -272,3 +272,25 @@ Boss から CTO への指示書、および CTO から Claude Code への指示�
 - Phase 境界は論理的な切れ目で、各 Phase で build と grep による検証を必ず通す
 - 既存ユーザーへの影響評価を Phase 計画に組み込み、影響が小さければスコープを圧縮できる設計にする
 - 破壊変更を含む commit は feature ブランチで複数の論理 commit に分割し、各 commit で build を通しておく（revert 時の切り分けが可能になる）
+
+## 2026-04-26 update: Phase X (Core Philosophy Enforcement)
+
+### きっかけ
+2026-04-26 TYSON-ZH90 incident 後、Yusuke の core philosophy を spirit level で system に内在化させる必要性 Boss 判断。詳細: docs/post-mortems/2026-04-26-tyson-zh90-incident.md
+
+### Phase X 全体構造
+
+| Phase | 目的 | 想定時間 |
+|---|---|---|
+| X-0 | core-philosophy.md + audit-checklist.md + post-mortem 整備 | 15 分 |
+| X-1 | slug 生成 logic upstream 強制 (generateSlug() helper、Firestore Rules) | 20 分 |
+| X-3 | metadata 必須化 upstream 強制 (audioPath[] write API check) | 15 分 |
+| X-2 | 弱 slug 一括 migration (全 pair_numbers enumerate + migrate) | 20 分 |
+| X-2.5 | DEMO link UI format 統一 (isDemoTest 分岐の機能差廃止) | 15 分 |
+| X-4 | AI 単体運用 test design (各 critical path の test 項目化) | 10 分 |
+
+実装順序: X-0 → X-1 → X-3 → X-2 → X-2.5 → X-4
+理由: upstream で安全装置 (X-1 generateSlug, X-3 metadata 強制) 揃えてから data 触る (X-2 migration)、UI format 統一 (X-2.5)、最後に test 設計 (X-4)
+
+### Debt #4 status
+Phase X 完了で本 debt close 候補。X-4 (AI 単体運用 test) の合格判定後に最終 close。

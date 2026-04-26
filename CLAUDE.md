@@ -1,5 +1,15 @@
 # Hum — プロジェクトガイド
 
+## 最上位原則
+
+本 file の全内容は **docs/core-philosophy.md** の SSoT (Single Source of Truth) に従う。
+矛盾発生時は core-philosophy.md が優先。
+
+新規 PR / Phase 実装前に **docs/audit-checklist.md** の 4 軸 audit を実施。
+違反検出時は post-mortem 化検討。
+
+直近 incident: **docs/post-mortems/2026-04-26-tyson-zh90-incident.md** (structural 3 + behavioral 3 件記録)
+
 ## 概要
 毎日1分、家族と声・写真を交換するアプリ。  
 本番: https://www.humfamily.com / https://tyson-two.vercel.app
