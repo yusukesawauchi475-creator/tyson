@@ -1,6 +1,21 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Phase X-1: pair_numbers (slug → pairId mapping) は client write 禁止、admin SDK のみ
+    // generateSlug() helper 経由化を物理 enforcement (core-philosophy.md 軸 3)
+    match /pair_numbers/{slug} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // Phase X-1: pairs (pair metadata) も client write 禁止、admin SDK のみ
+    match /pairs/{pairId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // 他 collection は既存挙動維持 (Phase X-3 で個別 rules 厳格化検討)
     // 認証済みユーザー（匿名認証含む）のみ読み書き可能
     match /{document=**} {
       allow read, write: if request.auth != null;

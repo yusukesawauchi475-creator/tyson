@@ -1,5 +1,6 @@
 import admin from 'firebase-admin';
 import { parseFirebaseServiceAccount } from './lib/parseFirebaseServiceAccount.js';
+import { findUniqueSlug } from '../src/lib/pairSlug.js';
 
 let adminApp;
 let firestore;
@@ -144,16 +145,12 @@ export default async function handler(req, res) {
       for (let i = 0; i < 6; i++) pairId += chars[Math.floor(Math.random() * chars.length)];
 
       try {
-        // Generate random 6-char slug (a-z 0-9, ~2.1 billion combinations)
-        const slugChars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-        const allSnap = await firestore.collection('pair_numbers').get();
-        const existingSlugs = new Set(allSnap.docs.map(d => d.id));
-        let slug;
-        do {
-          slug = '';
-          for (let i = 0; i < 6; i++) slug += slugChars[Math.floor(Math.random() * slugChars.length)];
-        } while (existingSlugs.has(slug));
-        console.log('[invite] create-numbered: slug=', slug, 'total docs=', allSnap.size);
+        // Phase X-1: generateSlug() helper 経由化、length 8 + Crockford Base32 chars
+        const slug = await findUniqueSlug(async (candidate) => {
+          const snap = await firestore.collection('pair_numbers').doc(candidate).get();
+          return snap.exists;
+        });
+        console.log('[invite] create-numbered: slug=', slug);
 
         // Write pair_numbers/{slug}
         await firestore.collection('pair_numbers').doc(slug).set({
