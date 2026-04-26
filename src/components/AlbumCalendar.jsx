@@ -195,10 +195,19 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoC
                   boxSizing: 'border-box',
                 }}>
                   <span style={{
-                    fontSize: 10,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 18,
+                    height: 18,
+                    borderRadius: '50%',
+                    background: 'rgba(255, 255, 255, 0.85)',
+                    fontSize: 11,
                     fontWeight: 700,
-                    color: inMonth ? '#555' : '#999',
+                    color: inMonth ? '#444' : '#999',
                     lineHeight: 1,
+                    fontFamily: 'Nunito, sans-serif',
+                    flexShrink: 0,
                   }}>{day}</span>
                   {hasContent && (
                     <div style={{ display: 'flex', gap: 2, alignItems: 'center', whiteSpace: 'nowrap', overflow: 'hidden' }}>
@@ -206,7 +215,7 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoC
                         <span style={{ fontSize: 10, fontWeight: 700, color: '#B04080', lineHeight: 1 }}>📷{photoCount}</span>
                       )}
                       {voiceCount > 0 && (
-                        <span style={{ fontSize: 10, fontWeight: 700, color: '#2A8050', lineHeight: 1 }}>🎙{voiceCount}</span>
+                        <span style={{ fontSize: 10, color: '#2A8050', lineHeight: 1 }}>🎙</span>
                       )}
                     </div>
                   )}
