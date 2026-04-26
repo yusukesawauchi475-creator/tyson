@@ -14,6 +14,7 @@ import { useAudioLevel } from '../lib/useAudioLevel'
 import UploadErrorModal from '../components/UploadErrorModal'
 import WeeklySummary from '../components/WeeklySummary'
 import RoleBadge from '../components/RoleBadge'
+import DemoModal from '../components/DemoModal'
 
 export default function HomePage({ lang = 'ja', onChangeRole }) {
   const navigate = useNavigate()
@@ -21,6 +22,8 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   const slug = outletContext?.slug
   const [streakCount, setStreakCount] = useState(null)
   const [daysSinceStart, setDaysSinceStart] = useState(null)
+  // Phase X-2.5: DEMO link で write 系操作タップ時に表示する CTA モーダル
+  const [demoModalOpen, setDemoModalOpen] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [sentAt, setSentAt] = useState(null)
@@ -107,7 +110,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   }, [])
 
   const startRecording = async () => {
-    if (isDemoTest) { setToastMsg(lang === 'en' ? 'This is a demo. Audio will not be sent.' : 'これはデモです。音声は送信されません'); setTimeout(() => setToastMsg(null), 2500); return }
+    if (isDemoTest) { setDemoModalOpen(true); return }
     if (isUploading) return
     setErrorLine(null)
     setSentAt(null)
@@ -270,7 +273,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   }
 
   const handleJournalFile = async (file, kind = 'journal_image') => {
-    if (isDemoTest) { setToastMsg(lang === 'en' ? 'This is a demo. Photos will not be added.' : 'これはデモです。写真はアルバムに追加されません'); setTimeout(() => setToastMsg(null), 2500); return }
+    if (isDemoTest) { setDemoModalOpen(true); return }
     if (!file || journalUploading) return
     if (typeof file.type !== 'string' || !file.type.startsWith('image/')) {
       setJournalError(t(lang, 'selectImage'))
@@ -630,36 +633,27 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
             </span>
           </div>
 
-          {isDemoTest ? (
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-              {['/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp', '/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png', '/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp'].map((url, i) => (
-                <img key={i} src={url} alt="" width={48} height={48} style={{ width: 48, height: 48, objectFit: 'cover', display: 'block', borderRadius: 10 }} />
+          {/* Phase X-2.5: DEMO でも通常 flow に統一、tap で CTA モーダル */}
+          <input ref={genericGalleryInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f && typeof f.type === 'string' && f.type.startsWith('image/')) handleJournalFile(f, 'generic_image'); e.target.value = '' }} />
+          <input ref={genericCameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'generic_image'); e.target.value = '' }} />
+
+          {photos.length > 0 && (
+            <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+              {photos.slice(0, 6).map((ph, i) => (
+                <button key={ph.storagePath + String(i)} type="button" onClick={() => { if (!slug) { console.error('slug required'); return } navigate(`/pair/${slug}/album`, { state: { scrollToDate: dateKey } }) }} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 10, overflow: 'hidden', flexShrink: 0 }} aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}>
+                  <img src={ph.url || ''} alt="" width={48} height={48} style={{ width: 48, height: 48, objectFit: 'cover', display: 'block', borderRadius: 10 }} />
+                </button>
               ))}
             </div>
-          ) : (
-            <>
-              <input ref={genericGalleryInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f && typeof f.type === 'string' && f.type.startsWith('image/')) handleJournalFile(f, 'generic_image'); e.target.value = '' }} />
-              <input ref={genericCameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJournalFile(f, 'generic_image'); e.target.value = '' }} />
-
-              {photos.length > 0 && (
-                <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-                  {photos.slice(0, 6).map((ph, i) => (
-                    <button key={ph.storagePath + String(i)} type="button" onClick={() => { if (!slug) { console.error('slug required'); return } navigate(`/pair/${slug}/album`, { state: { scrollToDate: dateKey } }) }} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 10, overflow: 'hidden', flexShrink: 0 }} aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}>
-                      <img src={ph.url || ''} alt="" width={48} height={48} style={{ width: 48, height: 48, objectFit: 'cover', display: 'block', borderRadius: 10 }} />
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {dailyPhotoLimitMessage && (
-                <p style={{ fontSize: 11, color: '#5a3a8a', margin: '0 0 4px' }}>{dailyPhotoLimitMessage}</p>
-              )}
-
-              <button type="button" disabled={journalUploading} onClick={() => { if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#fff', background: '#7c4fd4', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 0 #4a2490', fontFamily: 'Nunito, sans-serif' }}>
-                {lang === 'en' ? '📷 Add Photo' : '📷 写真を追加する'}
-              </button>
-            </>
           )}
+
+          {dailyPhotoLimitMessage && (
+            <p style={{ fontSize: 11, color: '#5a3a8a', margin: '0 0 4px' }}>{dailyPhotoLimitMessage}</p>
+          )}
+
+          <button type="button" disabled={journalUploading} onClick={() => { if (isDemoTest) { setDemoModalOpen(true); return } if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#fff', background: '#7c4fd4', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 0 #4a2490', fontFamily: 'Nunito, sans-serif' }}>
+            {lang === 'en' ? '📷 Add Photo' : '📷 写真を追加する'}
+          </button>
 
         </section>
 
@@ -694,6 +688,9 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
       )}
 
       <UploadErrorModal visible={uploadErrorModal.visible} message={uploadErrorModal.message} onRetry={uploadErrorModal.onRetry} onClose={() => setUploadErrorModal({ visible: false, message: '', onRetry: null })} lang={lang} />
+
+      {/* Phase X-2.5: DEMO link 用 CTA モーダル */}
+      <DemoModal isOpen={demoModalOpen} onClose={() => setDemoModalOpen(false)} />
     </div>
   )
 }
