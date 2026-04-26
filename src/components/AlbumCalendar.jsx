@@ -215,7 +215,7 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoC
                         <span style={{ fontSize: 10, fontWeight: 700, color: '#B04080', lineHeight: 1 }}>📷{photoCount}</span>
                       )}
                       {voiceCount > 0 && (
-                        <span style={{ fontSize: 10, fontWeight: 700, color: '#2A8050', lineHeight: 1 }}>🎙{voiceCount}</span>
+                        <span style={{ fontSize: 10, color: '#2A8050', lineHeight: 1 }}>🎙</span>
                       )}
                     </div>
                   )}
