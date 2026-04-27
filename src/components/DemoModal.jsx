@@ -55,7 +55,24 @@ export default function DemoModal({ isOpen, onClose, message, ctaText = 'リク�
           {message ||
             'デモ版です。ご家族専用リンクをご希望の方は、以下からリクエストしてください。'}
         </p>
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        {/* Phase X-2.5-fix-2: 「戻る」復活、誤タップ救済 + DEMO 体験継続 */}
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: '12px 20px',
+              borderRadius: 8,
+              border: '1px solid #ccc',
+              background: '#fff',
+              color: '#666',
+              cursor: 'pointer',
+              fontSize: 15,
+              fontFamily: 'Nunito, sans-serif',
+            }}
+          >
+            戻る
+          </button>
           <button
             type="button"
             onClick={handleCtaClick}
