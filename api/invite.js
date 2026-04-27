@@ -127,7 +127,34 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     const action = req.query?.action || req.body?.action;
 
-    // POST ?action=create-numbered
+    // Phase X-2.5-fix: pair 作成 logic を内部 helper 化、create-numbered と create-welcome で reuse
+    // TODO(Phase X-3-B): pairTimezone を必須引数として追加予定
+    // TODO(Phase Y): email 入力統合 (retention 強化、magic link auth) を別 action で追加予定
+    async function createPairNumberedDoc({ memo, source }) {
+      // Generate PAIR-XXXXXX (I/O/0/1 除外)
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let pairId = 'PAIR-';
+      for (let i = 0; i < 6; i++) pairId += chars[Math.floor(Math.random() * chars.length)];
+
+      // Phase X-1: generateSlug() helper 経由、length 8 + Crockford Base32 chars
+      const slug = await findUniqueSlug(async (candidate) => {
+        const snap = await firestore.collection('pair_numbers').doc(candidate).get();
+        return snap.exists;
+      });
+
+      const baseDoc = {
+        pairId,
+        memo: memo || '',
+        ...(source ? { source } : {}),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      };
+      await firestore.collection('pair_numbers').doc(slug).set(baseDoc);
+      await firestore.collection('pairs').doc(pairId).set({ ...baseDoc, number: slug });
+
+      return { slug, pairId };
+    }
+
+    // POST ?action=create-numbered (既存、admin / invite UI 経由)
     if (action === 'create-numbered') {
       let body = {};
       try {
@@ -139,43 +166,36 @@ export default async function handler(req, res) {
       } catch {}
       const memo = (body.memo || '').trim();
 
-      // Generate PAIR-XXXXXX
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      let pairId = 'PAIR-';
-      for (let i = 0; i < 6; i++) pairId += chars[Math.floor(Math.random() * chars.length)];
-
       try {
-        // Phase X-1: generateSlug() helper 経由化、length 8 + Crockford Base32 chars
-        const slug = await findUniqueSlug(async (candidate) => {
-          const snap = await firestore.collection('pair_numbers').doc(candidate).get();
-          return snap.exists;
-        });
+        const { slug, pairId } = await createPairNumberedDoc({ memo, source: null });
         console.log('[invite] create-numbered: slug=', slug);
-
-        // Write pair_numbers/{slug}
-        await firestore.collection('pair_numbers').doc(slug).set({
-          pairId,
-          memo,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-        // Write pairs/{pairId}
-        await firestore.collection('pairs').doc(pairId).set({
-          pairId,
-          number: slug,
-          memo,
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
         return res.status(200).json({
           success: true,
           number: slug,
           pairId,
-          url: `https://humfamily.com/pair/${slug}`,
+          url: `https://www.humfamily.com/pair/${slug}?openExternalBrowser=1`,
           requestId,
         });
       } catch (e) {
         console.error('[invite] create-numbered error:', e.message, e.stack?.substring(0, 200));
+        return res.status(500).json({ success: false, error: e.message, requestId });
+      }
+    }
+
+    // POST ?action=create-welcome (Phase X-2.5-fix、DEMO CTA 経由の自動 pair 発行)
+    if (action === 'create-welcome') {
+      try {
+        const { slug, pairId } = await createPairNumberedDoc({ memo: '', source: 'demo-cta' });
+        console.log('[invite] create-welcome: slug=', slug);
+        return res.status(200).json({
+          success: true,
+          slug,
+          pairId,
+          url: `https://www.humfamily.com/pair/${slug}?openExternalBrowser=1`,
+          requestId,
+        });
+      } catch (e) {
+        console.error('[invite] create-welcome error:', e.message, e.stack?.substring(0, 200));
         return res.status(500).json({ success: false, error: e.message, requestId });
       }
     }
