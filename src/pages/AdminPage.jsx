@@ -126,22 +126,32 @@ function PairCard({ pair, secret, numberMap }) {
               #{num}
             </a>
           )}
-          {num ? (
-            <a
-              href={`/pair/${num}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', textDecoration: 'underline', cursor: 'pointer' }}
-            >
-              {pair.pairId}
-            </a>
-          ) : (
-            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)' }}>{pair.pairId}</span>
-          )}
-          {memo && (
-            <span style={{ fontSize: 12, color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{memo}</span>
-          )}
+          {/* Phase II-pre-2: pairId + memo を同一 flex row に並べて視認性向上 */}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
+            {num ? (
+              <a
+                href={`/pair/${num}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', textDecoration: 'underline', cursor: 'pointer', flexShrink: 0 }}
+              >
+                {pair.pairId}
+              </a>
+            ) : (
+              <span
+                title="slug 未発行（Phase X-2 で migration 予定）"
+                style={{ fontSize: 15, fontWeight: 700, color: '#999', fontStyle: 'italic', flexShrink: 0 }}
+              >
+                {pair.pairId}
+              </span>
+            )}
+            {memo && (
+              <span style={{ fontSize: 13, color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                {memo}
+              </span>
+            )}
+          </div>
           <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
             {daysAgo(pair.lastActivity)}
           </span>
