@@ -222,3 +222,69 @@ firebase deploy --only firestore:rules,storage  # ルールデプロイ
 - 修正案: 何をすべきか
 
 問題がなければ「✅ クリーン」と報告。
+
+
+## 過去 mistake と rule (毎 mistake 即追記)
+
+このセクションは CTO + Boss + Claude Code が過去の mistake を忘れず再発防止策を毎回参照するため。
+新 mistake 検出時は即追記 (Phase B で PostToolUse hook 実装後は物理強制)。
+全 mistake は事実確認済み (Yusuke + Boss 直接確認、推測ゼロ)。
+
+### Mistake 1: 段階 6 allowlist 撤廃で TYSON-ZH90 推測可能 slug 残置
+- 発生: 段階 6 main merge
+- 影響: 2026-04-26 朝、外部公開リスク (実害ゼロだが要修正)
+- root cause: pair isolation = slug knowledge-based access に切替時、slug 自体の隠匿性 audit せず
+- rule: 防御 layer の片方撤廃時、他方の強化を必須 audit step に。新 slug は generateSlug() (Crockford Base32) 経由のみ。
+
+### Mistake 2: Phase II-pre partial 実装連鎖
+- 発生: 2026-04-26 夜
+- 詳細: Yusuke「Admin から各 pair link」依頼 → CTO が slug ある pair の link 化のみ実装、slug 無い pair / memo 表示を audit せず → Yusuke スクショ指摘で Phase II-pre-2 必要
+- root cause: Yusuke 依頼の明示 + 暗黙 + 文脈依存要望を完全 enumerate せず、最小 scope に偏った prompt 発行
+- rule: 全 prompt 発行前に variation table 作成、operator/data 系修正時は data variation 全行 audit。
+
+### Mistake 3: Phase X-2.5「閉じる」ボタン削除 (CTA flow 切断)
+- 発生: Phase X-2.5-fix で Boss 指示通り「閉じる」削除
+- 詳細: acquisition flow 一本化のため削除、CTA flow 切断 + 誤タップ救済不在 = UX 違反、Yusuke 朝指摘で Phase X-2.5-fix-2 で復活
+- root cause: UI 削除時に user journey 全 path で audit せず、誤タップ / 体験継続を考慮せず
+- rule: UI 削除は user journey 全 path で audit、誤タップ救済は default 仕様。
+
+### Mistake 4: DEMO format 違反 (写真追加 button 欠落)
+- 発生: 2026-04-26 朝、Yusuke スクショで PAIR-DEMOTEST に「写真を送る」セクションなし発見
+- root cause: isDemoTest 分岐が UI render 機能差を生み、core philosophy 軸 1 違反継続
+- rule: isDemoTest 等の特殊 pair は UI 機能差ゼロ、write block + CTA モーダル trigger のみで差別化。
+
+### Mistake 6: streak timezone 不整合 (option D 暫定)
+- 発生: Phase I Bug 2 修正時、streak が NY 固定 dateKey で判定、JST upload と整合せず
+- 詳細: Phase I Bug 2-fix N=2 broader で暫定対処済み (commit 6b1bafc)、Phase X-3-B で pairTimezone 本実装予定
+- root cause: 段階 10-a 設計時に timezone 軸を audit せず、NY 固定で実装
+- rule: dateKey 計算は pair の timezone context 必須、Phase X-3-B で pairTimezone 統合本実装。
+
+### Mistake 8: Boss が CTO 前 prompt 見落とし二重発行リスク
+- 発生: Phase X-1 main merge prompt 発行時
+- 詳細: Boss が CTO 既発行 prompt を見落とし「即発行」指示 → Yusuke「c、再発行して」回答が証拠
+- root cause: Boss thread と CTO thread の同期不足、prompt 履歴管理欠落
+- rule: 新 prompt 発行前に Boss / CTO 間の prompt 状況確認 step、Yusuke が thread 跨ぐ際の context tracking 推奨。
+
+### Mistake 9: 複数依頼 partial 実装 pattern (scope creep 回避偏重)
+- 発生: 今夜複数の phase で繰り返し
+- 詳細: Yusuke が 3 つ依頼 → CTO が 1-2 つで完了報告 → Yusuke 残り発見 → 再 prompt の悪循環
+- Yusuke 観察: 「俺が 3 つ頼んでも、お前は 1 つか 2 つしかタスクができずに終わったという。俺が見つけて指摘してごめん、今やる、とまた始める。これとかいつかミスするから絶対に sustainable じゃなさすぎる」
+- root cause: scope creep 回避と完全実装の trade-off で前者偏重、Yusuke 要望の完全 enumeration 不足
+- rule: 1 phase で完結させる judgment 最優先、scope creep より完全実装。複数依頼受領時は variation table 作成必須。
+
+### Mistake 10: CLAUDE.md 自身を毎回更新してなかった (運用基盤欠落)
+- 発生: 2026-04-26 まで継続的に存在
+- root cause: 過去 mistake を docs に永続化せず、context 依存記憶に依存 = 新 thread で同 mistake 再発
+- rule: 全 mistake 検出時は CLAUDE.md に即追記、Phase B 後は PostToolUse hook で物理強制。
+
+### Mistake 11: Boss が Phase 起草時に事実確認 / 既存 commit 状況 / 未検証技術 risk 分離 step を skip
+- 発生: 2026-04-26 夜、Phase A 起草時
+- 詳細: Boss が mistake 10 件のうち 4 件を memory + 推測ベースで書き、Boris Tips を未検証のまま Phase A 物理層に組み込もうとし、CTO 累計と Boss 番号のずれを確認せず Phase A 番号付けた
+- root cause: Behavioral-8 (partial response) の延長、明示要望 + 暗黙要望の暗黙部分を enumerate せず、Boss 自身の partial response 病
+- rule: Phase 起草時に必ず以下 3 軸 cross check:
+  - 事実確認: 記載内容が本 thread / 既存 docs / Yusuke 直接確認に根拠あるか
+  - 既存状態: 関連 commit / branch / 進行 phase 状況把握済みか
+  - 技術 risk: 未検証技術含む場合、別 phase に分離可能か
+- 観測: CTO + Boss 両者で同 pattern 発生、AI 単体運用への移行で全 AI agent (Boss / CTO / Claude Code 等) に同 self-audit step 必須化。
+
+注: Mistake 5 (Yahoo ブラウザ) と Mistake 7 (Domain 削除提案) は本 phase scope では削除。Yusuke 後日確認で事実確定したら追加。

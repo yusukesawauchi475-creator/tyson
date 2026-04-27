@@ -107,3 +107,54 @@
 - AI 単体実行 test pass 率 (Phase X-4 完了後 100% 目標)
 - secret 取得 flow の Yusuke 手動操作回数 (Phase X-4 完了後 0 回目標)
 - 緊急 hotfix での design 後退提案件数 (Phase X-0 以降 0 件目標)
+
+
+## Behavioral-7: CTO preempt 判断による Boss thread 非同期発行
+
+- 発生: 2026-04-26 夜、Phase X-1 main merge prompt 発行時
+- 詳細: CTO が Boss judgment を予測して prompt を Yusuke の段階3 完了報告と同時に発行。Boss が並行で「即発行」指示を出した結果、prompt が二重に存在する状態
+- 影響: Yusuke が混乱可能性、CTO chat の order 不明瞭、二重実行リスク
+- root cause: CTO の preempt 判断が Boss judgment 軸を無視
+- 対策:
+  - CTO は新 prompt 発行前に Boss 判断確認 step を必ず入れる
+  - 緊急時の judgment は CTO 単独でせず、Boss thread への確認待ち
+
+## Behavioral-8: Boss / CTO の partial response pattern (structural failure)
+
+- 発生: 2026-04-26 朝〜夜、複数 phase で繰り返し
+- 詳細: Yusuke が複数依頼を 1 メッセージで投げる pattern で、CTO が明示的な 1-2 つを拾い、暗黙 / 文脈依存要望を見落とす partial 実装連鎖が頻発。Boss 自身も Phase A 起草時に同 pattern 再現 (Mistake 11)
+- 例:
+  - Phase II-pre: Admin link 依頼 → slug ある pair link 化のみ、slug 無い pair / memo 表示漏れ → Phase II-pre-2 必要
+  - Phase X-2.5: DEMO format 統一依頼 → 写真セクション + CTA モーダル実装、acquisition flow audit 不足 → Phase X-2.5-fix 必要
+  - Phase A 起草 (Boss): mistake 10 件のうち 4 件を memory 推測で書く、Boris Tips 未検証のまま Phase A 組み込み試行
+- 影響: Yusuke 苛立ち累積、開発速度 1/2-1/3、AI 単体運用への移行不可能、sustainable 性破壊
+- root cause:
+  - CTO + Boss の prompt 設計が「最小 scope」「scope creep 回避」に偏重
+  - Yusuke 要望の完全 enumeration 習慣不足
+  - founder visibility 依存 (Yusuke スクショ指摘待ち pattern)
+  - 1 ターン 1 タスクの偏り
+- Yusuke 観察: 俺が 3 つ頼んでも、お前は 1 つか 2 つしかタスクができずに終わったという。俺が見つけて指摘してごめん、今やる、とまた始める。これとかいつかミスするから絶対に sustainable じゃなさすぎる
+- 対策 (Boss + Yusuke 確定):
+  - Yusuke 依頼受領時の明示 + 暗黙 + 文脈依存要望全 enumerate (Philosophy 2)
+  - Variation table 必須化 (軸 5)
+  - Self-verification (Philosophy 3、Phase B で hook 実装)
+  - 1 phase で完結させる judgment 最優先
+  - 事実確認 + 既存状態 + 技術 risk 分離の 3 軸 cross check (Mistake 11 rule)
+
+## Behavioral-9: CTO の prompt size + nested markdown escape 問題
+
+- 発生: 2026-04-26 夜、Phase A1 prompt 発行時
+- 詳細: nested code block (markdown 内に backtick triple) で escape 問題、prompt 後半が truncate、Claude Code が memory ベース補完を拒否して stop
+- 影響: Phase A1 実装 1 回失敗、Yusuke 再 prompt 必要
+- root cause: CTO が prompt size + markdown structure の audit せず発行 (Mistake 11 系)
+- 対策:
+  - 大規模 docs 作成は heredoc + 'EOF' quote で nested 回避
+  - prompt 発行前に nested markdown / code block escape audit step
+  - Claude Code の self-audit が catch する設計が機能した、permanent rule 化
+  - 本 incident で Claude Code が memory 補完拒否 = Phase A1 の Philosophy 1 (Persistent learning) が prompt 段階で既に効いてる証拠
+
+## Behavioral 系違反の cross-cutting 教訓
+
+Behavioral 1-9 全部に共通する root cause: AI agent (CTO + Boss + Claude Code) の memory ベース判断 + 完璧主義 + 緊急時 panic + scope creep 回避偏重。
+
+これらを上位 docs (core-philosophy.md Philosophy 1-6 + audit-checklist.md 軸 5 + self-audit + CLAUDE.md mistake 1-11 注: 5,7 後日追加) で物理 enforce、Phase B で hook 化して context 依存じゃなく構造的に防止する。
