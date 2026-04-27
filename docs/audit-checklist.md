@@ -79,3 +79,47 @@ critical path 例:
 - core-philosophy.md と integral pair (片方だけでは機能しない)
 - 各 PR description に「軸 1-4 audit 結果」section 必須化 (CLAUDE.md で強制)
 - 違反検出時は post-mortem 化検討
+
+
+## 軸 5: Variation table 作成済み
+
+operator 系 / data 系 / UI 系修正時、全 data variation を table 化して各 variation で UX / logic 確認。
+
+### 必須適用 case
+- pair card / pair list 等の表示修正 (slug あり/なし、memo あり/なし、active/deactivated)
+- API write logic 修正 (各 input pattern の reject 条件)
+- UI 機能差を生む修正 (DEMO / 通常 pair / legacy pair の handling)
+
+### Variation table format
+table format: variation 1 | variation 2 | ... | 期待挙動
+
+### 例 (Phase II-pre 時にやるべきだった)
+- pair 種類: 通常 / legacy / DEMO / deactivated
+- slug: あり / なし
+- memo: あり / なし
+- active: yes / no
+- 期待挙動: link 化 / grayed-out / memo 表示 / 空
+
+## Self-audit checklist (各 phase 完了時 + 全 output 前)
+
+### 完了時 audit (Yusuke 指摘待たない)
+- [ ] core philosophy 軸 1-5 audit
+- [ ] fundamental philosophy 1-6 audit
+- [ ] 全 button / API endpoint 動作確認 (test / screenshot)
+- [ ] 段階7/10-a/10-b/段階11/段階13/段階14/段階15/X-* logic 無変更
+- [ ] 削除追加ゼロ scan
+- [ ] CLAUDE.md reflection 必要なら追記
+- [ ] memory rules 全準拠 verify
+- [ ] handoff-template.md 同期更新
+
+### 全 output 前 audit (Boss / CTO / Claude Code)
+- [ ] Yusuke 依頼の明示 + 暗黙 + 文脈依存要望全 enumerate 済み
+- [ ] 各要望に対する response が含まれている
+- [ ] 過去 mistake pattern と照合済み (CLAUDE.md mistake 1-11 参照、Mistake 5/7 は除外、後日追加)
+- [ ] Variation table 必要な task で作成済み
+- [ ] Self-verification 実行済み or 計画済み
+- [ ] CLAUDE.md 更新必要なら追記済み
+- [ ] 事実確認 + 既存状態確認 + 技術 risk 分離の 3 軸 cross check (Mistake 11 rule)
+- [ ] Plan Mode 利用判断 (複雑 phase の場合)
+
+Check pass しないと output しない。

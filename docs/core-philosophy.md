@@ -80,3 +80,38 @@ docs/core-philosophy.md  ← 最上位 SSoT (本 doc)
 ```
 
 矛盾発生時は本 doc が優先。新原則追加 / 既存原則修正は Yusuke (product owner) judgment のみで可能。
+
+
+## 6 Fundamental Philosophy (CTO + Claude Code 運用 baseline)
+
+これらは「軸 1-5 audit checklist」よりさらに上位の運用思想。AI 単体運用への移行を前提とする。
+
+### Philosophy 1: Persistent learning over context-dependent memory
+- 過去 mistake / 学びを context window 依存じゃなく docs に永続化
+- 新 thread / 新 session で同 mistake 再発しない構造
+- 実装: CLAUDE.md mistake list、post-mortems、Phase B で PostToolUse hook
+
+### Philosophy 2: Complete enumeration over partial response
+- Yusuke 依頼受領時、明示 + 暗黙 + 文脈依存要望を全 enumerate
+- partial 実装で後追い修正は禁止、1 phase で完結
+- 実装: variation table 必須化 (軸 5)、self-audit step
+
+### Philosophy 3: Self-verification over founder visibility
+- Yusuke スクショ指摘待たず、CTO + Claude Code 自身が test / screenshot / API health check
+- founder visibility は最終 verify、CTO の audit failure を Yusuke が補完する pattern 撲滅
+- 実装: Phase B で PostToolUse hook、test / screenshot 自動化
+
+### Philosophy 4: Upstream physical enforcement over downstream check
+- 違反を生成不能にする upstream block (Firestore Rules、API validation、generateSlug() helper)
+- scan / 監視じゃなく入口で物理 block
+- 実装: Phase X-1 (slug)、Phase X-3-A (metadata)、Phase X-3-B (timezone)
+
+### Philosophy 5: AI-only operation as design baseline
+- 全機能を AI が単体実行可能な前提で設計
+- 人間判断介在ゼロを default、人間 review は exception
+- 実装: Phase E (Z 設計)、Phase B (skills/hooks)
+
+### Philosophy 6: Subagent specialization over single-thread orchestration
+- 1 task = 1 subagent role 分担
+- main thread は orchestrator、複雑 audit / multi-file 修正は subagent 委譲
+- 実装: Plan Mode + subagents (Phase B 標準化)
