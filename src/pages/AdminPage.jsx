@@ -114,10 +114,31 @@ function PairCard({ pair, secret, numberMap }) {
         style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, cursor: 'pointer', gap: 8 }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, flex: 1 }}>
+          {/* Phase II-pre: slug / pairId tap で /pair/<slug> 新 tab、Admin 維持しつつ pair 確認 */}
           {num && (
-            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-primary)' }}>#{num}</span>
+            <a
+              href={`/pair/${num}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-primary)', textDecoration: 'underline', cursor: 'pointer' }}
+            >
+              #{num}
+            </a>
           )}
-          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)' }}>{pair.pairId}</span>
+          {num ? (
+            <a
+              href={`/pair/${num}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)', textDecoration: 'underline', cursor: 'pointer' }}
+            >
+              {pair.pairId}
+            </a>
+          ) : (
+            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--color-text)' }}>{pair.pairId}</span>
+          )}
           {memo && (
             <span style={{ fontSize: 12, color: 'var(--color-text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{memo}</span>
           )}
@@ -518,9 +539,10 @@ function PairNumberManager({ secret, numberMap }) {
 
       {!listLoading && numbers.filter(n => !HIDDEN_PAIR_IDS.includes(n.pairId)).map(n => (
         <div key={n.number} className="card" style={{ padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-primary)', minWidth: 30 }}>#{n.number}</span>
+          {/* Phase II-pre: slug / pairId tap で /pair/<slug> 新 tab */}
+          <a href={`/pair/${n.number}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-primary)', minWidth: 30, textDecoration: 'underline', cursor: 'pointer' }}>#{n.number}</a>
           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--color-text)', flex: 1 }}>{n.memo || '-'}</span>
-          <span style={{ fontSize: 11, color: 'var(--color-text-muted)', minWidth: 70 }}>{n.pairId}</span>
+          <a href={`/pair/${n.number}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--color-text-muted)', minWidth: 70, textDecoration: 'underline', cursor: 'pointer' }}>{n.pairId}</a>
           <span style={{ fontSize: 10, color: 'var(--color-text-muted)', minWidth: 60 }}>{n.createdAt}</span>
           <button type="button" onClick={() => copyUrl(n.number)} style={{ padding: '3px 10px', fontSize: 11, background: copied === n.number ? 'var(--color-success)' : 'var(--color-primary)', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 600 }}>
             {copied === n.number ? '✓' : 'コピー'}
