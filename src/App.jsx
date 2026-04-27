@@ -9,6 +9,7 @@ import LandingPage from './pages/LandingPage'
 import RoleSelectPage from './pages/RoleSelectPage'
 import PairWorld from './components/PairWorld'
 import InvitePage from './pages/InvitePage'
+import WelcomePage from './pages/WelcomePage'
 import { getUserRole, setUserRole, clearUserRole } from './lib/pairDaily'
 import PwaInstallBanner, { BANNER_HEIGHT } from './components/PwaInstallBanner'
 
@@ -64,6 +65,7 @@ function App() {
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/demo" element={<DemoPage />} />
             <Route path="/landing" element={<LandingPage />} />
+            <Route path="/welcome" element={<WelcomePage />} />
             <Route path="/pair/:slug" element={<PairWorld />}>
               <Route index element={<RootRoute />} />
               <Route path="album" element={<AlbumPage />} />
