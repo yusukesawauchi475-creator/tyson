@@ -581,12 +581,15 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           </div>
           {hasParentAudio === true ? (
             <button type="button" onClick={handlePlayParent} disabled={isLoadingParent} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#1a6645', background: '#fff', border: 'none', borderRadius: 14, cursor: isLoadingParent ? 'wait' : 'pointer', boxShadow: '0 4px 0 #a8d8bc', fontFamily: 'Nunito, sans-serif' }}>
-              {isLoadingParent ? t(lang, 'loading') : isPlayingParent ? (lang === 'en' ? '⏹ Stop' : '⏹ 停止') : (lang === 'en' ? '▶ Play' : '▶ 再生')}
-              {isParentUnseen && !isPlayingParent && !isLoadingParent && <span style={{ marginLeft: 6, color: '#E04040' }}>●</span>}
+              {isLoadingParent
+                ? t(lang, 'loading')
+                : isPlayingParent
+                  ? (lang === 'en' ? '⏹ Stop' : '⏹ 停止')
+                  : `${lang === 'en' ? '▶ Play' : '▶ 再生'}${isParentUnseen ? ' 🔴' : ''}`}
             </button>
           ) : (
             <button type="button" disabled style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#1a6645', background: '#fff', border: 'none', borderRadius: 14, cursor: 'default', boxShadow: '0 4px 0 #a8d8bc', opacity: 0.4, fontFamily: 'Nunito, sans-serif' }}>
-              {hasParentAudio === false ? (lang === 'en' ? '▶ Not yet received' : '▶ まだ届いていません') : (lang === 'en' ? '▶ Checking...' : '▶ 確認中…')}
+              {lang === 'en' ? '▶ Play' : '▶ 再生'}
             </button>
           )}
         </section>

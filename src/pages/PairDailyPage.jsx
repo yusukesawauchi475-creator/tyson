@@ -774,12 +774,15 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
           </div>
           {hasAudio === true ? (
             <button type="button" onClick={handlePlay} disabled={isLoading} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#1a6645', background: '#fff', border: 'none', borderRadius: 14, cursor: isLoading ? 'wait' : 'pointer', boxShadow: '0 4px 0 #a8d8bc', fontFamily: 'Nunito, sans-serif' }}>
-              {isLoading ? t(lang, 'loading') : isPlaying ? (lang === 'en' ? '⏹ Stop' : '⏹ 停止') : (lang === 'en' ? '▶ Play' : '▶ 再生')}
-              {isChildUnseen && !isPlaying && !isLoading && <span style={{ marginLeft: 6, color: '#E04040' }}>●</span>}
+              {isLoading
+                ? t(lang, 'loading')
+                : isPlaying
+                  ? (lang === 'en' ? '⏹ Stop' : '⏹ 停止')
+                  : `${lang === 'en' ? '▶ Play' : '▶ 再生'}${isChildUnseen ? ' 🔴' : ''}`}
             </button>
           ) : (
             <button type="button" disabled style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#1a6645', background: '#fff', border: 'none', borderRadius: 14, cursor: 'default', boxShadow: '0 4px 0 #a8d8bc', opacity: 0.4, fontFamily: 'Nunito, sans-serif' }}>
-              {hasAudio === false ? (lang === 'en' ? '▶ Not yet received' : '▶ まだ届いていません') : (lang === 'en' ? '▶ Checking...' : '▶ 確認中…')}
+              {lang === 'en' ? '▶ Play' : '▶ 再生'}
             </button>
           )}
         </section>
