@@ -15,6 +15,7 @@ import UploadErrorModal from '../components/UploadErrorModal'
 import WeeklySummary from '../components/WeeklySummary'
 import RoleBadge from '../components/RoleBadge'
 import DemoModal from '../components/DemoModal'
+import InviteModal from '../components/InviteModal'
 
 export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child' }) {
   const outletContext = useOutletContext()
@@ -24,6 +25,10 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   const [daysSinceStart, setDaysSinceStart] = useState(null)
   // Phase X-2.5: DEMO link で write 系操作タップ時に表示する CTA モーダル
   const [demoModalOpen, setDemoModalOpen] = useState(false)
+  // Phase II-share: 招待 share UI 統一（iOS share sheet 廃止、LINE + clipboard）
+  const [inviteModalOpen, setInviteModalOpen] = useState(false)
+  const [inviteUrl, setInviteUrl] = useState(null)
+  const [inviteText, setInviteText] = useState(null)
   const [dateKey, setDateKey] = useState(getDateKey())
   const [hasAudio, setHasAudio] = useState(null)
   const [debugAuthInfo, setDebugAuthInfo] = useState('...')
@@ -695,7 +700,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
     setIsRecording(false)
   }
 
-  const handleShare = async () => {
+  const handleShare = () => {
     if (isRecording) {
       const msg = lang === 'en' ? 'Recording in progress. Stop and navigate away?' : '録音中です。中断して移動しますか？'
       if (!window.confirm(msg)) return
@@ -706,29 +711,14 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
       setTimeout(() => setToastMsg(null), 2500)
       return
     }
+    // Phase II-share: iOS share sheet 廃止、InviteModal 経由で LINE + clipboard 統一
     const url = buildInviteUrl(slug)
-    const shareData = {
-      title: 'Hum',
-      text: lang === 'en' ? 'Hum — daily 1-min voice with family' : '家族専用の音声メッセージ',
-      url,
-    }
-    // iOS native share sheet を user gesture 内で同期的に呼ぶ（await 前に navigator.share）
-    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
-      try {
-        await navigator.share(shareData)
-        return
-      } catch (e) {
-        // ユーザーが share sheet キャンセル → 静かに ignore
-        if (e?.name === 'AbortError') return
-        // その他 error → clipboard fallback へ
-      }
-    }
-    // fallback: clipboard コピー（navigator.share 不在 or エラー時）
-    const result = await copyInviteLink(url)
-    setToastMsg(result.success
-      ? (lang === 'en' ? 'Link copied' : 'リンクをコピーしました')
-      : (lang === 'en' ? 'Failed to copy' : 'コピーに失敗しました'))
-    setTimeout(() => setToastMsg(null), 2500)
+    const text = lang === 'en'
+      ? `Hum — daily 1-min voice with family\n\n${url}`
+      : `家族専用の音声メッセージリンクができました\n\n${url}`
+    setInviteUrl(url)
+    setInviteText(text)
+    setInviteModalOpen(true)
   }
 
   const handleRecordClick = () => {
@@ -908,6 +898,14 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
 
       {/* Phase X-2.5: DEMO link 用 CTA モーダル */}
       <DemoModal isOpen={demoModalOpen} onClose={() => setDemoModalOpen(false)} />
+
+      {/* Phase II-share: 招待 share モーダル */}
+      <InviteModal
+        isOpen={inviteModalOpen}
+        onClose={() => setInviteModalOpen(false)}
+        inviteUrl={inviteUrl}
+        inviteText={inviteText}
+      />
     </div>
   )
 }
