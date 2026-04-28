@@ -707,6 +707,23 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
       return
     }
     const url = buildInviteUrl(slug)
+    const shareData = {
+      title: 'Hum',
+      text: lang === 'en' ? 'Hum — daily 1-min voice with family' : '家族専用の音声メッセージ',
+      url,
+    }
+    // iOS native share sheet を user gesture 内で同期的に呼ぶ（await 前に navigator.share）
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share(shareData)
+        return
+      } catch (e) {
+        // ユーザーが share sheet キャンセル → 静かに ignore
+        if (e?.name === 'AbortError') return
+        // その他 error → clipboard fallback へ
+      }
+    }
+    // fallback: clipboard コピー（navigator.share 不在 or エラー時）
     const result = await copyInviteLink(url)
     setToastMsg(result.success
       ? (lang === 'en' ? 'Link copied' : 'リンクをコピーしました')
