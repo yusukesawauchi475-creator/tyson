@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { getIdTokenForApi, db } from '../lib/firebase.js'
 import { getDateKey, genRequestId } from '../lib/pairDaily.js'
@@ -245,6 +245,67 @@ function PairCard({ pair, secret, numberMap }) {
   )
 }
 
+/**
+ * Phase II-pre-3: 「未活動 pair」card
+ * 発行済みだが pair_media / journal に doc 不在の pair を grayed-out で表示。
+ * deactivated flag が true なら「停止」badge、false なら「未 upload」badge。
+ */
+function InactivePairCard({ pair }) {
+  const { pairId, slug, memo, deactivated } = pair
+  return (
+    <div
+      style={{
+        background: '#f5f5f5',
+        borderRadius: 8,
+        padding: '10px 12px',
+        opacity: 0.75,
+        border: '1px solid #ddd',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        {slug ? (
+          <a
+            href={`/pair/${slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#888', textDecoration: 'underline', fontWeight: 600, fontSize: 13 }}
+          >
+            #{slug}
+          </a>
+        ) : (
+          <span style={{ color: '#aaa', fontStyle: 'italic', fontSize: 13 }} title="slug 不在（Phase X-2 で migration 予定）">
+            (slug 不在)
+          </span>
+        )}
+        {slug ? (
+          <a
+            href={`/pair/${slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: '#888', textDecoration: 'underline', fontSize: 13 }}
+          >
+            {pairId}
+          </a>
+        ) : (
+          <span style={{ color: '#999', fontSize: 13 }}>{pairId}</span>
+        )}
+        {memo && (
+          <span style={{ color: '#666', fontSize: 13 }}>{memo}</span>
+        )}
+        {deactivated ? (
+          <span style={{ background: '#ffebee', color: '#c33', fontSize: 11, padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
+            停止
+          </span>
+        ) : (
+          <span style={{ background: '#fff3e0', color: '#e65100', fontSize: 11, padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
+            未 upload
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function AdminPage({ lang = 'ja' }) {
   // Phase 2 final: pair context は URL クエリ ?pair=PAIR-X から取得（localStorage 廃止）
   const [searchParams] = useSearchParams()
@@ -268,12 +329,45 @@ export default function AdminPage({ lang = 'ja' }) {
         snap.forEach(doc => {
           const data = doc.data() || {}
           const pid = data.pairId
-          if (pid) map[pid] = { slug: doc.id, memo: data.memo || '' }
+          // Phase II-pre-3: deactivated + createdAt も保持（「未活動」section の badge / 並び替え用）
+          if (pid) map[pid] = {
+            slug: doc.id,
+            memo: data.memo || '',
+            deactivated: data.deactivated === true,
+            createdAt: data.createdAt || null,
+          }
         })
         setNumberMap(map)
       } catch (_) {}
     })()
   }, [])
+
+  // Phase II-pre-3: 「未活動 pair」 = numberMap にあるが pairs (activitySummary) にない pair
+  // 発行済みだが pair_media / journal に doc 不在の pair を表示、operator が全 pair を Admin で確認可能
+  const inactivePairs = useMemo(() => {
+    if (!numberMap || !pairs) return []
+    const activePairIds = new Set(pairs.map(p => p.pairId))
+    const inactive = []
+    for (const [pairId, data] of Object.entries(numberMap)) {
+      if (HIDDEN_PAIR_IDS.includes(pairId)) continue
+      if (!activePairIds.has(pairId)) {
+        inactive.push({
+          pairId,
+          slug: data.slug,
+          memo: data.memo,
+          deactivated: data.deactivated,
+          createdAt: data.createdAt,
+        })
+      }
+    }
+    // createdAt 降順（新しく発行された pair が上）
+    inactive.sort((a, b) => {
+      const aTime = a.createdAt?.seconds || 0
+      const bTime = b.createdAt?.seconds || 0
+      return bTime - aTime
+    })
+    return inactive
+  }, [numberMap, pairs])
 
   useEffect(() => {
     try {
@@ -430,6 +524,21 @@ export default function AdminPage({ lang = 'ja' }) {
           {dashError && <p style={{ fontSize: 13, color: 'var(--color-danger)', textAlign: 'center' }}>{dashError}</p>}
           {pairs && pairs.filter(pair => !HIDDEN_PAIR_IDS.includes(pair.pairId)).map(pair => <PairCard key={pair.pairId} pair={pair} secret={secret} numberMap={numberMap} />)}
           {pairs && pairs.length === 0 && <p style={{ fontSize: 13, color: 'var(--color-text-muted)', textAlign: 'center' }}>データなし</p>}
+
+          {/* Phase II-pre-3: 未活動 pair section（発行されたが pair_media / journal に doc 不在の pair） */}
+          {inactivePairs.length > 0 && (
+            <section style={{ marginTop: 24 }}>
+              <h2 style={{ margin: '0 0 4px', fontSize: 14, fontWeight: 700, color: 'var(--color-text-muted)' }}>
+                未活動（{inactivePairs.length}）
+              </h2>
+              <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--color-text-muted)' }}>
+                発行されたが、まだ voice / photo upload がない pair
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {inactivePairs.map(p => <InactivePairCard key={p.pairId} pair={p} />)}
+              </div>
+            </section>
+          )}
         </>
       )}
 
