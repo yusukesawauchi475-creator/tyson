@@ -65,21 +65,22 @@ export function useAudioLevel() {
       const audioContext = new (window.AudioContext || window.webkitAudioContext)()
       audioContextRef.current = audioContext
 
-      // iOS/Androidでsuspended状態の場合があるのでresume
-      if (audioContext.state === 'suspended') {
-        await audioContext.resume()
-      }
-
-      // AnalyserNodeを作成
+      // AnalyserNodeを await 前に同期で作成し ref に格納
+      // (Visualizer が isRecording の re-render 時に analyserRef.current を確実に取得できるよう、
+      //  resume() の await より先に setup する)
       const analyser = audioContext.createAnalyser()
       analyser.fftSize = 256
       analyser.smoothingTimeConstant = 0.8
       analyserRef.current = analyser
 
-      // MediaStreamSourceを作成
       const source = audioContext.createMediaStreamSource(stream)
       sourceRef.current = source
       source.connect(analyser)
+
+      // iOS/Androidでsuspended状態の場合があるのでresume (node 接続後でも data flow は再開後から開始)
+      if (audioContext.state === 'suspended') {
+        await audioContext.resume()
+      }
 
       // データ配列を確保
       const bufferLength = analyser.frequencyBinCount
@@ -120,5 +121,5 @@ export function useAudioLevel() {
     }
   }, [])
 
-  return { level, isSpeaking, start, stop }
+  return { level, isSpeaking, start, stop, analyserRef }
 }

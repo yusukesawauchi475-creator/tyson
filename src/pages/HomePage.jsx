@@ -11,6 +11,7 @@ import { getIdTokenForApi, auth, isFirebaseConfigured } from '../lib/firebase'
 import { getAuth } from 'firebase/auth'
 import { formatDeployedAtLocal, getBuildHash } from '../lib/dateFormat'
 import { useAudioLevel } from '../lib/useAudioLevel'
+import Visualizer from '../components/Visualizer'
 import UploadErrorModal from '../components/UploadErrorModal'
 import WeeklySummary from '../components/WeeklySummary'
 import RoleBadge from '../components/RoleBadge'
@@ -79,7 +80,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   const journalCameraInputRef = useRef(null)
   const genericGalleryInputRef = useRef(null)
   const genericCameraInputRef = useRef(null)
-  const { level, isSpeaking, start: startAudioLevel, stop: stopAudioLevel } = useAudioLevel()
+  const { level, isSpeaking, start: startAudioLevel, stop: stopAudioLevel, analyserRef } = useAudioLevel()
   const [uploadErrorModal, setUploadErrorModal] = useState({ visible: false, message: '', onRetry: null })
   const lastFailedAudioRef = useRef(null)
   const lastFailedPhotoRef = useRef(null)
@@ -599,6 +600,11 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
               {lang === 'en' ? '▶ Play' : '▶ 再生'}
             </button>
           )}
+          {hasParentAudio === true && (
+            <div style={{ marginTop: 8 }}>
+              <Visualizer source={parentAudioRef.current} active={isPlayingParent} height={60} color="#1a6645" />
+            </div>
+          )}
         </section>
 
         {/* (2) Send card — pink */}
@@ -615,13 +621,9 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
             {isUploading ? t(lang, 'sending') : isRecording ? (lang === 'en' ? '⏹ Recording...' : '⏹ 録音中…') : (lang === 'en' ? '🎙 Record' : '🎙 録音')}
           </button>
 
-          {isRecording && isSpeaking && (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 4, marginTop: 8, height: 20 }}>
-              {[0, 1, 2, 3, 4].map((i) => {
-                const jitter = (Math.random() - 0.5) * 0.1
-                const scale = Math.max(0.2, Math.min(1.0, level * 8 + jitter))
-                return <span key={i} style={{ width: 3, height: '100%', background: '#c0536e', borderRadius: 2, transform: `scaleY(${scale})`, transformOrigin: 'center', transition: 'transform 0.1s ease-out' }} />
-              })}
+          {isRecording && (
+            <div style={{ marginTop: 8 }}>
+              <Visualizer source={analyserRef.current} active height={60} color="#c0536e" />
             </div>
           )}
 

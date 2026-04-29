@@ -1,6 +1,7 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { t } from '../lib/i18n'
+import Visualizer from '../components/Visualizer'
 
 const DEMO_PAIR_ID = 'PAIR-DEMOTEST'
 const DEMO_AUDIO_URL = '/demo-audio.mp3'
@@ -178,6 +179,7 @@ export default function DemoPage({ lang = 'ja' }) {
           <button type="button" onClick={handlePlayParent} style={{ width: '100%', padding: 14, fontSize: 15, fontWeight: 700, color: '#fff', background: isPlayingParent ? 'linear-gradient(160deg,#E04040,#C02020)' : 'linear-gradient(160deg,#40D890,#18B868)', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: isPlayingParent ? '0 5px 0 #901010' : '0 5px 0 #109848', marginBottom: 10 }}>
             {isPlayingParent ? (lang === 'en' ? '⏹ Stop' : '⏹ 停止') : (lang === 'en' ? '▶ Play' : '▶ 再生')}
           </button>
+          <Visualizer source={parentAudioRef.current} active={isPlayingParent} height={60} color="#1A6040" />
         </section>
 
         {/* (2) Send card - disabled */}
