@@ -780,19 +780,26 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
             <span style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>👂</span>
             <span style={{ fontSize: 15, fontWeight: 800, color: '#1a5c3a' }}>{lang === 'en' ? "Listen to partner's voice" : '相手の声を聴く'}</span>
           </div>
-          {hasAudio === true ? (
-            <button type="button" onClick={handlePlay} disabled={isLoading} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#1a6645', background: '#fff', border: 'none', borderRadius: 14, cursor: isLoading ? 'wait' : 'pointer', boxShadow: '0 4px 0 #a8d8bc', fontFamily: 'Nunito, sans-serif' }}>
-              {isLoading
-                ? t(lang, 'loading')
-                : isPlaying
-                  ? (lang === 'en' ? '⏹ Stop' : '⏹ 停止')
-                  : `${lang === 'en' ? '▶ Play' : '▶ 再生'}${isChildUnseen ? ' 🔴' : ''}`}
-            </button>
-          ) : (
-            <button type="button" disabled style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#1a6645', background: '#fff', border: 'none', borderRadius: 14, cursor: 'default', boxShadow: '0 4px 0 #a8d8bc', opacity: 0.4, fontFamily: 'Nunito, sans-serif' }}>
-              {lang === 'en' ? '▶ Play' : '▶ 再生'}
-            </button>
-          )}
+          <div style={{ position: 'relative', width: '100%' }}>
+            {hasAudio === true ? (
+              <button type="button" onClick={handlePlay} disabled={isLoading} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#1a6645', background: '#fff', border: 'none', borderRadius: 14, cursor: isLoading ? 'wait' : 'pointer', boxShadow: '0 4px 0 #a8d8bc', fontFamily: 'Nunito, sans-serif' }}>
+                {isLoading
+                  ? t(lang, 'loading')
+                  : isPlaying
+                    ? (lang === 'en' ? '⏹ Stop' : '⏹ 停止')
+                    : `${lang === 'en' ? '▶ Play' : '▶ 再生'}${isChildUnseen ? ' 🔴' : ''}`}
+              </button>
+            ) : (
+              <button type="button" disabled style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#1a6645', background: '#fff', border: 'none', borderRadius: 14, cursor: 'default', boxShadow: '0 4px 0 #a8d8bc', opacity: 0.4, fontFamily: 'Nunito, sans-serif' }}>
+                {lang === 'en' ? '▶ Play' : '▶ 再生'}
+              </button>
+            )}
+            {hasAudio === true && isPlaying && (
+              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 14, overflow: 'hidden' }}>
+                <Visualizer source={audioRef.current} active color="rgba(26,102,69,0.4)" />
+              </div>
+            )}
+          </div>
         </section>
 
         {/* (2) Send card — pink */}
@@ -805,15 +812,16 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
           <p style={{ textAlign: 'center', fontSize: 12, color: '#6b2a3a', margin: '0 0 8px', fontWeight: 600 }}>
             ▶ {lang === 'en' ? 'Recording as Child' : '子として録音します'} 👦👧
           </p>
-          <button type="button" onClick={handleRecordClick} disabled={isUploading} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#fff', background: isUploading ? '#B0A0C8' : isRecording ? '#E04040' : '#c0536e', border: 'none', borderRadius: 14, cursor: isUploading ? 'wait' : 'pointer', boxShadow: isUploading ? 'none' : isRecording ? '0 4px 0 #901010' : '0 4px 0 #8a2a42', fontFamily: 'Nunito, sans-serif' }}>
-            {isUploading ? t(lang, 'sending') : isRecording ? (lang === 'en' ? '⏹ Recording...' : '⏹ 録音中…') : (lang === 'en' ? '🎙 Record' : '🎙 録音')}
-          </button>
-
-          {isRecording && (
-            <div style={{ marginTop: 8 }}>
-              <Visualizer source={analyserRef.current} active height={60} color="#c0536e" />
-            </div>
-          )}
+          <div style={{ position: 'relative', width: '100%' }}>
+            <button type="button" onClick={handleRecordClick} disabled={isUploading} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#fff', background: isUploading ? '#B0A0C8' : isRecording ? '#E04040' : '#c0536e', border: 'none', borderRadius: 14, cursor: isUploading ? 'wait' : 'pointer', boxShadow: isUploading ? 'none' : isRecording ? '0 4px 0 #901010' : '0 4px 0 #8a2a42', fontFamily: 'Nunito, sans-serif' }}>
+              {isUploading ? t(lang, 'sending') : isRecording ? (lang === 'en' ? '⏹ Recording...' : '⏹ 録音中…') : (lang === 'en' ? '🎙 Record' : '🎙 録音')}
+            </button>
+            {isRecording && (
+              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 14, overflow: 'hidden' }}>
+                <Visualizer source={analyserRef.current} active color="rgba(255,255,255,0.4)" />
+              </div>
+            )}
+          </div>
 
           {sentAt && (
             <p style={{ fontSize: 12, color: '#6b2a3a', fontWeight: 700, margin: '8px 0 0', textAlign: 'center', fontFamily: 'Nunito, sans-serif' }}>

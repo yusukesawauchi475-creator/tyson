@@ -1,8 +1,6 @@
 import { useEffect, useRef } from 'react'
 
-const BAR_COUNT = 24
-const BAR_GAP = 3
-const MIN_BAR = 3
+const elementChainCache = new WeakMap()
 
 function isAnalyser(s) {
   return typeof AnalyserNode !== 'undefined' && s instanceof AnalyserNode
@@ -12,93 +10,115 @@ function isStream(s) {
   return typeof MediaStream !== 'undefined' && s instanceof MediaStream
 }
 
-function drawBars(canvas, dataArray, color, cssW, cssH, alpha) {
-  const ctx = canvas.getContext('2d')
-  ctx.clearRect(0, 0, canvas.width, canvas.height)
-  ctx.fillStyle = color
-  ctx.globalAlpha = alpha
-
-  const barW = (cssW - BAR_GAP * (BAR_COUNT - 1)) / BAR_COUNT
-  const cy = cssH / 2
-  const samplesPerBin = Math.floor(dataArray.length / BAR_COUNT) || 1
-  const useRound = typeof ctx.roundRect === 'function'
-  const radius = Math.min(barW / 2, 3)
-
-  for (let i = 0; i < BAR_COUNT; i++) {
-    let sum = 0
-    for (let j = 0; j < samplesPerBin; j++) {
-      const v = (dataArray[i * samplesPerBin + j] - 128) / 128
-      sum += v * v
-    }
-    const rms = Math.sqrt(sum / samplesPerBin)
-    const h = Math.max(MIN_BAR, Math.min(cssH, rms * cssH * 1.8))
-    const x = i * (barW + BAR_GAP)
-    const y = cy - h / 2
-
-    if (useRound) {
-      ctx.beginPath()
-      ctx.roundRect(x, y, barW, h, radius)
-      ctx.fill()
-    } else {
-      ctx.fillRect(x, y, barW, h)
-    }
-  }
-
-  ctx.globalAlpha = 1
+function isAudioEl(s) {
+  return typeof HTMLAudioElement !== 'undefined' && s instanceof HTMLAudioElement
 }
 
-function drawIdle(canvas, color, cssW, cssH) {
-  const ctx = canvas.getContext('2d')
-  ctx.clearRect(0, 0, canvas.width, canvas.height)
-  ctx.fillStyle = color
-  ctx.globalAlpha = 0.35
-
-  const barW = (cssW - BAR_GAP * (BAR_COUNT - 1)) / BAR_COUNT
-  const cy = cssH / 2
-  const useRound = typeof ctx.roundRect === 'function'
-  const radius = Math.min(barW / 2, 3)
-  const y = cy - MIN_BAR / 2
-
-  for (let i = 0; i < BAR_COUNT; i++) {
-    const x = i * (barW + BAR_GAP)
-    if (useRound) {
-      ctx.beginPath()
-      ctx.roundRect(x, y, barW, MIN_BAR, radius)
-      ctx.fill()
-    } else {
-      ctx.fillRect(x, y, barW, MIN_BAR)
-    }
-  }
-
-  ctx.globalAlpha = 1
+function getOrCreateElementChain(audioEl) {
+  let chain = elementChainCache.get(audioEl)
+  if (chain) return chain
+  const Ctx = window.AudioContext || window.webkitAudioContext
+  if (!Ctx) return null
+  const audioCtx = new Ctx()
+  const sourceNode = audioCtx.createMediaElementSource(audioEl)
+  const analyser = audioCtx.createAnalyser()
+  analyser.fftSize = 1024
+  analyser.smoothingTimeConstant = 0.75
+  sourceNode.connect(analyser)
+  analyser.connect(audioCtx.destination)
+  chain = { audioCtx, sourceNode, analyser }
+  elementChainCache.set(audioEl, chain)
+  return chain
 }
 
-export default function Visualizer({ source, active = true, height = 60, color = '#c0536e' }) {
+function drawWaveform(ctx, dataArray, width, height, color) {
+  ctx.clearRect(0, 0, width, height)
+  ctx.strokeStyle = color
+  ctx.lineWidth = 1.5
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  ctx.beginPath()
+  const len = dataArray.length
+  if (len < 2) return
+  const step = width / (len - 1)
+  const cy = height / 2
+  for (let i = 0; i < len; i++) {
+    const v = (dataArray[i] - 128) / 128
+    const y = cy + v * cy * 0.85
+    const x = i * step
+    if (i === 0) ctx.moveTo(x, y)
+    else ctx.lineTo(x, y)
+  }
+  ctx.stroke()
+}
+
+function drawIdle(ctx, width, height, color) {
+  ctx.clearRect(0, 0, width, height)
+  ctx.strokeStyle = color
+  ctx.lineWidth = 1.5
+  ctx.lineCap = 'round'
+  ctx.beginPath()
+  ctx.moveTo(0, height / 2)
+  ctx.lineTo(width, height / 2)
+  ctx.stroke()
+}
+
+export default function Visualizer({ source, active = true, color = 'rgba(255,255,255,0.4)' }) {
   const canvasRef = useRef(null)
-  const wrapperRef = useRef(null)
   const rafRef = useRef(null)
   const ownedCtxRef = useRef(null)
   const ownedSourceRef = useRef(null)
+  const sizeRef = useRef({ w: 0, h: 0, dpr: 1 })
 
   useEffect(() => {
     const canvas = canvasRef.current
-    const wrapper = wrapperRef.current
-    if (!canvas || !wrapper) return
+    if (!canvas) return
+    const parent = canvas.parentElement
+    if (!parent) return
 
-    const dpr = Math.max(1, window.devicePixelRatio || 1)
-    const cssW = wrapper.clientWidth || 320
-    const cssH = height
-    canvas.width = Math.floor(cssW * dpr)
-    canvas.height = Math.floor(cssH * dpr)
-    const ctx = canvas.getContext('2d')
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    canvas.style.width = '100%'
-    canvas.style.height = cssH + 'px'
+    const measure = () => {
+      const dpr = Math.max(1, window.devicePixelRatio || 1)
+      const w = parent.clientWidth || 0
+      const h = parent.clientHeight || 0
+      if (w === 0 || h === 0) return false
+      if (sizeRef.current.w === w && sizeRef.current.h === h && sizeRef.current.dpr === dpr) return true
+      canvas.width = Math.floor(w * dpr)
+      canvas.height = Math.floor(h * dpr)
+      const ctx = canvas.getContext('2d')
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      sizeRef.current = { w, h, dpr }
+      return true
+    }
 
-    drawIdle(canvas, color, cssW, cssH)
+    const ensureSize = () => {
+      if (measure()) return true
+      // 親 layout 未確定の場合 next frame で retry
+      requestAnimationFrame(() => measure())
+      return false
+    }
+
+    let resizeObs = null
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObs = new ResizeObserver(() => measure())
+      resizeObs.observe(parent)
+    }
+
+    ensureSize()
+
+    const ctx2d = canvas.getContext('2d')
+    const drawIdleNow = () => {
+      const { w, h } = sizeRef.current
+      if (w > 0 && h > 0) drawIdle(ctx2d, w, h, color)
+    }
+
+    drawIdleNow()
+
+    const cleanupNoSource = () => {
+      if (resizeObs) { try { resizeObs.disconnect() } catch (_) {} }
+    }
 
     if (!source || !active) {
-      return () => {}
+      return cleanupNoSource
     }
 
     let analyser = null
@@ -108,7 +128,7 @@ export default function Visualizer({ source, active = true, height = 60, color =
       analyser = source
     } else if (isStream(source)) {
       const Ctx = window.AudioContext || window.webkitAudioContext
-      if (!Ctx) return () => {}
+      if (!Ctx) return cleanupNoSource
       try {
         const audioCtx = new Ctx()
         ownedCtxRef.current = audioCtx
@@ -123,18 +143,35 @@ export default function Visualizer({ source, active = true, height = 60, color =
         sourceNode.connect(a)
         analyser = a
         cleanupOwned = true
-      } catch (e) {
-        return () => {}
+      } catch (_) {
+        return cleanupNoSource
+      }
+    } else if (isAudioEl(source)) {
+      try {
+        const chain = getOrCreateElementChain(source)
+        if (chain) {
+          if (chain.audioCtx.state === 'suspended') {
+            chain.audioCtx.resume().catch(() => {})
+          }
+          analyser = chain.analyser
+        }
+      } catch (_) {
+        return cleanupNoSource
       }
     }
 
-    if (!analyser) return () => {}
+    if (!analyser) return cleanupNoSource
 
     const dataArray = new Uint8Array(analyser.fftSize)
 
     const tick = () => {
-      analyser.getByteTimeDomainData(dataArray)
-      drawBars(canvas, dataArray, color, cssW, cssH, 1)
+      const { w, h } = sizeRef.current
+      if (w > 0 && h > 0) {
+        analyser.getByteTimeDomainData(dataArray)
+        drawWaveform(ctx2d, dataArray, w, h, color)
+      } else {
+        measure()
+      }
       rafRef.current = requestAnimationFrame(tick)
     }
     rafRef.current = requestAnimationFrame(tick)
@@ -150,22 +187,16 @@ export default function Visualizer({ source, active = true, height = 60, color =
         try { ownedCtxRef.current?.close() } catch (_) {}
         ownedCtxRef.current = null
       }
-      drawIdle(canvas, color, cssW, cssH)
+      if (resizeObs) { try { resizeObs.disconnect() } catch (_) {} }
+      drawIdleNow()
     }
-  }, [source, active, height, color])
-
-  const fixed = {
-    height: height + 'px',
-    minHeight: height + 'px',
-    maxHeight: height + 'px',
-    width: '100%',
-    overflow: 'hidden',
-    display: 'block',
-  }
+  }, [source, active, color])
 
   return (
-    <div ref={wrapperRef} style={fixed} aria-hidden="true">
-      <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: height + 'px' }} />
-    </div>
+    <canvas
+      ref={canvasRef}
+      style={{ display: 'block', width: '100%', height: '100%' }}
+      aria-hidden="true"
+    />
   )
 }
