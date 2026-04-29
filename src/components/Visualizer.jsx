@@ -1,96 +1,76 @@
 import { useEffect, useRef } from 'react'
 
-const elementChainCache = new WeakMap()
+const BAR_COUNT = 24
+const BAR_GAP = 3
+const MIN_BAR = 3
 
-function getOrCreateElementChain(audioEl) {
-  let chain = elementChainCache.get(audioEl)
-  if (chain) return chain
-  const Ctx = window.AudioContext || window.webkitAudioContext
-  if (!Ctx) return null
-  const audioCtx = new Ctx()
-  const sourceNode = audioCtx.createMediaElementSource(audioEl)
-  const analyser = audioCtx.createAnalyser()
-  analyser.fftSize = 1024
-  analyser.smoothingTimeConstant = 0.75
-  sourceNode.connect(analyser)
-  analyser.connect(audioCtx.destination)
-  chain = { audioCtx, sourceNode, analyser }
-  elementChainCache.set(audioEl, chain)
-  return chain
+function isAnalyser(s) {
+  return typeof AnalyserNode !== 'undefined' && s instanceof AnalyserNode
 }
 
-function drawFlat(canvas, color) {
-  if (!canvas) return
+function isStream(s) {
+  return typeof MediaStream !== 'undefined' && s instanceof MediaStream
+}
+
+function drawBars(canvas, dataArray, color, cssW, cssH, alpha) {
   const ctx = canvas.getContext('2d')
-  const w = canvas.width
-  const h = canvas.height
-  ctx.clearRect(0, 0, w, h)
-  ctx.lineWidth = 2
-  ctx.strokeStyle = color
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  ctx.fillStyle = color
+  ctx.globalAlpha = alpha
+
+  const barW = (cssW - BAR_GAP * (BAR_COUNT - 1)) / BAR_COUNT
+  const cy = cssH / 2
+  const samplesPerBin = Math.floor(dataArray.length / BAR_COUNT) || 1
+  const useRound = typeof ctx.roundRect === 'function'
+  const radius = Math.min(barW / 2, 3)
+
+  for (let i = 0; i < BAR_COUNT; i++) {
+    let sum = 0
+    for (let j = 0; j < samplesPerBin; j++) {
+      const v = (dataArray[i * samplesPerBin + j] - 128) / 128
+      sum += v * v
+    }
+    const rms = Math.sqrt(sum / samplesPerBin)
+    const h = Math.max(MIN_BAR, Math.min(cssH, rms * cssH * 1.8))
+    const x = i * (barW + BAR_GAP)
+    const y = cy - h / 2
+
+    if (useRound) {
+      ctx.beginPath()
+      ctx.roundRect(x, y, barW, h, radius)
+      ctx.fill()
+    } else {
+      ctx.fillRect(x, y, barW, h)
+    }
+  }
+
+  ctx.globalAlpha = 1
+}
+
+function drawIdle(canvas, color, cssW, cssH) {
+  const ctx = canvas.getContext('2d')
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  ctx.fillStyle = color
   ctx.globalAlpha = 0.35
-  ctx.beginPath()
-  ctx.moveTo(0, h / 2)
-  ctx.lineTo(w, h / 2)
-  ctx.stroke()
+
+  const barW = (cssW - BAR_GAP * (BAR_COUNT - 1)) / BAR_COUNT
+  const cy = cssH / 2
+  const useRound = typeof ctx.roundRect === 'function'
+  const radius = Math.min(barW / 2, 3)
+  const y = cy - MIN_BAR / 2
+
+  for (let i = 0; i < BAR_COUNT; i++) {
+    const x = i * (barW + BAR_GAP)
+    if (useRound) {
+      ctx.beginPath()
+      ctx.roundRect(x, y, barW, MIN_BAR, radius)
+      ctx.fill()
+    } else {
+      ctx.fillRect(x, y, barW, MIN_BAR)
+    }
+  }
+
   ctx.globalAlpha = 1
-}
-
-function drawWaveform(canvas, dataArray, color) {
-  if (!canvas) return
-  const ctx = canvas.getContext('2d')
-  const w = canvas.width
-  const h = canvas.height
-  const cy = h / 2
-  ctx.clearRect(0, 0, w, h)
-
-  const len = dataArray.length
-  const points = new Array(len)
-  for (let i = 0; i < len; i++) {
-    const v = (dataArray[i] - 128) / 128
-    points[i] = cy + v * cy * 0.9
-  }
-
-  // Background fill (奥行き感: 上下方向 gradient で 3D 風)
-  const grad = ctx.createLinearGradient(0, 0, 0, h)
-  grad.addColorStop(0, color + '00')
-  grad.addColorStop(0.5, color + '55')
-  grad.addColorStop(1, color + '00')
-  ctx.fillStyle = grad
-  ctx.beginPath()
-  ctx.moveTo(0, points[0])
-  for (let i = 1; i < len; i++) {
-    const x = (i / (len - 1)) * w
-    ctx.lineTo(x, points[i])
-  }
-  ctx.lineTo(w, cy)
-  ctx.lineTo(0, cy)
-  ctx.closePath()
-  ctx.fill()
-
-  // 背面 stroke (太、半透明 — 奥)
-  ctx.lineWidth = 4
-  ctx.strokeStyle = color
-  ctx.globalAlpha = 0.3
-  ctx.lineJoin = 'round'
-  ctx.lineCap = 'round'
-  ctx.beginPath()
-  ctx.moveTo(0, points[0])
-  for (let i = 1; i < len; i++) {
-    const x = (i / (len - 1)) * w
-    ctx.lineTo(x, points[i])
-  }
-  ctx.stroke()
-
-  // 前面 stroke (細、不透明 — 手前)
-  ctx.lineWidth = 1.5
-  ctx.globalAlpha = 1
-  ctx.beginPath()
-  ctx.moveTo(0, points[0])
-  for (let i = 1; i < len; i++) {
-    const x = (i / (len - 1)) * w
-    ctx.lineTo(x, points[i])
-  }
-  ctx.stroke()
 }
 
 export default function Visualizer({ source, active = true, height = 60, color = '#c0536e' }) {
@@ -115,10 +95,7 @@ export default function Visualizer({ source, active = true, height = 60, color =
     canvas.style.width = '100%'
     canvas.style.height = cssH + 'px'
 
-    const drawF = (c) => drawFlat(c, color)
-    const drawW = (c, d) => drawWaveform(c, d, color)
-
-    drawF(canvas)
+    drawIdle(canvas, color, cssW, cssH)
 
     if (!source || !active) {
       return () => {}
@@ -127,11 +104,11 @@ export default function Visualizer({ source, active = true, height = 60, color =
     let analyser = null
     let cleanupOwned = false
 
-    if (source instanceof window.AnalyserNode || (typeof AnalyserNode !== 'undefined' && source instanceof AnalyserNode)) {
+    if (isAnalyser(source)) {
       analyser = source
-    } else if (typeof MediaStream !== 'undefined' && source instanceof MediaStream) {
+    } else if (isStream(source)) {
       const Ctx = window.AudioContext || window.webkitAudioContext
-      if (!Ctx) { drawF(canvas); return }
+      if (!Ctx) return () => {}
       try {
         const audioCtx = new Ctx()
         ownedCtxRef.current = audioCtx
@@ -147,35 +124,17 @@ export default function Visualizer({ source, active = true, height = 60, color =
         analyser = a
         cleanupOwned = true
       } catch (e) {
-        drawF(canvas)
-        return () => {}
-      }
-    } else if (typeof HTMLAudioElement !== 'undefined' && source instanceof HTMLAudioElement) {
-      try {
-        const chain = getOrCreateElementChain(source)
-        if (chain) {
-          if (chain.audioCtx.state === 'suspended') {
-            chain.audioCtx.resume().catch(() => {})
-          }
-          analyser = chain.analyser
-        }
-      } catch (e) {
-        drawF(canvas)
         return () => {}
       }
     }
 
-    if (!analyser) {
-      drawF(canvas)
-      return () => {}
-    }
+    if (!analyser) return () => {}
 
-    const bufferLength = analyser.fftSize
-    const dataArray = new Uint8Array(bufferLength)
+    const dataArray = new Uint8Array(analyser.fftSize)
 
     const tick = () => {
       analyser.getByteTimeDomainData(dataArray)
-      drawW(canvas, dataArray)
+      drawBars(canvas, dataArray, color, cssW, cssH, 1)
       rafRef.current = requestAnimationFrame(tick)
     }
     rafRef.current = requestAnimationFrame(tick)
@@ -191,7 +150,7 @@ export default function Visualizer({ source, active = true, height = 60, color =
         try { ownedCtxRef.current?.close() } catch (_) {}
         ownedCtxRef.current = null
       }
-      drawF(canvas)
+      drawIdle(canvas, color, cssW, cssH)
     }
   }, [source, active, height, color])
 

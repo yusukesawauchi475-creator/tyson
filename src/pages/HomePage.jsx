@@ -600,11 +600,6 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
               {lang === 'en' ? '▶ Play' : '▶ 再生'}
             </button>
           )}
-          {hasParentAudio === true && (
-            <div style={{ marginTop: 8 }}>
-              <Visualizer source={parentAudioRef.current} active={isPlayingParent} height={60} color="#1a6645" />
-            </div>
-          )}
         </section>
 
         {/* (2) Send card — pink */}

@@ -793,11 +793,6 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
               {lang === 'en' ? '▶ Play' : '▶ 再生'}
             </button>
           )}
-          {hasAudio === true && (
-            <div style={{ marginTop: 8 }}>
-              <Visualizer source={audioRef.current} active={isPlaying} height={60} color="#1a6645" />
-            </div>
-          )}
         </section>
 
         {/* (2) Send card — pink */}

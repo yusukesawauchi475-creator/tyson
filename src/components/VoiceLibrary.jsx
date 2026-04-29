@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { markSeen } from '../lib/pairDaily'
 import { getIdTokenForApi } from '../lib/firebase'
 import { getEffectiveRole, isCorrected } from '../lib/voiceRole'
-import Visualizer from './Visualizer'
 
 export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pairIdProp, onDataLoaded, adminMode = false, onCorrect }) {
   const [days, setDays] = useState([])
@@ -266,11 +265,6 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
         })}
       </div>
 
-      {playingKey && (
-        <div style={{ marginTop: 8 }}>
-          <Visualizer source={audioRef.current} active height={60} color="#7050C0" />
-        </div>
-      )}
       <audio ref={audioRef} onEnded={handleEnded} onPause={() => setPlayingKey(null)} style={{ display: 'none' }} />
     </section>
   )
