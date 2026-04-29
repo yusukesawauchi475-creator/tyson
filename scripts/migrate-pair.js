@@ -149,8 +149,13 @@ async function main() {
     console.error(`Target slug already exists: ${newSlug}（race condition）`);
     process.exit(1);
   }
+  // Phase II-share-bug-fix: createdAt 必須化
+  // root cause: Firestore orderBy('createdAt') query は createdAt 不在 doc を物理的に除外
+  // → AdminPage 発行済みペア tab で migration 先 doc が表示されない bug
+  // → sourceData.createdAt 不在 (legacy founder family) でも serverTimestamp で補完
   await targetRef.set({
     ...sourceData,
+    createdAt: sourceData.createdAt || migratedAt,
     deactivated: false,
     migratedFrom: sourceSlug,
     migratedAt,
