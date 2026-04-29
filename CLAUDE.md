@@ -287,4 +287,29 @@ firebase deploy --only firestore:rules,storage  # ルールデプロイ
   - 技術 risk: 未検証技術含む場合、別 phase に分離可能か
 - 観測: CTO + Boss 両者で同 pattern 発生、AI 単体運用への移行で全 AI agent (Boss / CTO / Claude Code 等) に同 self-audit step 必須化。
 
+### Mistake 12: 視覚仕様の配置形式 enumeration 不足
+- 発生: 2026-04-29、UI Fix Round 1-3 (visualizer 実装で 3 周計約 30 分浪費)
+- 詳細: Yusuke「録音再生時の 3D 風波形 visualizer 追加」要求を CTO が「container 独立 60px 配置」と解釈、Round 1 commit 後 Yusuke「button overlay 半透明軽い波形」が真意と判明、Round 2-3 で大幅 rewrite
+- root cause: 視覚仕様で配置形式 (container 独立 / button overlay / inline / sidebar / modal 等) が複数解釈可能なとき、CTO 単独解釈で実装着手、Yusuke 確認なし
+- rule: 視覚仕様要求検出時、Plan Mode で配置形式候補 2-3 案 (各案 ASCII art or 1 行説明付き) を Yusuke に提示してから着手。CTO 解釈で先に進めない。
+- 例: 「ボタンに波形」要求は overlay と container 両解釈可能、Plan で確認必須。
+
+### Mistake 13: 数値計算 / 描画 logic で input 値 range simulation 不在
+- 発生: 2026-04-29、UI Fix Round 2 (24 bar visualizer dashed line 化)
+- 詳細: 24 bar の `rms × cssH × 1.8 = rms × 108` で voice RMS ~0.01-0.05 が全 bar MIN_BAR=3px に張り付き dashed line 化、Yusuke 実機で「動かない」発覚、Round 3 で rewrite
+- root cause: variation table が「無音 / 発話」の 2 状態しか持たず、実 input 値 (voice RMS の typical range) で出力値を trace せず、scale dilution risk 検出できなかった
+- rule: 数値計算 / 描画 logic 系の Plan で以下を variation table に追加: input 値の実 range 明示 (例: voice RMS は 0.01-0.05、無音 0、ピーク 0.1) + 各 range で出力値計算 trace + 想定 vs 実値乖離検出。「無音 / 発話」の 2 状態で variation 完成と扱わない。
+- 例: scale 値計算は最小 / 中間 / 最大 input 全件で出力 trace、MIN/MAX clamp 張り付き検出。
+
+### Mistake 14: 実機 test 依頼 prompt の検証環境明示漏れ
+- 発生: 2026-04-29、UI Fix Round 1 commit/push 前 (Yusuke が humfamily.com で「fix 反映前」を test、「直ってねーよ」誤判定)
+- 詳細: CTO が working tree fix 完了後 Yusuke に test 依頼、Yusuke は本番 humfamily.com (= unpushed 前 commit fd325c1 deploy 済み) で確認 → fix 未 deploy 状態のため旧 logic 観測 = 誤判定。CTO の test 依頼 prompt に「commit/push/deploy 完了確認」明示なし。
+- root cause: 実機 test 依頼 prompt の必須 checklist 不在、CTO が「実装完了 = test 可能」と暗黙前提
+- rule: 実機 test 依頼 prompt 起草時、以下 4 項目必須記載 (1 つでも欠けたら投入禁止):
+  1. 確認 URL (本番 humfamily.com / preview / localhost dev / branch deploy 明示)
+  2. commit/push/deploy 状態 (反映済み確認手順、Vercel deploy ID or git log 提示)
+  3. cache clear 手順 (端末別: iOS Safari / Android Chrome / PWA / private tab)
+  4. 確認項目 list (期待動作明示、症状 fail 時の報告 format)
+- 例: humfamily.com 本番 test 時 → "deploy 完了 (commit X、Vercel ID Y) → private browsing tab で humfamily.com 開く → 録音 button 押下 → button 上に半透明白波線 + button size 不変 確認"
+
 注: Mistake 5 (Yahoo ブラウザ) と Mistake 7 (Domain 削除提案) は本 phase scope では削除。Yusuke 後日確認で事実確定したら追加。
