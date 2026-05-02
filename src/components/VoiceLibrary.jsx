@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { markSeen } from '../lib/pairDaily'
+import { markSeen, getDateKeyNY } from '../lib/pairDaily'
 import { getIdTokenForApi } from '../lib/firebase'
 import { getEffectiveRole, isCorrected } from '../lib/voiceRole'
 
@@ -7,6 +7,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
   const [days, setDays] = useState([])
   const [loading, setLoading] = useState(true)
   const [playingKey, setPlayingKey] = useState(null) // url
+  const [expandedMonths, setExpandedMonths] = useState(() => new Set())
   const audioRef = useRef(null)
 
   const effectivePairId = pairIdProp
@@ -17,7 +18,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
       const idToken = await getIdTokenForApi()
       if (!idToken || cancelled) { setLoading(false); return }
       try {
-        const res = await fetch(`/api/pair-media?action=voice-history&pairId=${encodeURIComponent(effectivePairId)}&limit=7&v=${Date.now()}`, {
+        const res = await fetch(`/api/pair-media?action=voice-history&pairId=${encodeURIComponent(effectivePairId)}&limit=365&v=${Date.now()}`, {
           headers: { Authorization: `Bearer ${idToken}`, Pragma: 'no-cache' },
           cache: 'no-store',
         })
@@ -78,6 +79,37 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
     const period = hh < 12 ? 'am' : 'pm'
     const displayHour = hh === 0 ? 12 : hh > 12 ? hh - 12 : hh
     return `${displayHour}:${mm}${period}`
+  }
+
+  // 直近 10 日のカットオフ key（NY 時間）。これより新しい日 (>=) はそのまま展開、古い日 (<) は月別折りたたみ。
+  const getRecentCutoffKey = () => {
+    const todayKey = getDateKeyNY()
+    const [y, m, d] = todayKey.split('-').map(Number)
+    const base = new Date(Date.UTC(y, m - 1, d))
+    base.setUTCDate(base.getUTCDate() - 10)
+    const yy = base.getUTCFullYear()
+    const mm = String(base.getUTCMonth() + 1).padStart(2, '0')
+    const dd = String(base.getUTCDate()).padStart(2, '0')
+    return `${yy}-${mm}-${dd}`
+  }
+
+  const formatMonthLabel = (monthKey) => {
+    // monthKey: "YYYY-MM"
+    const [y, m] = monthKey.split('-').map(Number)
+    if (lang === 'en') {
+      const names = ['January','February','March','April','May','June','July','August','September','October','November','December']
+      return `${names[m - 1]} ${y}`
+    }
+    return `${y}年${m}月`
+  }
+
+  const toggleMonth = (monthKey) => {
+    setExpandedMonths(prev => {
+      const next = new Set(prev)
+      if (next.has(monthKey)) next.delete(monthKey)
+      else next.add(monthKey)
+      return next
+    })
   }
 
   // 配列 items から時刻昇順（古い→新しい）にソート。hhmm が null の場合は最後尾
@@ -153,7 +185,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
     const latestIdx = items.length - 1 // 昇順なので最新は末尾
 
     return (
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0, overflow: 'hidden' }}>
         {items.map((item, idx) => {
           const key = item.url
           const isPlaying = playingKey === key
@@ -165,7 +197,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
           return (
             <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               {/* 段階10-b: 緑ボックス tap で再生 + 右端に DL アイコンのみ + admin 訂正ボタン / 訂正済マーク */}
-              <div style={{ display: 'flex', alignItems: 'stretch', gap: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'stretch', gap: 4, minWidth: 0 }}>
                 <button
                   type="button"
                   onClick={() => handlePlay(dateKey, r, item.url)}
@@ -252,17 +284,64 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
       </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {days.map((day) => {
-          // 段階10-a: effectiveRole で再分類（訂正済 item は訂正後の列に移動して render）
-          const { parent, child } = reclassifyDay(day)
+        {(() => {
+          const cutoffKey = getRecentCutoffKey()
+          const recentDays = days.filter(d => d.dateKey >= cutoffKey)
+          const olderDays = days.filter(d => d.dateKey < cutoffKey)
+
+          const monthGroups = []
+          const monthIndex = new Map()
+          for (const day of olderDays) {
+            const monthKey = day.dateKey.slice(0, 7)
+            if (!monthIndex.has(monthKey)) {
+              monthIndex.set(monthKey, monthGroups.length)
+              monthGroups.push({ monthKey, days: [] })
+            }
+            monthGroups[monthIndex.get(monthKey)].days.push(day)
+          }
+
+          const renderDay = (day) => {
+            const { parent, child } = reclassifyDay(day)
+            return (
+              <div key={day.dateKey} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0', borderBottom: '1px solid #EEE8FF' }}>
+                <span style={{ fontSize: 12, color: '#8070A0', fontWeight: 600, minWidth: 50, paddingTop: 8 }}>{formatDate(day.dateKey)}</span>
+                {renderRoleColumn(day.dateKey, 'parent', parent, lang === 'en' ? 'Parent' : '親')}
+                {renderRoleColumn(day.dateKey, 'child', child, lang === 'en' ? 'Child' : '子')}
+              </div>
+            )
+          }
+
           return (
-            <div key={day.dateKey} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0', borderBottom: '1px solid #EEE8FF' }}>
-              <span style={{ fontSize: 12, color: '#8070A0', fontWeight: 600, minWidth: 50, paddingTop: 8 }}>{formatDate(day.dateKey)}</span>
-              {renderRoleColumn(day.dateKey, 'parent', parent, lang === 'en' ? 'Parent' : '親')}
-              {renderRoleColumn(day.dateKey, 'child', child, lang === 'en' ? 'Child' : '子')}
-            </div>
+            <>
+              {recentDays.map(renderDay)}
+              {monthGroups.map(({ monthKey, days: mDays }) => {
+                const expanded = expandedMonths.has(monthKey)
+                return (
+                  <div key={monthKey} style={{ display: 'flex', flexDirection: 'column' }}>
+                    <button
+                      type="button"
+                      onClick={() => toggleMonth(monthKey)}
+                      style={{
+                        width: '100%', padding: '10px 12px', fontSize: 13, fontWeight: 700,
+                        color: '#7050C0', background: '#fff', border: '1px solid #E8E0FF',
+                        borderRadius: 10, cursor: 'pointer', display: 'flex',
+                        alignItems: 'center', justifyContent: 'space-between',
+                        marginTop: 6,
+                      }}
+                      aria-expanded={expanded}
+                    >
+                      <span>{formatMonthLabel(monthKey)}</span>
+                      <span style={{ fontSize: 11, color: '#8070A0', fontWeight: 500 }}>
+                        {mDays.length}{lang === 'en' ? ' days' : '日'} {expanded ? '▲' : '▼'}
+                      </span>
+                    </button>
+                    {expanded && mDays.map(renderDay)}
+                  </div>
+                )
+              })}
+            </>
           )
-        })}
+        })()}
       </div>
 
       <audio ref={audioRef} onEnded={handleEnded} onPause={() => setPlayingKey(null)} style={{ display: 'none' }} />

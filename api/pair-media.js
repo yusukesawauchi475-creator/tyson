@@ -320,7 +320,7 @@ async function handleVoiceHistory(req, res) {
   const pairId = req.query?.pairId;
   if (!pairId) return res.status(400).json({ error: 'pairId is required' });
   if (isTysonOnlyBlocked(pairId, uid)) return res.status(403).json({ error: 'Access denied' });
-  const limit = Math.min(parseInt(req.query?.limit) || 7, 30);
+  const limit = Math.min(parseInt(req.query?.limit) || 30, 365);
 
   try {
     initFirebaseAdmin();
