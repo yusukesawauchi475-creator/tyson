@@ -167,11 +167,12 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
 
     if (items.length === 0) {
       return (
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
           <button type="button" disabled style={{
-            width: '100%', padding: '8px 10px', fontSize: 12, fontWeight: 600,
-            color: '#CCC', background: '#fff', border: '1px solid #E8E0FF',
-            borderRadius: 10, cursor: 'default', display: 'flex', alignItems: 'center', gap: 5,
+            width: '100%', padding: '8px 6px', fontSize: 11, fontWeight: 600,
+            color: '#CCC', background: '#fff', border: '2px solid #E8E0FF',
+            borderRadius: 10, cursor: 'default', display: 'flex', alignItems: 'center', gap: 4,
+            boxSizing: 'border-box', overflow: 'hidden',
           }}>
             <span style={{ fontSize: 13 }}>—</span>
             <span>{label}</span>
@@ -202,19 +203,20 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
                   type="button"
                   onClick={() => handlePlay(dateKey, r, item.url)}
                   style={{
-                    flex: 1, padding: '8px 10px', fontSize: 12, fontWeight: 600,
+                    flex: 1, padding: '8px 6px', fontSize: 11, fontWeight: 600,
                     color: '#555', background: isPlaying ? '#E8E0FF' : '#fff',
                     border: `2px solid ${borderColor}`,
                     borderRadius: 10, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: 5,
+                    display: 'flex', alignItems: 'center', gap: 4,
                     whiteSpace: 'nowrap', overflow: 'hidden', minWidth: 0,
+                    boxSizing: 'border-box',
                   }}
                 >
                   <span style={{ fontSize: 13, flexShrink: 0 }}>{showUnseen ? '🔴' : '✅'}</span>
                   <span style={{ flexShrink: 0 }}>{label}</span>
                   <span style={{ fontSize: 13, flexShrink: 0 }}>{r === 'parent' ? '👴🏻👵🏻' : '👦👧'}</span>
                   {item.hhmm && (
-                    <span style={{ fontSize: 11, color: '#8070A0', marginLeft: 'auto', flexShrink: 0, fontFamily: 'Nunito, sans-serif', fontWeight: 500 }}>
+                    <span style={{ fontSize: 11, color: '#8070A0', marginLeft: 'auto', flexShrink: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Nunito, sans-serif', fontWeight: 500 }}>
                       {formatTime(item.hhmm)}
                     </span>
                   )}
