@@ -1,0 +1,145 @@
+{
+  "generatedAt": "2026-05-02T23:58:34.164Z",
+  "oldSlugs": [
+    {
+      "slug": "mw49f0",
+      "exists": true,
+      "data": {
+        "pairId": "PAIR-2TN3F5",
+        "memo": "test3",
+        "createdAt": "2026-04-16T10:40:00.451Z",
+        "deactivated": true,
+        "migratedTo": "3d8kgtp5",
+        "deactivatedAt": "2026-04-29T19:35:39.154Z"
+      }
+    },
+    {
+      "slug": "h06m0g",
+      "exists": true,
+      "data": {
+        "pairId": "PAIR-CXH6TH",
+        "memo": "Madoka Paints",
+        "createdAt": "2026-04-08T10:47:56.740Z",
+        "migratedFrom": "6",
+        "deactivated": true,
+        "migratedTo": "kgaxrs94",
+        "deactivatedAt": "2026-04-29T19:35:39.768Z"
+      }
+    },
+    {
+      "slug": "libriv",
+      "exists": true,
+      "data": {
+        "pairId": "PAIR-2M9W2F",
+        "memo": "Chitose Hanert",
+        "createdAt": "2026-04-08T10:47:45.046Z",
+        "migratedFrom": "5",
+        "deactivated": true,
+        "migratedTo": "jjw78emr",
+        "deactivatedAt": "2026-04-29T19:35:40.400Z"
+      }
+    },
+    {
+      "slug": "2habi5",
+      "exists": true,
+      "data": {
+        "pairId": "PAIR-8XHPL2",
+        "memo": "Shigemi Sherry Cree",
+        "createdAt": "2026-04-08T10:47:33.816Z",
+        "migratedFrom": "4",
+        "deactivated": true,
+        "migratedTo": "yntk4g9e",
+        "deactivatedAt": "2026-04-29T19:35:40.968Z"
+      }
+    },
+    {
+      "slug": "5828p4",
+      "exists": true,
+      "data": {
+        "pairId": "PAIR-ZEV92B",
+        "memo": "Tomoko Himitsu",
+        "createdAt": "2026-04-08T10:35:22.956Z",
+        "migratedFrom": "3",
+        "deactivated": true,
+        "migratedTo": "uzbjjjt8",
+        "deactivatedAt": "2026-04-29T19:35:41.448Z"
+      }
+    },
+    {
+      "slug": "lxm0mt",
+      "exists": true,
+      "data": {
+        "pairId": "PAIR-8BDAUA",
+        "memo": "test2",
+        "createdAt": "2026-04-03T17:25:23.292Z",
+        "migratedFrom": "2",
+        "deactivated": true,
+        "migratedTo": "9znpzaeb",
+        "deactivatedAt": "2026-04-29T19:35:42.040Z"
+      }
+    },
+    {
+      "slug": "ulf1q6",
+      "exists": true,
+      "data": {
+        "pairId": "PAIR-H58HTP",
+        "memo": "test",
+        "createdAt": "2026-04-03T15:11:11.077Z",
+        "migratedFrom": "1",
+        "deactivated": true,
+        "migratedTo": "3vqg3n3x",
+        "deactivatedAt": "2026-04-29T19:35:42.646Z"
+      }
+    }
+  ],
+  "newSlugs": [
+    {
+      "slug": "kgaxrs94",
+      "exists": true,
+      "data": {
+        "pairId": "PAIR-CXH6TH",
+        "memo": "Madoka Paints",
+        "createdAt": "2026-04-08T10:47:56.740Z",
+        "migratedFrom": "h06m0g",
+        "deactivated": false,
+        "migratedAt": "2026-04-29T19:35:39.521Z"
+      }
+    },
+    {
+      "slug": "jjw78emr",
+      "exists": true,
+      "data": {
+        "pairId": "PAIR-2M9W2F",
+        "memo": "Chitose Hanert",
+        "createdAt": "2026-04-08T10:47:45.046Z",
+        "migratedFrom": "libriv",
+        "deactivated": false,
+        "migratedAt": "2026-04-29T19:35:40.210Z"
+      }
+    },
+    {
+      "slug": "yntk4g9e",
+      "exists": true,
+      "data": {
+        "pairId": "PAIR-8XHPL2",
+        "memo": "Shigemi Sherry Cree",
+        "createdAt": "2026-04-08T10:47:33.816Z",
+        "migratedFrom": "2habi5",
+        "deactivated": false,
+        "migratedAt": "2026-04-29T19:35:40.731Z"
+      }
+    },
+    {
+      "slug": "uzbjjjt8",
+      "exists": true,
+      "data": {
+        "pairId": "PAIR-ZEV92B",
+        "memo": "Tomoko Himitsu",
+        "createdAt": "2026-04-08T10:35:22.956Z",
+        "migratedFrom": "5828p4",
+        "deactivated": false,
+        "migratedAt": "2026-04-29T19:35:41.276Z"
+      }
+    }
+  ]
+}
