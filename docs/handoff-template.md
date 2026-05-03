@@ -31,6 +31,11 @@ Phase II-share-bug-fix 完了、Phase D 以降は別日 / 別 thread 待機。
 - Phase Z: 自動化 roadmap (Slack/cron/retention/CI、別日)
 - Phase G: backlog 整理 (CLAUDE.md backlog section 追記、新 thread 着手)
 - backlog: PC 再生 indicator 表示 (重要度低、Yusuke 判断「warito doudemo ii」)
+- backlog: admin filter logic に deactivated:true 除外追加 (重要度低、Yusuke 自身のみ影響、Phase G or cleanup phase で対応)
+  - 検出: 2026-04-29 Phase D Step 2 verify audit
+  - 症状: AdminPage.jsx L572-578 で pair_numbers query が deactivated field 無視
+  - 修正範囲: 5-15 line (filter 条件に deactivated !== true 追加)
+  - raw fact: docs/phase-d/audit-result-step2-verify.md
 
 ## Next Step (Yusuke 確認)
 
