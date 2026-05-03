@@ -312,4 +312,18 @@ firebase deploy --only firestore:rules,storage  # ルールデプロイ
   4. 確認項目 list (期待動作明示、症状 fail 時の報告 format)
 - 例: humfamily.com 本番 test 時 → "deploy 完了 (commit X、Vercel ID Y) → private browsing tab で humfamily.com 開く → 録音 button 押下 → button 上に半透明白波線 + button size 不変 確認"
 
-注: Mistake 5 (Yahoo ブラウザ) と Mistake 7 (Domain 削除提案) は本 phase scope では削除。Yusuke 後日確認で事実確定したら追加。
+### Mistake 17: 新 phase 着手判断は Boss orchestration 通す
+- 発生: 2026-05-02、Phase D 完了直後 (CTO thread)
+- 詳細: Yusuke が新 phase task prompt (azmcqghd への demo data 投入) を CTO に持ち込み、CTO は Boss judgment 受領前なのに prompt 改訂作業に着手、Yusuke から Q1-Q4 答え引き出して新 phase initiation を Boss skip で進めかけた。Yusuke の「Boss に相談しないの?」flag で停止
+- root cause: 確定 task の継続実行 (UI Fix Round N → N+1 等) と新 phase initiation の判断 boundary が CTO 内で曖昧、philosophy 軸 4 (AI 単体運用) の運用原則違反
+- rule: 新 phase 着手判断 = Boss orchestration scope。CTO は単独で Yusuke に prompt dispatch しない。以下を判断 trigger とする:
+  - Yusuke から新 task prompt が持ち込まれた
+  - 現在の thread scope 外の判断 (priority / pair 選定 / philosophy 軸 trade-off) が必要
+  - memory 上の next priority list と異なる proposal が来た
+  → Boss thread に handoff 報告書起草 + Yusuke に「Boss judgment 仰いで」明示。CTO 自律で prompt 改訂作業に入らない
+- 判断 boundary:
+  - 確定 task 継続 (UI Fix Round 進行 / Phase D Step 2 → 完了報告 等) → CTO 単独進行 OK
+  - 新 phase initiation (撮影用 demo / Phase X-3-B 着手 / 別 priority shift) → Boss judgment 必須
+- 例: Phase D 完了後、memory 上 next priority は (1) DemoPage sample data / (2) Facebook 投稿 等。Yusuke が「azmcqghd へ demo data 投入したい」と持ち込んだ場合、CTO は ✅ Boss thread に「新 phase 着手判断依頼 + design intent 整合質問」報告 → Boss judgment 待機。❌ NG: Yusuke から Q1-Q4 答え引き出して prompt 改訂着手
+
+注: Mistake 5 (Yahoo ブラウザ) と Mistake 7 (Domain 削除提案) は本 phase scope では削除。Yusuke 後日確認で事実確定したら追加。Mistake 15-16 は本 thread reflection で言及あるが Boss 採用は 17 のみ、後日候補として番号 reserved。
