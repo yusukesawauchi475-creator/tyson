@@ -40,7 +40,6 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   const [errorLine, setErrorLine] = useState(null)
   const [isRecording, setIsRecording] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
-  const [sentAt, setSentAt] = useState(null)
   const [oneLiner, setOneLiner] = useState('')
   const [oneLinerStage, setOneLinerStage] = useState(null)
   const [oneLinerVisible, setOneLinerVisible] = useState(false)
@@ -187,6 +186,8 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
       setJournalUploading(false)
       if (result.success) {
         console.log('[upload success]', { requestId: reqId, kind, result: { success: result.success, requestId: result.requestId, dateKey: result.dateKey, storagePath: result.storagePath } })
+        setToastMsg(t(lang, 'photoSentToast'))
+        setTimeout(() => setToastMsg(null), 3000)
         setJournalRequestId(result.requestId)
         if (kind === 'journal_image') {
           setJournalUploaded(true)
@@ -407,7 +408,6 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
     if (isDemoTest) { setDemoModalOpen(true); return }
     if (isUploading) return
     setErrorLine(null)
-    setSentAt(null)
     // 録音開始時に一言を非表示
     setOneLinerVisible(false)
     setAnalysisVisible(false)
@@ -487,7 +487,8 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
           // リクエストシーケンス番号をインクリメント
           analysisReqSeqRef.current += 1
           const seq = analysisReqSeqRef.current
-          setSentAt(new Date())
+          setToastMsg(t(lang, 'voiceSentToast'))
+          setTimeout(() => setToastMsg(null), 3000)
           setErrorLine(null)
           // 親と子の両方が録音済みならstreakを更新
           if (hasAudio === true) {
@@ -728,10 +729,6 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
     else startRecording()
   }
 
-  const sentAtStr = sentAt
-    ? sentAt.toLocaleTimeString(lang === 'en' ? 'en-US' : 'ja-JP', { hour: '2-digit', minute: '2-digit' })
-    : ''
-
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-sans)', background: 'var(--color-bg)', color: 'var(--color-text)', paddingBottom: 72, overflow: 'hidden' }}>
       {/* Gradient Header */}
@@ -822,12 +819,6 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
               </div>
             )}
           </div>
-
-          {sentAt && (
-            <p style={{ fontSize: 12, color: '#6b2a3a', fontWeight: 700, margin: '8px 0 0', textAlign: 'center', fontFamily: 'Nunito, sans-serif' }}>
-              {t(lang, 'sentAt', { time: sentAtStr })}
-            </p>
-          )}
 
           <DailyPromptCard pairId={currentPairId} role={ROLE_CHILD} onTopicChange={handleTopicChange} lang={lang} />
         </section>

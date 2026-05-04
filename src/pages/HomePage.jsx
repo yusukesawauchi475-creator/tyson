@@ -32,7 +32,6 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   const [inviteText, setInviteText] = useState(null)
   const [isRecording, setIsRecording] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
-  const [sentAt, setSentAt] = useState(null)
   const [errorLine, setErrorLine] = useState(null)
   const [hasParentAudio, setHasParentAudio] = useState(null)
   const [debugAuthInfo, setDebugAuthInfo] = useState('...')
@@ -119,7 +118,6 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
     if (isDemoTest) { setDemoModalOpen(true); return }
     if (isUploading) return
     setErrorLine(null)
-    setSentAt(null)
     setOneLinerVisible(false)
     setAnalysisVisible(false)
     analysisReqSeqRef.current += 1
@@ -159,7 +157,8 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           const dateKeyForThisUpload = result?.dateKey || getDateKey()
           analysisReqSeqRef.current += 1
           const seq = analysisReqSeqRef.current
-          setSentAt(new Date())
+          setToastMsg(t(lang, 'voiceSentToast'))
+          setTimeout(() => setToastMsg(null), 3000)
           setErrorLine(null)
           if (hasParentAudio === true) {
             updateStreak(currentPairId).then(({ success, count }) => { if (success) setStreakCount(count) })
@@ -298,6 +297,8 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
       const result = await uploadJournalImage(toUpload, reqId, currentPairId, ROLE_PARENT, kind)
       setJournalUploading(false)
       if (result.success) {
+        setToastMsg(t(lang, 'photoSentToast'))
+        setTimeout(() => setToastMsg(null), 3000)
         setJournalRequestId(result.requestId)
         if (kind === 'journal_image') {
           setJournalUploaded(true)
@@ -531,10 +532,6 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
     }
   }, [parentAudioUrl])
 
-  const sentAtStr = sentAt
-    ? sentAt.toLocaleTimeString(lang === 'en' ? 'en-US' : 'ja-JP', { hour: '2-digit', minute: '2-digit' })
-    : ''
-
   const today = new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', {
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
   })
@@ -629,12 +626,6 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
               </div>
             )}
           </div>
-
-          {sentAt && (
-            <p style={{ fontSize: 12, color: '#6b2a3a', fontWeight: 700, margin: '8px 0 0', textAlign: 'center', fontFamily: 'Nunito, sans-serif' }}>
-              {t(lang, 'sentAt', { time: sentAtStr })}
-            </p>
-          )}
 
           <DailyPromptCard pairId={currentPairId} role={ROLE_PARENT} onTopicChange={handleTopicChange} lang={lang} />
         </section>

@@ -59,6 +59,28 @@ export function getBuildHash() {
   return 'dev'
 }
 
+/** 12h lowercase format with space: "6:42 pm" / "12:00 am" / "12:00 pm". 0-padding なし。 */
+export function formatTime12hLower(date) {
+  const d = date instanceof Date ? date : new Date(date)
+  if (Number.isNaN(d.getTime())) return ''
+  const hh = d.getHours()
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  const period = hh < 12 ? 'am' : 'pm'
+  const displayHour = hh === 0 ? 12 : hh > 12 ? hh - 12 : hh
+  return `${displayHour}:${mm} ${period}`
+}
+
+/** "HHMM" 形式 (例 "1842") から 12h lowercase format with space を返す。"6:42 pm"。 */
+export function formatTime12hLowerFromHHMM(hhmm) {
+  if (!hhmm || typeof hhmm !== 'string' || hhmm.length !== 4) return ''
+  const hh = parseInt(hhmm.slice(0, 2), 10)
+  if (Number.isNaN(hh)) return ''
+  const mm = hhmm.slice(2, 4)
+  const period = hh < 12 ? 'am' : 'pm'
+  const displayHour = hh === 0 ? 12 : hh > 12 ? hh - 12 : hh
+  return `${displayHour}:${mm} ${period}`
+}
+
 export function formatDateJST(timestamp, options = {}) {
   if (!timestamp) return '-'
   const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp)

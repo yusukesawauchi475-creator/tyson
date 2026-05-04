@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { markSeen, getDateKeyNY } from '../lib/pairDaily'
 import { getIdTokenForApi } from '../lib/firebase'
 import { getEffectiveRole, isCorrected } from '../lib/voiceRole'
+import { formatTime12hLowerFromHHMM } from '../lib/dateFormat'
 
 export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pairIdProp, onDataLoaded, adminMode = false, onCorrect }) {
   const [days, setDays] = useState([])
@@ -71,15 +72,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
     return lang === 'en' ? `${m}/${d}` : `${m}月${d}日`
   }
 
-  const formatTime = (hhmm) => {
-    if (!hhmm || hhmm.length !== 4) return ''
-    const hh = parseInt(hhmm.slice(0, 2), 10)
-    if (isNaN(hh)) return ''
-    const mm = hhmm.slice(2, 4)
-    const period = hh < 12 ? 'am' : 'pm'
-    const displayHour = hh === 0 ? 12 : hh > 12 ? hh - 12 : hh
-    return `${displayHour}:${mm}${period}`
-  }
+  const formatTime = formatTime12hLowerFromHHMM
 
   // 直近 10 日のカットオフ key（NY 時間）。これより新しい日 (>=) はそのまま展開、古い日 (<) は月別折りたたみ。
   const getRecentCutoffKey = () => {
@@ -214,9 +207,9 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
                 >
                   <span style={{ fontSize: 13, flexShrink: 0 }}>{showUnseen ? '🔴' : '✅'}</span>
                   <span style={{ flexShrink: 0 }}>{label}</span>
-                  <span style={{ fontSize: 13, flexShrink: 0 }}>{r === 'parent' ? '👴🏻👵🏻' : '👦👧'}</span>
+                  <span style={{ fontSize: 13, flexShrink: 1, minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap' }}>{r === 'parent' ? '👴🏻👵🏻' : '👦👧'}</span>
                   {item.hhmm && (
-                    <span style={{ fontSize: 11, color: '#8070A0', marginLeft: 'auto', flexShrink: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Nunito, sans-serif', fontWeight: 500 }}>
+                    <span style={{ fontSize: 11, color: '#8070A0', marginLeft: 'auto', flexShrink: 0, whiteSpace: 'nowrap', fontFamily: 'Nunito, sans-serif', fontWeight: 500 }}>
                       {formatTime(item.hhmm)}
                     </span>
                   )}
