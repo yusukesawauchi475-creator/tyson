@@ -82,7 +82,7 @@ button:active { transform: translateY(3px) !important; }
   font-weight: 600;
   line-height: 1.4;
   text-align: center;
-  white-space: normal;
+  white-space: pre-line;
   min-width: 280px;
   max-width: 90vw;
   background: rgba(0, 0, 0, 0.92);
