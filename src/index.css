@@ -66,3 +66,30 @@ button:active { transform: translateY(3px) !important; }
 
 .mobile-white-overlay { display: none; }
 .app-foreground { position: relative; z-index: 1; }
+
+/* UI Fix Round 5: 画面中央 popup (voice / photo 送信完了) */
+@keyframes popup-toast-in {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+.popup-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 24px 48px;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  white-space: normal;
+  min-width: 280px;
+  max-width: 90vw;
+  background: rgba(0, 0, 0, 0.92);
+  color: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  z-index: 30000;
+  pointer-events: none;
+  animation: popup-toast-in 200ms ease-out;
+}
