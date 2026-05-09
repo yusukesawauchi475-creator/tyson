@@ -8,7 +8,7 @@ import { db, getIdTokenForApi } from '../lib/firebase'
  * slug を Firestore pair_numbers から pairId に解決し、子ルートへ Outlet context として渡す。
  * Phase 2: localStorage 書き込みを削除（公理1: URL = Source of Truth に準拠）。
  */
-export default function PairWorld() {
+export default function PairWorld({ lang = 'ja' }) {
   const { slug } = useParams()
   const [pairId, setPairId] = useState(null)
   const [error, setError] = useState(null)
@@ -84,5 +84,5 @@ export default function PairWorld() {
       </div>
     )
   }
-  return <Outlet context={{ pairId, slug }} />
+  return <Outlet context={{ pairId, slug, lang }} />
 }

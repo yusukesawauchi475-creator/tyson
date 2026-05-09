@@ -1,6 +1,6 @@
 /**
- * Lightweight i18n for English demo route. No external library.
- * ja = default (existing), en = YC demo.
+ * Lightweight i18n. No external library.
+ * ja = default, en = English, es = Español (CTO 自律起草、native 確認後日)
  */
 
 const dict = {
@@ -211,19 +211,118 @@ const dict = {
     'dailyPrompt.q.what_did_you_enjoy': 'What did you enjoy today?',
     'dailyPrompt.q.put_feelings_in_words': 'If you put your feelings today into words, what would you say?',
   },
+  es: {
+    partnerRecordingListen: 'Grabación del compañero (escuchar)',
+    myRecordingRecordSend: 'Mi grabación (grabar/enviar)',
+    journalSharedAi: 'Diario (privado • 1 por día)',
+    dailyPhotosShared: 'Fotos diarias (compartidas) • hasta 3',
+    parentJournalToday: 'Diario del padre (hoy)',
+    myJournal: 'Mi diario',
+    todayPhotos: 'Fotos de hoy',
+    refresh: 'Actualizar',
+    play: 'Reproducir',
+    record: 'Grabar',
+    gallery: 'Galería',
+    camera: 'Cámara',
+    anotherTopic: 'Otro tema',
+    skip: 'Saltar',
+    reload: 'Recargar',
+    copy: 'Copiar',
+    received: 'Recibido',
+    notReceivedYet: 'Aún no recibido',
+    notReceivedYetOk: 'Aún no recibido (Está bien por hoy)',
+    sentAt: 'Enviado ({{time}})',
+    voiceSentToast: '✅ Grabado\n🎙️ ¡Entregado!',
+    photoSentToast: '✅ Foto enviada\n📷 ¡Entregado!',
+    saved: 'Guardado',
+    savedWithDate: 'Guardado ({{date}})',
+    loading: 'Cargando...',
+    playing: 'Reproduciendo...',
+    sending: 'Enviando...',
+    recording: 'Grabando...',
+    todayPhotosCount: 'Fotos de hoy: {{count}}/3',
+    notUploadedYet: 'Aún no subido',
+    checking: 'Comprobando...',
+    voiceReceivedToday: 'Voz recibida hoy',
+    notYetOkToday: 'Aún no (Está bien por hoy)',
+    tapToEnlarge: 'Toca para ampliar',
+    dailyPhotoLimit: 'Hasta 3 fotos por día',
+    todayTopic: 'Tema de hoy',
+    journalNotice: 'El diario es privado (solo lo ves tú). Las fotos diarias se comparten con tu compañero.',
+    journalShownToPartner: 'El diario es privado (solo lo ves tú).',
+    journalOverwriteConfirm: 'Esto sobrescribirá el diario de hoy. ¿Continuar?',
+    parentJournalAlt: 'Diario del padre',
+    roleLabelParent: 'Padre',
+    roleLabelChild: 'Hijo',
+    photoFromParent: 'Del padre',
+    photoFromChild: 'Del hijo',
+    photoFromUnknown: 'Desconocido',
+    parentJournalZoomAlt: 'Diario del padre (ampliado)',
+    childJournalToday: 'Diario del hijo (hoy)',
+    childJournalAlt: 'Diario del hijo',
+    childJournalZoomAlt: 'Diario del hijo (ampliado)',
+    tryAgain: 'Por favor, inténtalo de nuevo',
+    uploadFailed: 'Algo salió mal. Inténtalo de nuevo (ID: {{id}})',
+    playFailed: 'Algo salió mal. Inténtalo de nuevo (ID: PLAY-ERR)',
+    micDenied: 'Acceso al micrófono denegado',
+    selectImage: 'Por favor, selecciona una imagen',
+    uploadError: 'Error al subir',
+    uploadErrorSize: 'La imagen es demasiado grande. Prueba con un archivo más pequeño',
+    uploadErrorType: 'Formato no compatible. Usa JPEG o PNG',
+    uploadErrorNetwork: 'Error de red. Verifica tu conexión e inténtalo de nuevo',
+    initError: 'Inicialización: {{msg}}',
+    uploadSuccessThanks: '¡Gracias! Tu grabación fue enviada.',
+    finalOneLiner_default: '¡Bien! ¿Qué destacó de tu día?',
+    finalOneLiner_eat: '¡Bien! ¿Qué fue lo más rico que comiste?',
+    finalOneLiner_weather: '¡Bien! ¿Qué te llamó la atención del cielo hoy?',
+    finalOneLiner_fun: '¡Genial! ¿Cuál fue la mejor parte?',
+    finalOneLiner_meet: '¡Bien! ¿De qué hablaron?',
+    finalOneLiner_mood: 'Bien. ¿Cómo describirías tu estado de ánimo ahora?',
+    finalOneLiner_topic: '¡Bien! ¿Qué destacó de "{{topic}}"?',
+    analysisPlaceholder_default: 'Gracias por compartir tu día.',
+    analysisPlaceholder_eat: 'Gracias por compartir lo que comiste.',
+    analysisPlaceholder_weather: 'Gracias por compartir el clima.',
+    analysisPlaceholder_fun: 'Gracias por compartir tu momento destacado.',
+    analysisPlaceholder_meet: 'Gracias por compartir a quién conociste.',
+    analysisPlaceholder_mood: 'Gracias por compartir cómo te sientes.',
+    'dailyPrompt.q.what_did_you_eat': '¿Qué comiste hoy?',
+    'dailyPrompt.q.how_was_weather': '¿Cómo estuvo el clima hoy?',
+    'dailyPrompt.q.fun_highlight': '¿Qué fue lo más divertido de hoy?',
+    'dailyPrompt.q.how_do_you_feel': '¿Cómo te sientes hoy?',
+    'dailyPrompt.q.where_did_you_go': '¿A dónde fuiste hoy?',
+    'dailyPrompt.q.what_left_impression': '¿Qué te causó impresión hoy?',
+    'dailyPrompt.q.who_did_you_meet': '¿A quién viste hoy?',
+    'dailyPrompt.q.what_did_you_do': '¿Qué hiciste hoy?',
+    'dailyPrompt.q.what_did_you_notice': '¿Qué notaste hoy?',
+    'dailyPrompt.q.how_was_your_day': '¿Cómo fue tu día?',
+    'dailyPrompt.q.what_was_highlight': '¿Cuál fue el mejor momento de hoy?',
+    'dailyPrompt.q.what_did_you_learn': '¿Qué aprendiste hoy?',
+    'dailyPrompt.q.what_did_you_feel_today': '¿Qué sentiste hoy?',
+    'dailyPrompt.q.what_memory_today': '¿Qué recuerdo te llevas de hoy?',
+    'dailyPrompt.q.small_happiness': '¿Cuál fue tu pequeña alegría hoy?',
+    'dailyPrompt.q.what_time_today': '¿Cómo pasaste el tiempo hoy?',
+    'dailyPrompt.q.what_talk_about': '¿Qué quieres contar de hoy?',
+    'dailyPrompt.q.what_were_you_thinking': '¿En qué pensabas hoy?',
+    'dailyPrompt.q.describe_in_one_word': 'Si tu día fuera una palabra, ¿cuál sería?',
+    'dailyPrompt.q.mood_color': 'Si tu ánimo de hoy fuera un color, ¿cuál sería?',
+    'dailyPrompt.q.what_went_well': '¿Qué salió bien hoy?',
+    'dailyPrompt.q.look_back_today': 'Mirando atrás, ¿cómo fue tu día?',
+    'dailyPrompt.q.what_did_you_enjoy': '¿Qué disfrutaste hoy?',
+    'dailyPrompt.q.put_feelings_in_words': 'Si pones tus sentimientos en palabras, ¿qué dirías?',
+  },
 }
 
 /**
- * @param {'ja'|'en'} lang
+ * @param {'ja'|'en'|'es'} lang
  * @param {string} key
  * @param {Record<string, string>} [vars]
  * @returns {string}
  */
 export function t(lang, key, vars = {}) {
-  const locale = lang === 'en' ? 'en' : 'ja'
+  const locale = lang === 'es' ? 'es' : (lang === 'en' ? 'en' : 'ja')
   const localeDict = dict[locale] || dict.ja
-  // 英語ルートで dailyPrompt の key のときは dict.ja にフォールバックしない（本文が日本語で出るのを防ぐ）
-  const fallbackJa = (locale === 'en' && typeof key === 'string' && key.startsWith('dailyPrompt.')) ? key : (dict.ja[key] ?? (typeof key === 'string' ? key : ''))
+  // 非 ja ルートで dailyPrompt の key のときは dict.ja にフォールバックしない（本文が日本語で出るのを防ぐ）
+  const fallbackJa = ((locale === 'en' || locale === 'es') && typeof key === 'string' && key.startsWith('dailyPrompt.')) ? key : (dict.ja[key] ?? (typeof key === 'string' ? key : ''))
   let s = localeDict[key] ?? fallbackJa
   if (vars && typeof vars === 'object') {
     Object.keys(vars).forEach((k) => {

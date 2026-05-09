@@ -35,6 +35,7 @@ function RootRoute({ lang = 'ja' }) {
   // 段階10-a-ext: PairWorld の outlet context から pairId を取得、role_history 記録に渡す
   const outletContext = useOutletContext()
   const pairId = outletContext?.pairId ?? null
+  const ctxLang = outletContext?.lang ?? lang
   const [role, setRole] = useState(() => {
     const roleFromUrl = searchParams.get('role')?.trim()
     if (roleFromUrl === 'parent' || roleFromUrl === 'child') {
@@ -47,33 +48,52 @@ function RootRoute({ lang = 'ja' }) {
   const handleSelect = (selectedRole) => setRole(selectedRole)
   const handleChangeRole = () => { clearUserRole('switch-button', pairId); setRole(null) }
 
-  if (!role) return <RoleSelectPage onSelect={handleSelect} lang={lang} pairId={pairId} />
-  if (role === 'parent') return <HomePage lang={lang} onChangeRole={handleChangeRole} />
-  return <PairDailyPage lang={lang} onChangeRole={handleChangeRole} role={role} />
+  if (!role) return <RoleSelectPage onSelect={handleSelect} lang={ctxLang} pairId={pairId} />
+  if (role === 'parent') return <HomePage lang={ctxLang} onChangeRole={handleChangeRole} />
+  return <PairDailyPage lang={ctxLang} onChangeRole={handleChangeRole} role={role} />
+}
+
+function AppRoutes() {
+  const [searchParams] = useSearchParams()
+  const urlLang = searchParams.get('lang')
+  const storedLang = (() => {
+    try { return localStorage.getItem('hum_lang') } catch (_) { return null }
+  })()
+  const validLangs = ['ja', 'en', 'es']
+  const lang = validLangs.includes(urlLang) ? urlLang
+    : validLangs.includes(storedLang) ? storedLang
+    : 'ja'
+
+  const [bannerVisible, setBannerVisible] = useState(false)
+
+  return (
+    <>
+      <PwaInstallBanner lang={lang} onVisibilityChange={setBannerVisible} />
+      <div className="app-foreground app-root" style={bannerVisible ? { paddingTop: BANNER_HEIGHT } : undefined}>
+        <Routes>
+          <Route path="/" element={<RootOrLanding lang={lang} />} />
+          <Route path="/admin" element={<AdminPage lang={lang} />} />
+          <Route path="/demo" element={<DemoPage lang={lang} />} />
+          <Route path="/landing" element={<LandingPage lang={lang} />} />
+          <Route path="/welcome" element={<WelcomePage lang={lang} />} />
+          <Route path="/pair/:slug" element={<PairWorld lang={lang} />}>
+            <Route index element={<RootRoute lang={lang} />} />
+            <Route path="album" element={<AlbumPage lang={lang} />} />
+            <Route path="invite" element={<InvitePage lang={lang} />} />
+          </Route>
+        </Routes>
+      </div>
+    </>
+  )
 }
 
 function App() {
-  const [bannerVisible, setBannerVisible] = useState(false)
   return (
     <>
       <div className="mobile-white-overlay" aria-hidden="true" />
-      <PwaInstallBanner lang="ja" onVisibilityChange={setBannerVisible} />
-      <div className="app-foreground app-root" style={bannerVisible ? { paddingTop: BANNER_HEIGHT } : undefined}>
-        <Router>
-          <Routes>
-            <Route path="/" element={<RootOrLanding />} />
-            <Route path="/admin" element={<AdminPage />} />
-            <Route path="/demo" element={<DemoPage />} />
-            <Route path="/landing" element={<LandingPage />} />
-            <Route path="/welcome" element={<WelcomePage />} />
-            <Route path="/pair/:slug" element={<PairWorld />}>
-              <Route index element={<RootRoute />} />
-              <Route path="album" element={<AlbumPage />} />
-              <Route path="invite" element={<InvitePage />} />
-            </Route>
-          </Routes>
-        </Router>
-      </div>
+      <Router>
+        <AppRoutes />
+      </Router>
     </>
   )
 }
