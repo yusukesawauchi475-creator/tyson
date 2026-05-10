@@ -4,8 +4,8 @@ import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, getDat
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { buildInviteUrl, copyInviteLink } from '../lib/invite'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
-import { t } from '../lib/i18n'
-import DailyPromptCard, { getCountry, cycleCountry } from '../components/DailyPromptCard'
+import { t, getMonthName } from '../lib/i18n'
+import DailyPromptCard from '../components/DailyPromptCard'
 import LanguageSwitch from '../components/LanguageSwitch'
 import { getIdTokenForApi, auth, isFirebaseConfigured } from '../lib/firebase'
 import { getAuth } from 'firebase/auth'
@@ -532,9 +532,11 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
     }
   }, [parentAudioUrl])
 
-  const today = new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', {
-    year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
-  })
+  const _dateNow = new Date()
+  const dateDay = _dateNow.getDate()
+  const dateMonthYear = lang === 'ja'
+    ? `${_dateNow.getFullYear()}年 ${getMonthName(lang, _dateNow.getMonth())}`
+    : `${getMonthName(lang, _dateNow.getMonth())} ${_dateNow.getFullYear()}`
 
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-sans)', background: 'var(--color-bg)', color: 'var(--color-text)', paddingBottom: 72, overflow: 'hidden' }}>
@@ -559,19 +561,17 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
       </header>
 
       {/* Date bar */}
-      <div style={{ background: '#F8F0FF', borderBottom: '1px solid #EEE8FF', padding: '8px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <time style={{ fontSize: 11, color: '#8070A0', fontWeight: 600 }}>{today}</time>
-          <span style={{ fontSize: 11, fontStyle: 'italic', color: '#9080B0' }}>{lang === 'en' ? '1 min a day, connected by voice' : '毎日1分、声でつながる'}</span>
+      <div style={{ background: '#F8F0FF', borderBottom: '1px solid #EEE8FF', padding: '10px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0, flexShrink: 1 }}>
+          <span style={{ fontSize: 22, fontWeight: 600, color: '#6B5B95', lineHeight: 1 }}>{dateDay}</span>
+          <span style={{ fontSize: 10, fontWeight: 500, color: '#6B5B95', opacity: 0.75, letterSpacing: '0.1em', whiteSpace: 'nowrap' }}>{dateMonthYear}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           {/* 段階10-b: Switch button を RoleBadge に吸収（常時 role 表示 + tap で変更） */}
           {onChangeRole && (
             <RoleBadge role="parent" lang={lang} onClick={onChangeRole} />
           )}
-          <button type="button" onClick={() => { cycleCountry(); window.location.reload() }} style={{ padding: '2px 6px', fontSize: 10, color: '#8070A0', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
-            {getCountry().toUpperCase()}
-          </button>
+          <LanguageSwitch lang={lang} />
         </div>
       </div>
 

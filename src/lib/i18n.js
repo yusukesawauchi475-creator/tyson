@@ -110,6 +110,7 @@ const dict = {
     'dailyPrompt.q.look_back_today': '今日の1日を振り返ると？',
     'dailyPrompt.q.what_did_you_enjoy': '今日は何を楽しんだ？',
     'dailyPrompt.q.put_feelings_in_words': '今日の気持ちを言葉にすると？',
+    monthNames: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
   },
   en: {
     partnerRecordingListen: "Partner's recording (listen)",
@@ -210,6 +211,7 @@ const dict = {
     'dailyPrompt.q.look_back_today': 'Looking back on today, how was it?',
     'dailyPrompt.q.what_did_you_enjoy': 'What did you enjoy today?',
     'dailyPrompt.q.put_feelings_in_words': 'If you put your feelings today into words, what would you say?',
+    monthNames: ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'],
   },
   es: {
     partnerRecordingListen: 'Grabación del compañero (escuchar)',
@@ -309,6 +311,7 @@ const dict = {
     'dailyPrompt.q.look_back_today': 'Mirando atrás, ¿cómo fue tu día?',
     'dailyPrompt.q.what_did_you_enjoy': '¿Qué disfrutaste hoy?',
     'dailyPrompt.q.put_feelings_in_words': 'Si pones tus sentimientos en palabras, ¿qué dirías?',
+    monthNames: ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'],
   },
 }
 
@@ -330,6 +333,11 @@ export function t(lang, key, vars = {}) {
     })
   }
   return s
+}
+
+export function getMonthName(lang, monthIndex) {
+  const locale = lang === 'es' ? 'es' : (lang === 'en' ? 'en' : 'ja')
+  return (dict[locale]?.monthNames ?? dict.ja.monthNames)[monthIndex] ?? ''
 }
 
 export { dict }
