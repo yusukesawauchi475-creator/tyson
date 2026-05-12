@@ -80,7 +80,7 @@ export default function WeeklySummary({ lang = 'ja', pairId }) {
 
   return (
     <div style={{ background: 'rgba(192,128,255,0.12)', borderRadius: 10, padding: '8px 14px', fontSize: 12, color: '#8060B0', fontWeight: 600 }}>
-      {lang === 'en' ? 'This week' : '今週'} 🎙{totalVoice}{lang === 'en' ? '' : '回'} 📷{totalPhoto}{lang === 'en' ? '' : '枚'}
+      {lang === 'en' ? 'This week' : lang === 'es' ? 'This week' : '今週'} 🎙{totalVoice}{lang === 'en' ? '' : lang === 'es' ? '' : '回'} 📷{totalPhoto}{lang === 'en' ? '' : lang === 'es' ? '' : '枚'}
     </div>
   )
 }

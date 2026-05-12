@@ -99,7 +99,7 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoC
   const monthLabel = (() => {
     const [y, m] = currentMonth.split('-').map(Number)
     return new Date(y, m - 1).toLocaleDateString(
-      lang === 'en' ? 'en-US' : 'ja-JP',
+      lang === 'en' ? 'en-US' : lang === 'es' ? 'en-US' : 'ja-JP',
       { year: 'numeric', month: 'long' }
     )
   })()
@@ -116,7 +116,7 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoC
           type="button"
           onClick={goPrev}
           style={{ background: 'none', border: 'none', fontSize: 20, color: '#7050C0', cursor: 'pointer', padding: '4px 12px', lineHeight: 1 }}
-          aria-label={lang === 'en' ? 'Previous month' : '前月'}
+          aria-label={lang === 'en' ? 'Previous month' : lang === 'es' ? 'Previous month' : '前月'}
         >‹</button>
         <span style={{ fontSize: 15, fontWeight: 700, color: '#333' }}>{monthLabel}</span>
         <button
@@ -124,7 +124,7 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoC
           onClick={goNext}
           disabled={!canGoNext}
           style={{ background: 'none', border: 'none', fontSize: 20, color: canGoNext ? '#7050C0' : '#DDD', cursor: canGoNext ? 'pointer' : 'default', padding: '4px 12px', lineHeight: 1 }}
-          aria-label={lang === 'en' ? 'Next month' : '翌月'}
+          aria-label={lang === 'en' ? 'Next month' : lang === 'es' ? 'Next month' : '翌月'}
         >›</button>
       </div>
 
@@ -137,7 +137,7 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoC
 
       {loading && (
         <p style={{ textAlign: 'center', fontSize: 13, color: '#8070A0', padding: '32px 0' }}>
-          {lang === 'en' ? 'Loading...' : '読み込み中...'}
+          {lang === 'en' ? 'Loading...' : lang === 'es' ? 'Loading...' : '読み込み中...'}
         </p>
       )}
       {error && (
@@ -148,7 +148,7 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoC
             onClick={() => setCurrentMonth((m) => m)}
             style={{ padding: '8px 20px', fontSize: 12, fontWeight: 600, color: '#fff', background: 'linear-gradient(135deg,#FF80C0,#A060FF)', border: 'none', borderRadius: 10, cursor: 'pointer' }}
           >
-            {lang === 'en' ? 'Retry' : '再試行'}
+            {lang === 'en' ? 'Retry' : lang === 'es' ? 'Retry' : '再試行'}
           </button>
         </div>
       )}

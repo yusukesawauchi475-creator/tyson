@@ -353,12 +353,12 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
 
   const handleShare = () => {
     if (isRecording) {
-      const msg = lang === 'en' ? 'Recording in progress. Stop and navigate away?' : '録音中です。中断して移動しますか？'
+      const msg = lang === 'en' ? 'Recording in progress. Stop and navigate away?' : lang === 'es' ? 'Recording in progress. Stop and navigate away?' : '録音中です。中断して移動しますか？'
       if (!window.confirm(msg)) return
       stopRecording()
     }
     if (!slug) {
-      setToastMsg(lang === 'en' ? 'Cannot share: invalid pair URL' : '共有できません。有効なペアURLからアクセスしてください')
+      setToastMsg(lang === 'en' ? 'Cannot share: invalid pair URL' : lang === 'es' ? 'Cannot share: invalid pair URL' : '共有できません。有効なペアURLからアクセスしてください')
       setTimeout(() => setToastMsg(null), 2500)
       return
     }
@@ -549,12 +549,12 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {daysSinceStart > 0 && (
             <span style={{ padding: '4px 12px', fontSize: 13, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,0.25)', borderRadius: 20 }}>
-              {daysSinceStart}{lang === 'en' ? 'd' : '日目'}
+              {daysSinceStart}{lang === 'en' ? 'd' : lang === 'es' ? 'd' : '日目'}
             </span>
           )}
           {streakCount > 0 && (
             <span style={{ padding: '4px 12px', fontSize: 13, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,0.25)', borderRadius: 20 }}>
-              🔥{streakCount}{lang === 'en' ? 'd' : '日連続'}
+              🔥{streakCount}{lang === 'en' ? 'd' : lang === 'es' ? 'd' : '日連続'}
             </span>
           )}
         </div>
@@ -582,7 +582,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
         <section style={{ width: '100%', background: '#b8f0d8', borderRadius: 20, padding: 16, boxShadow: '0 4px 0 0 #6bbf96', overflow: 'hidden', fontFamily: 'Nunito, sans-serif' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <span style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>👂</span>
-            <span style={{ fontSize: 15, fontWeight: 800, color: '#1a5c3a' }}>{lang === 'en' ? "Listen to partner's voice" : '相手の声を聴く'}</span>
+            <span style={{ fontSize: 15, fontWeight: 800, color: '#1a5c3a' }}>{lang === 'en' ? "Listen to partner's voice" : lang === 'es' ? "Listen to partner's voice" : '相手の声を聴く'}</span>
           </div>
           <div style={{ position: 'relative', width: '100%' }}>
             {hasParentAudio === true ? (
@@ -590,12 +590,12 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
                 {isLoadingParent
                   ? t(lang, 'loading')
                   : isPlayingParent
-                    ? (lang === 'en' ? '⏹ Stop' : '⏹ 停止')
-                    : `${lang === 'en' ? '▶ Play' : '▶ 再生'}${isParentUnseen ? ' 🔴' : ''}`}
+                    ? (lang === 'en' ? '⏹ Stop' : lang === 'es' ? '⏹ Stop' : '⏹ 停止')
+                    : `${lang === 'en' ? '▶ Play' : lang === 'es' ? '▶ Play' : '▶ 再生'}${isParentUnseen ? ' 🔴' : ''}`}
               </button>
             ) : (
               <button type="button" disabled style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#1a6645', background: '#fff', border: 'none', borderRadius: 14, cursor: 'default', boxShadow: '0 4px 0 #a8d8bc', opacity: 0.4, fontFamily: 'Nunito, sans-serif' }}>
-                {lang === 'en' ? '▶ Play' : '▶ 再生'}
+                {lang === 'en' ? '▶ Play' : lang === 'es' ? '▶ Play' : '▶ 再生'}
               </button>
             )}
             {hasParentAudio === true && isPlayingParent && (
@@ -610,15 +610,15 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
         <section style={{ width: '100%', background: '#f5d8e0', borderRadius: 20, padding: 16, boxShadow: '0 4px 0 0 #c98fa0', overflow: 'hidden', fontFamily: 'Nunito, sans-serif' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <span style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🎙</span>
-            <span style={{ fontSize: 15, fontWeight: 800, color: '#6b2a3a' }}>{lang === 'en' ? 'Record & send your voice' : '声を録って送る'}</span>
+            <span style={{ fontSize: 15, fontWeight: 800, color: '#6b2a3a' }}>{lang === 'en' ? 'Record & send your voice' : lang === 'es' ? 'Record & send your voice' : '声を録って送る'}</span>
           </div>
           {/* 段階10-b: 録音直上に role 確認 text、誤 upload 防止 */}
           <p style={{ textAlign: 'center', fontSize: 12, color: '#6b2a3a', margin: '0 0 8px', fontWeight: 600 }}>
-            ▶ {lang === 'en' ? 'Recording as Parent' : '親として録音します'} 👴🏻👵🏻
+            ▶ {lang === 'en' ? 'Recording as Parent' : lang === 'es' ? 'Recording as Parent' : '親として録音します'} 👴🏻👵🏻
           </p>
           <div style={{ position: 'relative', width: '100%' }}>
             <button type="button" onClick={handleClick} disabled={isUploading} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#fff', background: isUploading ? '#B0A0C8' : isRecording ? '#E04040' : '#c0536e', border: 'none', borderRadius: 14, cursor: isUploading ? 'wait' : 'pointer', boxShadow: isUploading ? 'none' : isRecording ? '0 4px 0 #901010' : '0 4px 0 #8a2a42', fontFamily: 'Nunito, sans-serif' }}>
-              {isUploading ? t(lang, 'sending') : isRecording ? (lang === 'en' ? '⏹ Recording...' : '⏹ 録音中…') : (lang === 'en' ? '🎙 Record' : '🎙 録音')}
+              {isUploading ? t(lang, 'sending') : isRecording ? (lang === 'en' ? '⏹ Recording...' : lang === 'es' ? '⏹ Recording...' : '⏹ 録音中…') : (lang === 'en' ? '🎙 Record' : lang === 'es' ? '🎙 Record' : '🎙 録音')}
             </button>
             {isRecording && (
               <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 14, overflow: 'hidden' }}>
@@ -635,7 +635,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <span style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>📷</span>
             <span style={{ fontSize: 15, fontWeight: 800, color: '#3a1a7a' }}>
-              {lang === 'en' ? 'Send photos' : '写真を送る'} · {isDemoTest ? 3 : photos.filter((p) => p.role === ROLE_PARENT).length}/3
+              {lang === 'en' ? 'Send photos' : lang === 'es' ? 'Send photos' : '写真を送る'} · {isDemoTest ? 3 : photos.filter((p) => p.role === ROLE_PARENT).length}/3
             </span>
           </div>
 
@@ -646,7 +646,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           {photos.length > 0 && (
             <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
               {photos.slice(0, 6).map((ph, i) => (
-                <button key={ph.storagePath + String(i)} type="button" onClick={() => { if (!slug) { console.error('slug required'); return } navigate(`/pair/${slug}/album`, { state: { scrollToDate: dateKey } }) }} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 10, overflow: 'hidden', flexShrink: 0 }} aria-label={lang === 'en' ? 'View in album' : 'アルバムで見る'}>
+                <button key={ph.storagePath + String(i)} type="button" onClick={() => { if (!slug) { console.error('slug required'); return } navigate(`/pair/${slug}/album`, { state: { scrollToDate: dateKey } }) }} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 10, overflow: 'hidden', flexShrink: 0 }} aria-label={lang === 'en' ? 'View in album' : lang === 'es' ? 'View in album' : 'アルバムで見る'}>
                   <img src={ph.url || ''} alt="" width={48} height={48} style={{ width: 48, height: 48, objectFit: 'cover', display: 'block', borderRadius: 10 }} />
                 </button>
               ))}
@@ -658,7 +658,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           )}
 
           <button type="button" disabled={journalUploading} onClick={() => { if (isDemoTest) { setDemoModalOpen(true); return } if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#fff', background: '#7c4fd4', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 0 #4a2490', fontFamily: 'Nunito, sans-serif' }}>
-            {lang === 'en' ? '📷 Add Photo' : '📷 写真を追加する'}
+            {lang === 'en' ? '📷 Add Photo' : lang === 'es' ? '📷 Add Photo' : '📷 写真を追加する'}
           </button>
 
         </section>
@@ -668,17 +668,17 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
 
       {/* Bottom nav */}
       <nav className="bottom-nav">
-        <button type="button" className="active"><span style={{ fontSize: 20 }}>🏠</span><span>{lang === 'en' ? 'Home' : 'ホーム'}</span></button>
+        <button type="button" className="active"><span style={{ fontSize: 20 }}>🏠</span><span>{lang === 'en' ? 'Home' : lang === 'es' ? 'Home' : 'ホーム'}</span></button>
         <button type="button" onClick={() => {
           if (isRecording) {
-            const msg = lang === 'en' ? 'Recording in progress. Stop and navigate away?' : '録音中です。中断して移動しますか？'
+            const msg = lang === 'en' ? 'Recording in progress. Stop and navigate away?' : lang === 'es' ? 'Recording in progress. Stop and navigate away?' : '録音中です。中断して移動しますか？'
             if (!window.confirm(msg)) return
             stopRecording()
           }
           if (!slug) { console.error('slug required'); return }
           navigate(`/pair/${slug}/album`)
-        }}><span style={{ fontSize: 20 }}>🖼</span><span>{lang === 'en' ? 'Album' : 'アルバム'}</span></button>
-        <button type="button" onClick={handleShare}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : '招待'}</span></button>
+        }}><span style={{ fontSize: 20 }}>🖼</span><span>{lang === 'en' ? 'Album' : lang === 'es' ? 'Album' : 'アルバム'}</span></button>
+        <button type="button" onClick={handleShare}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : lang === 'es' ? 'Invite' : '招待'}</span></button>
       </nav>
 
       <audio ref={parentAudioRef} onEnded={handleParentEnded} onPause={() => setIsPlayingParent(false)} style={{ display: 'none' }} />

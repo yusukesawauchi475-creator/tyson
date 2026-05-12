@@ -106,7 +106,7 @@ function getEventTopic(dateKey, country, lang) {
   const [, m, d] = dateKey.split('-').map(Number)
   const date = new Date(dateKey + 'T12:00:00')
   const dow = date.getDay() // 0=Sun
-  const isEn = lang === 'en'
+  const isEn = lang === 'en' || lang === 'es'
 
   // Shared events
   if (m === 1 && d === 1) return isEn ? "What's your New Year's wish for our family?" : '家族への新年の願いは？'
@@ -259,7 +259,7 @@ export default function DailyPromptCard({ pairId, role, onTopicChange, lang = 'j
 
   if (!isVisible || isSkipped) return null
 
-  const isEn = String(lang) === 'en'
+  const isEn = String(lang) === 'en' || String(lang) === 'es'
   const topicDisplay = aiTopic || (isEn ? TOPICS_EN[topicIndex] : TOPICS[topicIndex]) || TOPICS[0]
 
   return (

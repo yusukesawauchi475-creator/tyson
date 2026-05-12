@@ -69,7 +69,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
   const formatDate = (dateKey) => {
     if (!dateKey) return ''
     const [, m, d] = dateKey.split('-').map(Number)
-    return lang === 'en' ? `${m}/${d}` : `${m}月${d}日`
+    return lang === 'en' ? `${m}/${d}` : lang === 'es' ? `${m}/${d}` : `${m}月${d}日`
   }
 
   const formatTime = formatTime12hLowerFromHHMM
@@ -119,10 +119,10 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
   if (days.length === 0) return (
     <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
       <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-        {lang === 'en' ? '🎧 Voice History' : '🎧 過去の声'}
+        {lang === 'en' ? '🎧 Voice History' : lang === 'es' ? '🎧 Voice History' : '🎧 過去の声'}
       </p>
       <p style={{ fontSize: 13, color: '#8070A0', textAlign: 'center', margin: 0 }}>
-        {lang === 'en' ? 'No voice messages yet.' : 'まだ音声がありません'}
+        {lang === 'en' ? 'No voice messages yet.' : lang === 'es' ? 'No voice messages yet.' : 'まだ音声がありません'}
       </p>
     </section>
   )
@@ -219,7 +219,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
                   {/* 段階10-b: 非 admin でも訂正済 item には ✏️ マーク（緑ボックス内右側に表示） */}
                   {!adminMode && isCorrected(item) && (
                     <span
-                      title={lang === 'en' ? 'Corrected' : '訂正済'}
+                      title={lang === 'en' ? 'Corrected' : lang === 'es' ? 'Corrected' : '訂正済'}
                       style={{ fontSize: 11, color: '#C08040', marginLeft: 4 }}
                     >✏️</span>
                   )}
@@ -228,13 +228,13 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
                   href={item.url}
                   download={filename}
                   onClick={(e) => e.stopPropagation()}
-                  title={lang === 'en' ? 'Download' : 'ダウンロード'}
+                  title={lang === 'en' ? 'Download' : lang === 'es' ? 'Download' : 'ダウンロード'}
                   style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     padding: '0 8px', fontSize: 16, color: '#8070A0',
                     textDecoration: 'none', flexShrink: 0, borderRadius: 8,
                   }}
-                  aria-label={lang === 'en' ? 'Download voice' : '音声を保存'}
+                  aria-label={lang === 'en' ? 'Download voice' : lang === 'es' ? 'Download voice' : '音声を保存'}
                 >⬇</a>
                 {/* 段階10-a: admin mode で反対 role への訂正ボタン（immutable 追記） */}
                 {adminMode && onCorrect && (
@@ -275,7 +275,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
   return (
     <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
       <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-        {lang === 'en' ? '🎧 Voice History' : '🎧 過去の声'}
+        {lang === 'en' ? '🎧 Voice History' : lang === 'es' ? '🎧 Voice History' : '🎧 過去の声'}
       </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -300,8 +300,8 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
             return (
               <div key={day.dateKey} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0', borderBottom: '1px solid #EEE8FF' }}>
                 <span style={{ fontSize: 12, color: '#8070A0', fontWeight: 600, minWidth: 50, paddingTop: 8 }}>{formatDate(day.dateKey)}</span>
-                {renderRoleColumn(day.dateKey, 'parent', parent, lang === 'en' ? 'Parent' : '親')}
-                {renderRoleColumn(day.dateKey, 'child', child, lang === 'en' ? 'Child' : '子')}
+                {renderRoleColumn(day.dateKey, 'parent', parent, lang === 'en' ? 'Parent' : lang === 'es' ? 'Parent' : '親')}
+                {renderRoleColumn(day.dateKey, 'child', child, lang === 'en' ? 'Child' : lang === 'es' ? 'Child' : '子')}
               </div>
             )
           }
@@ -327,7 +327,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
                     >
                       <span>{formatMonthLabel(monthKey)}</span>
                       <span style={{ fontSize: 11, color: '#8070A0', fontWeight: 500 }}>
-                        {mDays.length}{lang === 'en' ? ' days' : '日'} {expanded ? '▲' : '▼'}
+                        {mDays.length}{lang === 'en' ? ' days' : lang === 'es' ? ' days' : '日'} {expanded ? '▲' : '▼'}
                       </span>
                     </button>
                     {expanded && mDays.map(renderDay)}

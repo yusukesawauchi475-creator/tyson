@@ -116,14 +116,14 @@ export default function DemoPage({ lang = 'ja' }) {
     } else {
       try {
         await navigator.clipboard.writeText(`${text}\n${url}`)
-        alert(lang === 'en' ? 'Link copied!' : 'リンクをコピーしました')
+        alert(lang === 'en' ? 'Link copied!' : lang === 'es' ? 'Link copied!' : 'リンクをコピーしました')
       } catch (_) {
-        alert(lang === 'en' ? 'Copy failed' : 'コピーに失敗しました')
+        alert(lang === 'en' ? 'Copy failed' : lang === 'es' ? 'Copy failed' : 'コピーに失敗しました')
       }
     }
   }
 
-  const today = new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'ja-JP', {
+  const today = new Date().toLocaleDateString(lang === 'en' ? 'en-US' : lang === 'es' ? 'en-US' : 'ja-JP', {
     year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
   })
 
@@ -150,14 +150,14 @@ export default function DemoPage({ lang = 'ja' }) {
           <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: '#FF8C00', padding: '3px 10px', borderRadius: 10 }}>DEMO</span>
         </div>
         <p style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.9)', margin: 0, letterSpacing: '0.02em' }}>
-          {lang === 'en' ? '1 min a day, connected by voice' : '毎日1分、声でつながる家族アプリ'}
+          {lang === 'en' ? '1 min a day, connected by voice' : lang === 'es' ? '1 min a day, connected by voice' : '毎日1分、声でつながる家族アプリ'}
         </p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 12 }}>
           <span style={{ padding: '4px 12px', fontSize: 13, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,0.25)', borderRadius: 20 }}>
-            55{lang === 'en' ? 'd' : '日目'}
+            55{lang === 'en' ? 'd' : lang === 'es' ? 'd' : '日目'}
           </span>
           <span style={{ padding: '4px 12px', fontSize: 13, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,0.25)', borderRadius: 20 }}>
-            🔥7{lang === 'en' ? 'd' : '日連続'}
+            🔥7{lang === 'en' ? 'd' : lang === 'es' ? 'd' : '日連続'}
           </span>
         </div>
       </header>
@@ -176,7 +176,7 @@ export default function DemoPage({ lang = 'ja' }) {
             <span style={{ marginLeft: 6, color: '#E04040' }}>●</span>
           </p>
           <button type="button" onClick={handlePlayParent} style={{ width: '100%', padding: 14, fontSize: 15, fontWeight: 700, color: '#fff', background: isPlayingParent ? 'linear-gradient(160deg,#E04040,#C02020)' : 'linear-gradient(160deg,#40D890,#18B868)', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: isPlayingParent ? '0 5px 0 #901010' : '0 5px 0 #109848', marginBottom: 10 }}>
-            {isPlayingParent ? (lang === 'en' ? '⏹ Stop' : '⏹ 停止') : (lang === 'en' ? '▶ Play' : '▶ 再生')}
+            {isPlayingParent ? (lang === 'en' ? '⏹ Stop' : lang === 'es' ? '⏹ Stop' : '⏹ 停止') : (lang === 'en' ? '▶ Play' : lang === 'es' ? '▶ Play' : '▶ 再生')}
           </button>
         </section>
 
@@ -187,14 +187,14 @@ export default function DemoPage({ lang = 'ja' }) {
             {t(lang, 'record')}
           </button>
           <p style={{ fontSize: 11, color: '#B08050', textAlign: 'center', margin: '8px 0 0' }}>
-            {lang === 'en' ? 'Recording is disabled in demo mode' : 'デモモードでは録音できません'}
+            {lang === 'en' ? 'Recording is disabled in demo mode' : lang === 'es' ? 'Recording is disabled in demo mode' : 'デモモードでは録音できません'}
           </p>
         </section>
 
         {/* Today's Photos */}
         <section style={{ width: '100%', minHeight: 120, background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: '#7050C0', margin: '0 0 10px' }}>
-            📷 {lang === 'en' ? "Today's Photos" : '今日の写真'}　<span style={{ fontWeight: 500, color: '#8070A0' }}>3{lang === 'en' ? '' : '枚'}</span>
+            📷 {lang === 'en' ? "Today's Photos" : lang === 'es' ? "Today's Photos" : '今日の写真'}　<span style={{ fontWeight: 500, color: '#8070A0' }}>3{lang === 'en' ? '' : lang === 'es' ? '' : '枚'}</span>
           </p>
           <div style={{ display: 'flex', gap: 8 }}>
             {[
@@ -212,7 +212,7 @@ export default function DemoPage({ lang = 'ja' }) {
         {/* (3) Photo album grouped by date */}
         <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: '#7050C0', margin: '0 0 14px' }}>
-            📷 {lang === 'en' ? 'Photo Album' : 'フォトアルバム'}　<span style={{ fontWeight: 500, color: '#8070A0' }}>{allPhotos.length}{lang === 'en' ? ' photos' : '枚'}</span>
+            📷 {lang === 'en' ? 'Photo Album' : lang === 'es' ? 'Photo Album' : 'フォトアルバム'}　<span style={{ fontWeight: 500, color: '#8070A0' }}>{allPhotos.length}{lang === 'en' ? ' photos' : lang === 'es' ? ' photos' : '枚'}</span>
           </p>
 
           {albumDays.map((day) => (
@@ -239,8 +239,8 @@ export default function DemoPage({ lang = 'ja' }) {
 
         {/* Photo upload button (demo disabled) */}
         <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 18, padding: 18, overflow: 'hidden' }}>
-          <button type="button" onClick={() => { setErrorLine(lang === 'en' ? 'Photo upload is disabled in demo mode' : 'デモモードでは写真を追加できません'); setTimeout(() => setErrorLine(null), 3000) }} style={{ width: '100%', padding: 16, fontSize: 15, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg, #7050C0, #A060FF)', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 16px rgba(112,80,192,0.3)' }}>
-            📷 {lang === 'en' ? 'Add Photos' : '写真を追加する'}
+          <button type="button" onClick={() => { setErrorLine(lang === 'en' ? 'Photo upload is disabled in demo mode' : lang === 'es' ? 'Photo upload is disabled in demo mode' : 'デモモードでは写真を追加できません'); setTimeout(() => setErrorLine(null), 3000) }} style={{ width: '100%', padding: 16, fontSize: 15, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg, #7050C0, #A060FF)', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 16px rgba(112,80,192,0.3)' }}>
+            📷 {lang === 'en' ? 'Add Photos' : lang === 'es' ? 'Add Photos' : '写真を追加する'}
           </button>
         </section>
 
@@ -248,7 +248,7 @@ export default function DemoPage({ lang = 'ja' }) {
         <section style={{ width: '100%', textAlign: 'center', padding: '8px 0' }}>
           <style>{`@keyframes badgeBounce { 0%,100% { transform: perspective(400px) rotateY(0deg) scale(1); } 50% { transform: perspective(400px) rotateY(180deg) scale(1.1); } }`}</style>
           <button type="button" onClick={() => navigate(`/pair/${DEMO_PAIR_ID}/album`)} style={{ padding: '12px 28px', fontSize: 14, fontWeight: 700, color: '#7050C0', background: '#fff', border: '2px solid #E0D8FF', borderRadius: 16, cursor: 'pointer', position: 'relative' }}>
-            📷 {lang === 'en' ? 'View Album' : 'アルバムを見る'}
+            📷 {lang === 'en' ? 'View Album' : lang === 'es' ? 'View Album' : 'アルバムを見る'}
             <span style={{ position: 'absolute', top: -8, right: -8, background: 'linear-gradient(135deg, #FF6090, #FF8C00)', color: '#fff', fontSize: 9, fontWeight: 800, padding: '3px 7px', borderRadius: 10, boxShadow: '0 2px 8px rgba(255,96,144,.4)', animation: 'badgeBounce 3s ease-in-out infinite', display: 'inline-block' }}>NEW</span>
           </button>
         </section>
@@ -263,7 +263,7 @@ export default function DemoPage({ lang = 'ja' }) {
           onClick={() => navigate(`/pair/${DEMO_PAIR_ID}`)}
           style={{ width: '100%', maxWidth: 480, margin: '0 auto', display: 'block', padding: 20, fontSize: 18, fontWeight: 800, color: '#fff', background: 'linear-gradient(135deg, #FF60B0 0%, #A060FF 50%, #60B0FF 100%)', border: 'none', borderRadius: 18, cursor: 'pointer', boxShadow: '0 4px 16px rgba(192,128,255,0.4)', animation: 'demoPulse 2s ease-in-out infinite', letterSpacing: '0.02em' }}
         >
-          {lang === 'en' ? '✨ Try this app' : '✨ このアプリを使ってみる'}
+          {lang === 'en' ? '✨ Try this app' : lang === 'es' ? '✨ Try this app' : '✨ このアプリを使ってみる'}
         </button>
       </div>
 
