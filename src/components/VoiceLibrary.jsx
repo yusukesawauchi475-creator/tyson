@@ -3,6 +3,7 @@ import { markSeen, getDateKeyNY } from '../lib/pairDaily'
 import { getIdTokenForApi } from '../lib/firebase'
 import { getEffectiveRole, isCorrected } from '../lib/voiceRole'
 import { formatTime12hLowerFromHHMM } from '../lib/dateFormat'
+import { isVoiceListened, markVoiceListened } from '../lib/listenedTracking'
 
 export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pairIdProp, onDataLoaded, adminMode = false, onCorrect }) {
   const [days, setDays] = useState([])
@@ -35,7 +36,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
     return () => { cancelled = true }
   }, [effectivePairId])
 
-  const handlePlay = (dateKey, r, url) => {
+  const handlePlay = (dateKey, r, url, hhmm) => {
     const key = url
     const el = audioRef.current
     if (!el || !url) return
@@ -56,6 +57,8 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
       const partnerRole = role === 'parent' ? 'child' : 'parent'
       if (!adminMode && r === partnerRole) {
         markSeen(r, effectivePairId, dateKey)
+        // Phase 1: per-item localStorage listened tracking
+        markVoiceListened(effectivePairId, dateKey, r, hhmm)
         setDays(prev => prev.map(d => {
           if (d.dateKey !== dateKey) return d
           return { ...d, [r]: d[r] ? { ...d[r], isUnseen: false } : d[r] }
@@ -175,7 +178,10 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
     }
 
     const isMyRole = role === r
-    const dayUnseen = !!(roleData?.isUnseen && !isMyRole)
+    const isPartner = !isMyRole
+    const todayKey = getDateKeyNY()
+    const isToday = dateKey === todayKey
+    const dayUnseen = !!(roleData?.isUnseen && isPartner)
     const latestIdx = items.length - 1 // 昇順なので最新は末尾
 
     return (
@@ -183,9 +189,18 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
         {items.map((item, idx) => {
           const key = item.url
           const isPlaying = playingKey === key
-          // 未再生マークは最新の1件にのみ表示
-          const showUnseen = dayUnseen && idx === latestIdx
+          // Phase 1: 今日 partner voice は per-item localStorage tracking、過去日は既存動作 (latest のみ 🔴)
+          let showUnseen = false
+          if (isPartner) {
+            if (isToday) {
+              showUnseen = !isVoiceListened(effectivePairId, dateKey, r, item.hhmm)
+            } else {
+              showUnseen = dayUnseen && idx === latestIdx
+            }
+          }
           const borderColor = showUnseen ? '#E04040' : '#30A870'
+          // Phase 1: 今日 partner 未聴 cell に accent border-left (mistake 12 強化系 mock-up 整合)
+          const showAccentLeft = showUnseen && isToday
           // 段階9: 保存用ファイル名 hum_{pairId}_{dateKey}_{role}[_{hhmm}].mp3
           const filename = `hum_${effectivePairId || 'pair'}_${dateKey}_${r}${item.hhmm ? `_${item.hhmm}` : ''}.mp3`
           return (
@@ -194,15 +209,17 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
               <div style={{ display: 'flex', alignItems: 'stretch', gap: 4, minWidth: 0 }}>
                 <button
                   type="button"
-                  onClick={() => handlePlay(dateKey, r, item.url)}
+                  onClick={() => handlePlay(dateKey, r, item.url, item.hhmm)}
                   style={{
-                    flex: 1, padding: '8px 6px', fontSize: 11, fontWeight: 600,
+                    flex: 1, padding: showAccentLeft ? '8px 6px 8px 2px' : '8px 6px', fontSize: 11, fontWeight: 600,
                     color: '#555', background: isPlaying ? '#E8E0FF' : '#fff',
                     border: `2px solid ${borderColor}`,
+                    borderLeft: showAccentLeft ? '6px solid #B8A0E8' : `2px solid ${borderColor}`,
                     borderRadius: 10, cursor: 'pointer',
                     display: 'flex', alignItems: 'center', gap: 4,
                     whiteSpace: 'nowrap', overflow: 'hidden', minWidth: 0,
                     boxSizing: 'border-box',
+                    transition: 'border-left 300ms ease, padding-left 300ms ease',
                   }}
                 >
                   <span style={{ fontSize: 13, flexShrink: 0 }}>{showUnseen ? '🔴' : '✅'}</span>

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, getDateKey, genRequestId, getStreak, updateStreak } from '../lib/pairDaily'
+import { markVoiceListened, getTodayPartnerUnlistenedStats } from '../lib/listenedTracking'
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { buildInviteUrl, copyInviteLink } from '../lib/invite'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
@@ -39,6 +40,8 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   const [parentAudioUrl, setParentAudioUrl] = useState(null)
   const [isLoadingParent, setIsLoadingParent] = useState(false)
   const [isPlayingParent, setIsPlayingParent] = useState(false)
+  // Phase 1: 今日 partner (child) voice の 未聴 stats
+  const [partnerStats, setPartnerStats] = useState({ unlistened: 0, total: 0, latestHhmm: null })
   const [oneLiner, setOneLiner] = useState('')
   const [oneLinerStage, setOneLinerStage] = useState(null)
   const [oneLinerVisible, setOneLinerVisible] = useState(false)
@@ -470,6 +473,21 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
     return () => { stop(); document.removeEventListener('visibilitychange', onVisibility) }
   }, [])
 
+  // Phase 1: 今日 partner (child) voice の 未聴 stats fetch (mount + visibilitychange)
+  const refreshPartnerStats = useCallback(() => {
+    if (isDemoTest || !currentPairId) return
+    getTodayPartnerUnlistenedStats(currentPairId, LISTEN_ROLE_CHILD)
+      .then((s) => setPartnerStats(s))
+      .catch(() => {})
+  }, [currentPairId, isDemoTest])
+
+  useEffect(() => {
+    refreshPartnerStats()
+    const onVis = () => { if (document.visibilityState === 'visible') refreshPartnerStats() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [refreshPartnerStats])
+
   const handleStopParent = () => {
     const el = parentAudioRef.current
     if (el) { el.pause(); el.currentTime = 0 }
@@ -514,6 +532,12 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
         setIsPlayingParent(true)
         const seenDateKey = result.dateKey || partnerDateKeyRef.current
         markSeen(LISTEN_ROLE_CHILD, currentPairId, seenDateKey).then(() => setIsParentUnseen(false)).catch(() => {})
+        // Phase 1: Home Play は最新 voice 再生 → 該当 hhmm を listened にマーク + count 即減
+        const todayKey = getDateKey()
+        if (seenDateKey === todayKey && partnerStats.latestHhmm !== null) {
+          markVoiceListened(currentPairId, todayKey, LISTEN_ROLE_CHILD, partnerStats.latestHhmm)
+          setPartnerStats((prev) => ({ ...prev, unlistened: Math.max(0, prev.unlistened - 1) }))
+        }
       }
     } catch (playErr) {
       console.error('[handlePlayParent] play() FAILED:', playErr?.name, playErr?.message, playErr)
@@ -587,11 +611,19 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           <div style={{ position: 'relative', width: '100%' }}>
             {hasParentAudio === true ? (
               <button type="button" onClick={handlePlayParent} disabled={isLoadingParent} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#1a6645', background: '#fff', border: 'none', borderRadius: 14, cursor: isLoadingParent ? 'wait' : 'pointer', boxShadow: '0 4px 0 #a8d8bc', fontFamily: 'Nunito, sans-serif' }}>
-                {isLoadingParent
-                  ? t(lang, 'loading')
-                  : isPlayingParent
-                    ? (lang === 'en' ? '⏹ Stop' : lang === 'es' ? '⏹ Stop' : '⏹ 停止')
-                    : `${lang === 'en' ? '▶ Play' : lang === 'es' ? '▶ Play' : '▶ 再生'}${isParentUnseen ? ' 🔴' : ''}`}
+                {isLoadingParent ? t(lang, 'loading') : (
+                  <>
+                    {isPlayingParent
+                      ? (lang === 'en' ? '⏹ Stop' : lang === 'es' ? '⏹ Stop' : '⏹ 停止')
+                      : (lang === 'en' ? '▶ Play' : lang === 'es' ? '▶ Play' : '▶ 再生')}
+                    {partnerStats.total >= 1 && (
+                      <span style={{ fontSize: 11, color: '#888', fontWeight: 600, marginLeft: 6 }}>
+                        ({partnerStats.total - partnerStats.unlistened}/{partnerStats.total})
+                      </span>
+                    )}
+                    {!isPlayingParent && ((partnerStats.total >= 1 && partnerStats.unlistened > 0) || (partnerStats.total === 0 && isParentUnseen)) ? ' 🔴' : ''}
+                  </>
+                )}
               </button>
             ) : (
               <button type="button" disabled style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#1a6645', background: '#fff', border: 'none', borderRadius: 14, cursor: 'default', boxShadow: '0 4px 0 #a8d8bc', opacity: 0.4, fontFamily: 'Nunito, sans-serif' }}>
@@ -677,7 +709,11 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           }
           if (!slug) { console.error('slug required'); return }
           navigate(`/pair/${slug}/album`)
-        }}><span style={{ fontSize: 20 }}>🖼</span><span>{lang === 'en' ? 'Album' : lang === 'es' ? 'Album' : 'アルバム'}</span></button>
+        }}><span style={{ fontSize: 20, position: 'relative', display: 'inline-block' }}>🖼{partnerStats.unlistened > 0 && (
+          <span style={{ position: 'absolute', top: -4, right: -10, minWidth: 18, height: 18, padding: '0 5px', boxSizing: 'border-box', borderRadius: 9, background: '#B8A0E8', color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, border: '1.5px solid #fff', fontFamily: 'Nunito, sans-serif' }}>
+            {partnerStats.unlistened >= 10 ? '9+' : partnerStats.unlistened}
+          </span>
+        )}</span><span>{lang === 'en' ? 'Album' : lang === 'es' ? 'Album' : 'アルバム'}</span></button>
         <button type="button" onClick={handleShare}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : lang === 'es' ? 'Invite' : '招待'}</span></button>
       </nav>
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { getDateKey, fetchAudioForPlayback, hasTodayAudio, getListenRoleMeta, markSeen, uploadAudio, genRequestId, getStreak, updateStreak } from '../lib/pairDaily'
+import { markVoiceListened, getTodayPartnerUnlistenedStats } from '../lib/listenedTracking'
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { buildInviteUrl, copyInviteLink } from '../lib/invite'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
@@ -37,6 +38,8 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   const [audioUrl, setAudioUrl] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
+  // Phase 1: 今日 partner (parent) voice の 未聴 stats
+  const [partnerStats, setPartnerStats] = useState({ unlistened: 0, total: 0, latestHhmm: null })
   const [errorLine, setErrorLine] = useState(null)
   const [isRecording, setIsRecording] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -319,6 +322,21 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
     refreshComment()
   }, [refreshComment])
 
+  // Phase 1: 今日 partner (parent) voice の 未聴 stats fetch (mount + visibilitychange)
+  const refreshPartnerStats = useCallback(() => {
+    if (isDemoTest || !currentPairId) return
+    getTodayPartnerUnlistenedStats(currentPairId, LISTEN_ROLE_PARENT)
+      .then((s) => setPartnerStats(s))
+      .catch(() => {})
+  }, [currentPairId, isDemoTest])
+
+  useEffect(() => {
+    refreshPartnerStats()
+    const onVis = () => { if (document.visibilityState === 'visible') refreshPartnerStats() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [refreshPartnerStats])
+
   const handleStop = () => {
     const el = audioRef.current
     if (el) { el.pause(); el.currentTime = 0 }
@@ -377,6 +395,12 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
         setIsPlaying(true)
         const seenDateKey = result.dateKey || partnerDateKeyRef.current
         markSeen(LISTEN_ROLE_PARENT, currentPairId, seenDateKey).then(() => setIsChildUnseen(false)).catch(() => {})
+        // Phase 1: Home Play は最新 voice 再生 → 該当 hhmm を listened にマーク + count 即減
+        const todayKey = getDateKey()
+        if (seenDateKey === todayKey && partnerStats.latestHhmm !== null) {
+          markVoiceListened(currentPairId, todayKey, LISTEN_ROLE_PARENT, partnerStats.latestHhmm)
+          setPartnerStats((prev) => ({ ...prev, unlistened: Math.max(0, prev.unlistened - 1) }))
+        }
       }
     } catch (playErr) {
       console.error('[handlePlay] play() FAILED:', playErr?.name, playErr?.message, playErr)
@@ -784,11 +808,19 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
           <div style={{ position: 'relative', width: '100%' }}>
             {hasAudio === true ? (
               <button type="button" onClick={handlePlay} disabled={isLoading} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#1a6645', background: '#fff', border: 'none', borderRadius: 14, cursor: isLoading ? 'wait' : 'pointer', boxShadow: '0 4px 0 #a8d8bc', fontFamily: 'Nunito, sans-serif' }}>
-                {isLoading
-                  ? t(lang, 'loading')
-                  : isPlaying
-                    ? (lang === 'en' ? '⏹ Stop' : lang === 'es' ? '⏹ Stop' : '⏹ 停止')
-                    : `${lang === 'en' ? '▶ Play' : lang === 'es' ? '▶ Play' : '▶ 再生'}${isChildUnseen ? ' 🔴' : ''}`}
+                {isLoading ? t(lang, 'loading') : (
+                  <>
+                    {isPlaying
+                      ? (lang === 'en' ? '⏹ Stop' : lang === 'es' ? '⏹ Stop' : '⏹ 停止')
+                      : (lang === 'en' ? '▶ Play' : lang === 'es' ? '▶ Play' : '▶ 再生')}
+                    {partnerStats.total >= 1 && (
+                      <span style={{ fontSize: 11, color: '#888', fontWeight: 600, marginLeft: 6 }}>
+                        ({partnerStats.total - partnerStats.unlistened}/{partnerStats.total})
+                      </span>
+                    )}
+                    {!isPlaying && ((partnerStats.total >= 1 && partnerStats.unlistened > 0) || (partnerStats.total === 0 && isChildUnseen)) ? ' 🔴' : ''}
+                  </>
+                )}
               </button>
             ) : (
               <button type="button" disabled style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#1a6645', background: '#fff', border: 'none', borderRadius: 14, cursor: 'default', boxShadow: '0 4px 0 #a8d8bc', opacity: 0.4, fontFamily: 'Nunito, sans-serif' }}>
@@ -863,8 +895,8 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
       {/* Bottom nav */}
       <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9000, display: 'flex', background: '#fff', borderTop: '2px solid #F0E8FF', boxShadow: '0 -4px 20px rgba(180,120,255,0.15)', paddingBottom: 'max(4px, env(safe-area-inset-bottom))' }}>
         {[
-          { icon: '🏠', label: lang === 'en' ? 'Home' : lang === 'es' ? 'Home' : 'ホーム', bg: '#FFE8F4', bgActive: '#FFD0E8', active: true, onClick: null },
-          { icon: '🖼', label: lang === 'en' ? 'Album' : lang === 'es' ? 'Album' : 'アルバム', bg: '#F0E8FF', bgActive: '#E0D0FF', active: false, onClick: () => {
+          { icon: '🏠', label: lang === 'en' ? 'Home' : lang === 'es' ? 'Home' : 'ホーム', bg: '#FFE8F4', bgActive: '#FFD0E8', active: true, onClick: null, badge: 0 },
+          { icon: '🖼', label: lang === 'en' ? 'Album' : lang === 'es' ? 'Album' : 'アルバム', bg: '#F0E8FF', bgActive: '#E0D0FF', active: false, badge: partnerStats.unlistened, onClick: () => {
             if (isRecording) {
               const msg = lang === 'en' ? 'Recording in progress. Stop and navigate away?' : lang === 'es' ? 'Recording in progress. Stop and navigate away?' : '録音中です。中断して移動しますか？'
               if (!window.confirm(msg)) return
@@ -873,10 +905,17 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
             if (!slug) { console.error('slug required'); return }
             navigate(`/pair/${slug}/album`)
           } },
-          { icon: '👋', label: lang === 'en' ? 'Invite' : lang === 'es' ? 'Invite' : '招待', bg: '#FFF0E8', bgActive: '#FFE0D0', active: false, onClick: handleShare },
+          { icon: '👋', label: lang === 'en' ? 'Invite' : lang === 'es' ? 'Invite' : '招待', bg: '#FFF0E8', bgActive: '#FFE0D0', active: false, onClick: handleShare, badge: 0 },
         ].map((item) => (
           <button key={item.label} type="button" onClick={item.onClick} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '8px 0 4px', border: 'none', background: 'none', cursor: 'pointer' }}>
-            <span style={{ width: item.active ? 40 : 36, height: item.active ? 40 : 36, borderRadius: 20, background: item.active ? item.bgActive : item.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: item.active ? 22 : 18, transition: 'all 0.2s' }}>{item.icon}</span>
+            <span style={{ width: item.active ? 40 : 36, height: item.active ? 40 : 36, borderRadius: 20, background: item.active ? item.bgActive : item.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: item.active ? 22 : 18, transition: 'all 0.2s', position: 'relative' }}>
+              {item.icon}
+              {item.badge > 0 && (
+                <span style={{ position: 'absolute', top: -2, right: -6, minWidth: 18, height: 18, padding: '0 5px', boxSizing: 'border-box', borderRadius: 9, background: '#B8A0E8', color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, border: '1.5px solid #fff', fontFamily: 'Nunito, sans-serif' }}>
+                  {item.badge >= 10 ? '9+' : item.badge}
+                </span>
+              )}
+            </span>
             <span style={{ fontSize: 10, fontWeight: item.active ? 800 : 600, color: item.active ? '#7050C0' : '#999', background: item.active ? 'linear-gradient(135deg,#FF60B0,#A060FF)' : 'none', WebkitBackgroundClip: item.active ? 'text' : 'unset', WebkitTextFillColor: item.active ? 'transparent' : 'unset' }}>{item.label}</span>
           </button>
         ))}
