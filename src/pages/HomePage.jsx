@@ -616,12 +616,10 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
                     {isPlayingParent
                       ? (lang === 'en' ? '⏹ Stop' : lang === 'es' ? '⏹ Stop' : '⏹ 停止')
                       : (lang === 'en' ? '▶ Play' : lang === 'es' ? '▶ Play' : '▶ 再生')}
-                    {partnerStats.total >= 1 && (
-                      <span style={{ fontSize: 11, color: '#888', fontWeight: 600, marginLeft: 6 }}>
-                        ({partnerStats.total - partnerStats.unlistened}/{partnerStats.total})
-                      </span>
-                    )}
-                    {!isPlayingParent && ((partnerStats.total >= 1 && partnerStats.unlistened > 0) || (partnerStats.total === 0 && isParentUnseen)) ? ' 🔴' : ''}
+                    <span style={{ fontSize: 11, color: '#888', fontWeight: 600, marginLeft: 6 }}>
+                      ({partnerStats.total - partnerStats.unlistened}/{partnerStats.total})
+                    </span>
+                    {!isPlayingParent && partnerStats.unlistened > 0 ? ' 🔴' : ''}
                   </>
                 )}
               </button>
