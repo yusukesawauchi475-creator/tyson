@@ -761,20 +761,21 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
 
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-sans)', background: 'var(--color-bg)', color: 'var(--color-text)', paddingBottom: 72, overflow: 'hidden' }}>
-      {/* Gradient Header */}
-      <header style={{ flexShrink: 0, background: 'linear-gradient(135deg, #FF80C0 0%, #C080FF 50%, #80C0FF 100%)', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* Caribbean blue glass header */}
+      <header style={{ flexShrink: 0, background: 'linear-gradient(135deg, rgba(0,180,216,0.28), rgba(0,150,199,0.22), rgba(72,202,228,0.20))', borderBottom: '1px solid rgba(255,255,255,0.35)', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <img src="/logo.png" alt="Hum" width={36} height={36} style={{ borderRadius: 10, objectFit: 'cover' }} />
-          <span style={{ fontSize: 24, fontWeight: 800, color: '#fff' }}>Hum</span>
+          <span style={{ fontSize: 24, fontWeight: 800, color: '#005f80', textShadow: '0 1px 4px rgba(0,80,120,0.2)' }}>Hum</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <LanguageSwitch lang={lang} />
           {daysSinceStart > 0 && (
-            <span style={{ padding: '4px 12px', fontSize: 13, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,0.25)', borderRadius: 20 }}>
+            <span style={{ padding: '4px 12px', fontSize: 13, fontWeight: 700, color: '#0077aa', background: 'rgba(0,150,199,0.12)', border: '1px solid rgba(0,150,199,0.25)', borderRadius: 20 }}>
               {daysSinceStart}{lang === 'en' ? 'd' : lang === 'es' ? 'd' : '日目'}
             </span>
           )}
           {streakCount > 0 && (
-            <span style={{ padding: '4px 12px', fontSize: 13, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,0.25)', borderRadius: 20 }}>
+            <span style={{ padding: '4px 12px', fontSize: 13, fontWeight: 700, color: '#0077aa', background: 'rgba(0,150,199,0.12)', border: '1px solid rgba(0,150,199,0.25)', borderRadius: 20 }}>
               🔥{streakCount}{lang === 'en' ? 'd' : lang === 'es' ? 'd' : '日連続'}
             </span>
           )}
@@ -792,28 +793,28 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
           {onChangeRole && (
             <RoleBadge role={role} lang={lang} onClick={onChangeRole} />
           )}
-          <LanguageSwitch lang={lang} />
         </div>
       </div>
 
       <main className="page-content page" style={{ flex: 1, maxWidth: 480, margin: '0 auto', width: '100%', paddingTop: 8 }}>
         <WeeklySummary lang={lang} pairId={currentPairId} />
 
-        {/* (1) Receive card — green */}
-        <section style={{ width: '100%', background: '#b8f0d8', borderRadius: 20, padding: 16, boxShadow: '0 4px 0 0 #6bbf96', overflow: 'hidden', fontFamily: 'Nunito, sans-serif' }}>
+        {/* (1) Receive card — 3D lavender */}
+        <section style={{ width: '100%', background: 'linear-gradient(145deg, #f0eeff, #e8f0ff)', borderRadius: 20, padding: 16, boxShadow: '0 4px 0 #c8b8f0, 0 6px 12px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8)', overflow: 'hidden', fontFamily: 'Nunito, sans-serif' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <span style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>👂</span>
             <span style={{ fontSize: 15, fontWeight: 800, color: '#1a5c3a' }}>{lang === 'en' ? "Listen to partner's voice" : lang === 'es' ? "Escucha la voz de tu pareja" : '相手の声を聴く'}</span>
           </div>
           <div style={{ position: 'relative', width: '100%' }}>
             {hasAudio === true ? (
-              <button type="button" onClick={handlePlay} disabled={isLoading} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#1a6645', background: '#fff', border: 'none', borderRadius: 14, cursor: isLoading ? 'wait' : 'pointer', boxShadow: '0 4px 0 #a8d8bc', fontFamily: 'Nunito, sans-serif' }}>
+              <button type="button" onClick={handlePlay} disabled={isLoading} style={{ position: 'relative', overflow: 'hidden', width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#fff', background: 'linear-gradient(90deg, #8b5cf6, #a78bfa, #c084fc)', border: 'none', borderRadius: 12, cursor: isLoading ? 'wait' : 'pointer', fontFamily: 'Nunito, sans-serif' }}>
+                <span aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(180deg, rgba(255,255,255,0.18), transparent)', pointerEvents: 'none' }} />
                 {isLoading ? t(lang, 'loading') : (
                   <>
                     {isPlaying
                       ? (lang === 'en' ? '⏹ Stop' : lang === 'es' ? '⏹ Detener' : '⏹ 停止')
                       : (lang === 'en' ? '▶ Play' : lang === 'es' ? '▶ Reproducir' : '▶ 再生')}
-                    <span style={{ fontSize: 11, color: '#888', fontWeight: 600, marginLeft: 6 }}>
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', fontWeight: 600, marginLeft: 6 }}>
                       ({partnerStats.total - partnerStats.unlistened}/{partnerStats.total})
                     </span>
                     {!isPlaying && partnerStats.unlistened > 0 ? ' 🔴' : ''}
@@ -821,20 +822,21 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
                 )}
               </button>
             ) : (
-              <button type="button" disabled style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#1a6645', background: '#fff', border: 'none', borderRadius: 14, cursor: 'default', boxShadow: '0 4px 0 #a8d8bc', opacity: 0.4, fontFamily: 'Nunito, sans-serif' }}>
+              <button type="button" disabled style={{ position: 'relative', overflow: 'hidden', width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#fff', background: 'linear-gradient(90deg, #8b5cf6, #a78bfa, #c084fc)', border: 'none', borderRadius: 12, cursor: 'default', opacity: 0.4, fontFamily: 'Nunito, sans-serif' }}>
+                <span aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(180deg, rgba(255,255,255,0.18), transparent)', pointerEvents: 'none' }} />
                 {lang === 'en' ? '▶ Play' : lang === 'es' ? '▶ Reproducir' : '▶ 再生'}
               </button>
             )}
             {hasAudio === true && isPlaying && (
-              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 14, overflow: 'hidden' }}>
-                <Visualizer source={audioRef.current} active color="rgba(26,102,69,0.4)" />
+              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 12, overflow: 'hidden' }}>
+                <Visualizer source={audioRef.current} active color="rgba(255,255,255,0.35)" />
               </div>
             )}
           </div>
         </section>
 
-        {/* (2) Send card — pink */}
-        <section style={{ width: '100%', background: '#f5d8e0', borderRadius: 20, padding: 16, boxShadow: '0 4px 0 0 #c98fa0', overflow: 'hidden', fontFamily: 'Nunito, sans-serif' }}>
+        {/* (2) Send card — 3D pink */}
+        <section style={{ width: '100%', background: 'linear-gradient(145deg, #fff0f5, #fff5ee)', borderRadius: 20, padding: 16, boxShadow: '0 4px 0 #f0b8cc, 0 6px 12px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8)', overflow: 'hidden', fontFamily: 'Nunito, sans-serif' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <span style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🎙</span>
             <span style={{ fontSize: 15, fontWeight: 800, color: '#6b2a3a' }}>{lang === 'en' ? 'Record & send your voice' : lang === 'es' ? 'Graba y envía tu voz' : '声を録って送る'}</span>
@@ -844,11 +846,12 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
             ▶ {lang === 'en' ? 'Recording as Child' : lang === 'es' ? 'Grabando como Hijo/Hija' : '子として録音します'} 👦👧
           </p>
           <div style={{ position: 'relative', width: '100%' }}>
-            <button type="button" onClick={handleRecordClick} disabled={isUploading} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#fff', background: isUploading ? '#B0A0C8' : isRecording ? '#E04040' : '#c0536e', border: 'none', borderRadius: 14, cursor: isUploading ? 'wait' : 'pointer', boxShadow: isUploading ? 'none' : isRecording ? '0 4px 0 #901010' : '0 4px 0 #8a2a42', fontFamily: 'Nunito, sans-serif' }}>
+            <button type="button" onClick={handleRecordClick} disabled={isUploading} style={{ position: 'relative', overflow: 'hidden', width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#fff', background: isUploading ? '#B0A0C8' : isRecording ? 'linear-gradient(90deg, #ef4444, #f97316, #f59e0b)' : 'linear-gradient(90deg, #c084fc, #e879a0, #f97316)', opacity: isUploading ? 1 : 0.85, border: 'none', borderRadius: 12, cursor: isUploading ? 'wait' : 'pointer', fontFamily: 'Nunito, sans-serif' }}>
+              <span aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(180deg, rgba(255,255,255,0.18), transparent)', pointerEvents: 'none' }} />
               {isUploading ? t(lang, 'sending') : isRecording ? (lang === 'en' ? '⏹ Recording...' : lang === 'es' ? '⏹ Grabando...' : '⏹ 録音中…') : (lang === 'en' ? '🎙 Record' : lang === 'es' ? '🎙 Grabar' : '🎙 録音')}
             </button>
             {isRecording && (
-              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 14, overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 12, overflow: 'hidden' }}>
                 <Visualizer source={analyserRef.current} active color="rgba(255,255,255,0.4)" />
               </div>
             )}
@@ -857,9 +860,9 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
           <DailyPromptCard pairId={currentPairId} role={ROLE_CHILD} onTopicChange={handleTopicChange} lang={lang} />
         </section>
 
-        {/* (3) Photos card — purple */}
+        {/* (3) Photos card — 3D purple */}
         {/* Phase X-2.5: DEMO でもセクション render、tap で CTA モーダル */}
-        <section style={{ width: '100%', background: '#d4bfff', borderRadius: 20, padding: 16, boxShadow: '0 4px 0 0 #8b6bd4', overflow: 'hidden', fontFamily: 'Nunito, sans-serif' }}>
+        <section style={{ width: '100%', background: 'linear-gradient(145deg, #f4f0ff, #ede8ff)', borderRadius: 20, padding: 16, boxShadow: '0 4px 0 #c0a8f0, 0 6px 12px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8)', overflow: 'hidden', fontFamily: 'Nunito, sans-serif' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <span style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>📷</span>
             <span style={{ fontSize: 15, fontWeight: 800, color: '#3a1a7a' }}>
@@ -882,7 +885,8 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
 
           {dailyPhotoLimitMessage && <p style={{ fontSize: 11, color: '#5a3a8a', margin: '0 0 4px' }}>{dailyPhotoLimitMessage}</p>}
 
-          <button type="button" disabled={journalUploading} onClick={() => { if (isDemoTest) { setDemoModalOpen(true); return } if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }} style={{ width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#fff', background: '#7c4fd4', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 0 #4a2490', fontFamily: 'Nunito, sans-serif' }}>
+          <button type="button" disabled={journalUploading} onClick={() => { if (isDemoTest) { setDemoModalOpen(true); return } if (genericGalleryInputRef.current) { genericGalleryInputRef.current.value = ''; genericGalleryInputRef.current.click() } }} style={{ position: 'relative', overflow: 'hidden', width: '100%', padding: 14, fontSize: 17, fontWeight: 800, color: '#fff', background: 'linear-gradient(90deg, #7c3aed, #a855f7, #ec4899)', border: 'none', borderRadius: 12, cursor: 'pointer', fontFamily: 'Nunito, sans-serif' }}>
+            <span aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(180deg, rgba(255,255,255,0.18), transparent)', pointerEvents: 'none' }} />
             {lang === 'en' ? '📷 Add Photo' : lang === 'es' ? '📷 Añadir foto' : '📷 写真を追加する'}
           </button>
         </section>
@@ -914,7 +918,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
                 </span>
               )}
             </span>
-            <span style={{ fontSize: 10, fontWeight: item.active ? 800 : 600, color: item.active ? '#7050C0' : '#999', background: item.active ? 'linear-gradient(135deg,#FF60B0,#A060FF)' : 'none', WebkitBackgroundClip: item.active ? 'text' : 'unset', WebkitTextFillColor: item.active ? 'transparent' : 'unset' }}>{item.label}</span>
+            <span style={{ fontSize: 10, fontWeight: item.active ? 800 : 600, color: item.active ? '#0096c7' : '#999', background: item.active ? 'linear-gradient(135deg,#0096c7,#00b4d8)' : 'none', WebkitBackgroundClip: item.active ? 'text' : 'unset', WebkitTextFillColor: item.active ? 'transparent' : 'unset' }}>{item.label}</span>
           </button>
         ))}
       </nav>

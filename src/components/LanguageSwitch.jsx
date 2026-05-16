@@ -19,51 +19,29 @@ export default function LanguageSwitch({ lang = 'ja' }) {
     setSearchParams(next)
   }
 
-  const baseStyle = {
-    padding: '2px 8px',
+  const flagStyle = (active) => ({
+    padding: '2px 6px',
     fontSize: 18,
     fontWeight: 500,
-    border: '1px solid #dcdcdc',
+    border: `1px solid ${active ? 'rgba(0,120,180,0.5)' : 'transparent'}`,
     cursor: 'pointer',
-    background: '#fff',
+    background: active ? 'rgba(0,150,210,0.12)' : 'transparent',
+    opacity: active ? 1 : 0.4,
     color: '#333',
     lineHeight: 1,
     display: 'flex',
     alignItems: 'center',
-    transition: 'background 0.15s, border-color 0.15s',
-  }
-  const activeStyle = {
-    ...baseStyle,
-    background: '#DDD0FF',
-    color: '#333',
-    borderColor: '#B8A0E8',
-  }
-  const leftStyle = {
-    ...baseStyle,
-    borderRight: 'none',
-    borderTopLeftRadius: 999,
-    borderBottomLeftRadius: 999,
-  }
-  const middleStyle = {
-    ...baseStyle,
-    borderRight: 'none',
-  }
-  const rightStyle = {
-    ...baseStyle,
-    borderTopRightRadius: 999,
-    borderBottomRightRadius: 999,
-  }
-  const leftActive = { ...leftStyle, ...activeStyle }
-  const middleActive = { ...middleStyle, ...activeStyle }
-  const rightActive = { ...rightStyle, ...activeStyle }
+    borderRadius: 999,
+    transition: 'background 0.15s, border-color 0.15s, opacity 0.15s',
+  })
 
   return (
-    <div style={{ display: 'inline-flex', height: 28, flexShrink: 0 }} role="group" aria-label="Language">
+    <div style={{ display: 'inline-flex', height: 28, gap: 4, flexShrink: 0 }} role="group" aria-label="Language">
       <button
         type="button"
         onClick={() => goTo('ja')}
         aria-label="日本語"
-        style={currentLang === 'ja' ? leftActive : leftStyle}
+        style={flagStyle(currentLang === 'ja')}
       >
         🇯🇵
       </button>
@@ -71,7 +49,7 @@ export default function LanguageSwitch({ lang = 'ja' }) {
         type="button"
         onClick={() => goTo('en')}
         aria-label="English"
-        style={currentLang === 'en' ? middleActive : middleStyle}
+        style={flagStyle(currentLang === 'en')}
       >
         🇺🇸
       </button>
@@ -79,7 +57,7 @@ export default function LanguageSwitch({ lang = 'ja' }) {
         type="button"
         onClick={() => goTo('es')}
         aria-label="Español"
-        style={currentLang === 'es' ? rightActive : rightStyle}
+        style={flagStyle(currentLang === 'es')}
       >
         🇪🇸
       </button>
