@@ -22,7 +22,7 @@ export default function RoleSelectPage({ onSelect, lang = 'ja', pairId = null })
       <div style={{ maxWidth: 320, width: '100%', textAlign: 'center' }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>🎙</div>
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 8px' }}>
-          {lang === 'en' ? 'Who are you?' : lang === 'es' ? 'Who are you?' : 'あなたは？'}
+          {lang === 'en' ? 'Who are you?' : lang === 'es' ? '¿Quién eres?' : 'あなたは？'}
         </h1>
         <p style={{ fontSize: 13, color: '#555', margin: '0 0 12px', lineHeight: 1.5 }}>
           {lang === 'en'
@@ -53,7 +53,7 @@ export default function RoleSelectPage({ onSelect, lang = 'ja', pairId = null })
             }}
           >
             <div style={{ fontSize: 36, marginBottom: 8 }}>👴👵</div>
-            <div>{lang === 'en' ? 'Parent' : lang === 'es' ? 'Parent' : '親（おとうさん・おかあさん）'}</div>
+            <div>{lang === 'en' ? 'Parent' : lang === 'es' ? 'Padre/Madre' : '親（おとうさん・おかあさん）'}</div>
           </button>
 
           <button
@@ -73,7 +73,7 @@ export default function RoleSelectPage({ onSelect, lang = 'ja', pairId = null })
             }}
           >
             <div style={{ fontSize: 36, marginBottom: 8 }}>🧑</div>
-            <div>{lang === 'en' ? 'Child' : lang === 'es' ? 'Child' : '子供（こども）'}</div>
+            <div>{lang === 'en' ? 'Child' : lang === 'es' ? 'Hijo/Hija' : '子供（こども）'}</div>
           </button>
         </div>
       </div>

@@ -68,8 +68,41 @@ const TOPICS_EN = [
   "How was your day?",
 ]
 
-if (import.meta?.env?.DEV && TOPICS.length !== TOPICS_EN.length) {
-  console.warn('[DailyPromptCard] TOPICS.length !== TOPICS_EN.length', TOPICS.length, TOPICS_EN.length)
+const TOPICS_ES = [
+  "¿Qué comiste hoy?",
+  "¿Cómo estuvo el clima hoy?",
+  "¿Qué fue lo más divertido de hoy?",
+  "¿Cómo te sientes hoy?",
+  "¿A dónde fuiste hoy?",
+  "¿Qué te impresionó hoy?",
+  "¿Con quién te encontraste hoy?",
+  "¿Qué hiciste hoy?",
+  "¿Qué notaste hoy?",
+  "¿Cómo te fue hoy?",
+  "¿Cuál fue lo mejor de hoy?",
+  "¿Qué aprendiste hoy?",
+  "¿Qué sentiste hoy?",
+  "¿Qué recuerdo de hoy te quedó marcado?",
+  "¿Qué sentiste hoy?",
+  "¿Qué pequeña felicidad tuviste hoy?",
+  "¿Cómo pasaste el tiempo hoy?",
+  "¿De qué de hoy quieres hablar?",
+  "¿En qué estuviste pensando hoy?",
+  "Si describieras hoy en una palabra, ¿cuál sería?",
+  "¿Qué hiciste hoy?",
+  "Si tu ánimo de hoy fuera un color, ¿cuál sería?",
+  "¿Qué salió bien hoy?",
+  "¿Qué sentiste hoy?",
+  "Mirando hacia atrás, ¿cómo fue tu día?",
+  "¿Cómo te fue hoy?",
+  "¿Qué te impresionó hoy?",
+  "¿Qué disfrutaste hoy?",
+  "Si pusieras tus sentimientos de hoy en palabras, ¿qué dirías?",
+  "¿Cómo te fue hoy?",
+]
+
+if (import.meta?.env?.DEV && (TOPICS.length !== TOPICS_EN.length || TOPICS.length !== TOPICS_ES.length)) {
+  console.warn('[DailyPromptCard] TOPICS length mismatch', TOPICS.length, TOPICS_EN.length, TOPICS_ES.length)
 }
 
 const COUNTRY_KEY = 'hum_country'
@@ -106,32 +139,33 @@ function getEventTopic(dateKey, country, lang) {
   const [, m, d] = dateKey.split('-').map(Number)
   const date = new Date(dateKey + 'T12:00:00')
   const dow = date.getDay() // 0=Sun
-  const isEn = lang === 'en' || lang === 'es'
+  const isEn = lang === 'en'
+  const isEs = lang === 'es'
 
   // Shared events
-  if (m === 1 && d === 1) return isEn ? "What's your New Year's wish for our family?" : '家族への新年の願いは？'
-  if (m === 12 && d === 25) return isEn ? 'Best Christmas memory with family?' : '家族との一番のクリスマスの思い出は？'
+  if (m === 1 && d === 1) return isEn ? "What's your New Year's wish for our family?" : isEs ? '¿Cuál es tu deseo de Año Nuevo para la familia?' : '家族への新年の願いは？'
+  if (m === 12 && d === 25) return isEn ? 'Best Christmas memory with family?' : isEs ? '¿Cuál es tu mejor recuerdo navideño en familia?' : '家族との一番のクリスマスの思い出は？'
 
   // Mother's Day: 2nd Sunday of May
-  if (m === 5 && dow === 0 && d >= 8 && d <= 14) return isEn ? 'What do you want to tell Mom today?' : 'お母さんに今日伝えたいことは？'
+  if (m === 5 && dow === 0 && d >= 8 && d <= 14) return isEn ? 'What do you want to tell Mom today?' : isEs ? '¿Qué quieres decirle a mamá hoy?' : 'お母さんに今日伝えたいことは？'
   // Father's Day: 3rd Sunday of June
-  if (m === 6 && dow === 0 && d >= 15 && d <= 21) return isEn ? 'What do you want to tell Dad today?' : 'お父さんに今日伝えたいことは？'
+  if (m === 6 && dow === 0 && d >= 15 && d <= 21) return isEn ? 'What do you want to tell Dad today?' : isEs ? '¿Qué quieres decirle a papá hoy?' : 'お父さんに今日伝えたいことは？'
 
   if (country === 'jp') {
-    if (m === 8 && d === 15) return isEn ? 'Share a memory of Obon with family.' : 'お盆の家族の思い出を話そう'
-    if (m === 12 && d === 31) return isEn ? 'Reflect on this year with family.' : '家族と今年を振り返ろう'
+    if (m === 8 && d === 15) return isEn ? 'Share a memory of Obon with family.' : isEs ? 'Comparte un recuerdo de Obon con la familia.' : 'お盆の家族の思い出を話そう'
+    if (m === 12 && d === 31) return isEn ? 'Reflect on this year with family.' : isEs ? 'Reflexionen juntos sobre este año.' : '家族と今年を振り返ろう'
   }
   if (country === 'us') {
     // Thanksgiving: 4th Thursday of November
-    if (m === 11 && dow === 4 && d >= 22 && d <= 28) return isEn ? "What are you thankful for about our family?" : '家族で感謝していることは？'
+    if (m === 11 && dow === 4 && d >= 22 && d <= 28) return isEn ? "What are you thankful for about our family?" : isEs ? '¿Por qué estás agradecido por nuestra familia?' : '家族で感謝していることは？'
   }
 
   // Seasonal defaults for 'other'
   if (country === 'other' || !['jp', 'us'].includes(country)) {
-    if (m >= 3 && m <= 5) return isEn ? 'What spring memory do you cherish?' : '春の思い出で大切なものは？'
-    if (m >= 6 && m <= 8) return isEn ? 'What summer adventure do you remember?' : '夏の冒険で覚えていることは？'
-    if (m >= 9 && m <= 11) return isEn ? 'What autumn tradition do you love?' : '秋の家族の習慣で好きなものは？'
-    return isEn ? 'What winter memory warms your heart?' : '冬の思い出で心が温まるものは？'
+    if (m >= 3 && m <= 5) return isEn ? 'What spring memory do you cherish?' : isEs ? '¿Qué recuerdo de primavera atesoras?' : '春の思い出で大切なものは？'
+    if (m >= 6 && m <= 8) return isEn ? 'What summer adventure do you remember?' : isEs ? '¿Qué aventura de verano recuerdas?' : '夏の冒険で覚えていることは？'
+    if (m >= 9 && m <= 11) return isEn ? 'What autumn tradition do you love?' : isEs ? '¿Qué tradición de otoño te encanta?' : '秋の家族の習慣で好きなものは？'
+    return isEn ? 'What winter memory warms your heart?' : isEs ? '¿Qué recuerdo de invierno te calienta el corazón?' : '冬の思い出で心が温まるものは？'
   }
 
   return null // No event today
@@ -259,8 +293,9 @@ export default function DailyPromptCard({ pairId, role, onTopicChange, lang = 'j
 
   if (!isVisible || isSkipped) return null
 
-  const isEn = String(lang) === 'en' || String(lang) === 'es'
-  const topicDisplay = aiTopic || (isEn ? TOPICS_EN[topicIndex] : TOPICS[topicIndex]) || TOPICS[0]
+  const isEn = String(lang) === 'en'
+  const isEs = String(lang) === 'es'
+  const topicDisplay = aiTopic || (isEn ? TOPICS_EN[topicIndex] : isEs ? TOPICS_ES[topicIndex] : TOPICS[topicIndex]) || TOPICS[0]
 
   return (
     <div style={{

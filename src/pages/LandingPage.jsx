@@ -97,7 +97,7 @@ export default function LandingPage({ lang = 'ja' }) {
 
         {/* Catchphrase */}
         <p style={{ fontSize: 20, fontWeight: 600, color: '#5A4A6A', margin: '0 0 8px' }}>
-          {lang === 'en' ? '1 min a day, connected by voice' : lang === 'es' ? '1 min a day, connected by voice' : '毎日1分、声でつながる'}
+          {lang === 'en' ? '1 min a day, connected by voice' : lang === 'es' ? '1 minuto al día, conectados por voz' : '毎日1分、声でつながる'}
         </p>
 
         {/* Sub */}
@@ -126,11 +126,11 @@ export default function LandingPage({ lang = 'ja' }) {
             letterSpacing: '0.02em',
           }}
         >
-          {lang === 'en' ? '✨ Try the demo' : lang === 'es' ? '✨ Try the demo' : '✨ デモを見る'}
+          {lang === 'en' ? '✨ Try the demo' : lang === 'es' ? '✨ Prueba la demo' : '✨ デモを見る'}
         </button>
 
         <p style={{ fontSize: 12, color: '#B0A0C0', margin: '12px 0 0' }}>
-          {lang === 'en' ? 'No sign-up required' : lang === 'es' ? 'No sign-up required' : 'アカウント登録不要'}
+          {lang === 'en' ? 'No sign-up required' : lang === 'es' ? 'No se requiere registro' : 'アカウント登録不要'}
         </p>
       </div>
     </div>

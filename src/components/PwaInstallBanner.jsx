@@ -71,14 +71,14 @@ export default function PwaInstallBanner({ lang = 'ja', onVisibilityChange }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, maxWidth: 480, margin: '0 auto', height: '100%', padding: '0 14px' }}>
         <img src="/icon-192.png" alt="" width={36} height={36} style={{ borderRadius: 8, flexShrink: 0 }} />
         <p style={{ flex: 1, fontSize: 13, fontWeight: 700, color: '#5040A0', margin: 0, minWidth: 0 }}>
-          {lang === 'en' ? 'Add Hum to Home Screen' : lang === 'es' ? 'Add Hum to Home Screen' : 'Humをホーム画面に追加'}
+          {lang === 'en' ? 'Add Hum to Home Screen' : lang === 'es' ? 'Añadir Hum a la pantalla de inicio' : 'Humをホーム画面に追加'}
         </p>
         <button type="button" onClick={install} style={{
           padding: '6px 14px', fontSize: 12, fontWeight: 700, color: '#fff',
           background: 'linear-gradient(135deg, #B080FF, #8050D0)', border: 'none',
           borderRadius: 8, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
         }}>
-          {lang === 'en' ? 'Install' : lang === 'es' ? 'Install' : '追加'}
+          {lang === 'en' ? 'Install' : lang === 'es' ? 'Instalar' : '追加'}
         </button>
         <button type="button" onClick={dismiss} style={{
           padding: 4, fontSize: 16, color: '#B0A0C0', background: 'none',

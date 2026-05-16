@@ -215,15 +215,15 @@ export default function AlbumPage({ lang = 'ja' }) {
 
   const handleShare = async () => {
     if (!slug) {
-      setToastMsg(lang === 'en' ? 'Cannot share: invalid pair URL' : lang === 'es' ? 'Cannot share: invalid pair URL' : '共有できません。有効なペアURLからアクセスしてください')
+      setToastMsg(lang === 'en' ? 'Cannot share: invalid pair URL' : lang === 'es' ? 'No se puede compartir: URL de pareja inválida' : '共有できません。有効なペアURLからアクセスしてください')
       setTimeout(() => setToastMsg(null), 2500)
       return
     }
     const url = buildInviteUrl(slug)
     const result = await copyInviteLink(url)
     setToastMsg(result.success
-      ? (lang === 'en' ? 'Link copied' : lang === 'es' ? 'Link copied' : 'リンクをコピーしました')
-      : (lang === 'en' ? 'Failed to copy' : lang === 'es' ? 'Failed to copy' : 'コピーに失敗しました'))
+      ? (lang === 'en' ? 'Link copied' : lang === 'es' ? 'Enlace copiado' : 'リンクをコピーしました')
+      : (lang === 'en' ? 'Failed to copy' : lang === 'es' ? 'Error al copiar' : 'コピーに失敗しました'))
     setTimeout(() => setToastMsg(null), 2500)
   }
 
@@ -241,7 +241,7 @@ export default function AlbumPage({ lang = 'ja' }) {
     if (!dateKey) return dateKey
     const [y, m, d] = dateKey.split('-').map(Number)
     return new Date(y, m - 1, d).toLocaleDateString(
-      lang === 'en' ? 'en-US' : lang === 'es' ? 'en-US' : 'ja-JP',
+      lang === 'en' ? 'en-US' : lang === 'es' ? 'es-ES' : 'ja-JP',
       { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' }
     )
   }
@@ -249,7 +249,7 @@ export default function AlbumPage({ lang = 'ja' }) {
   const formatDateShort = (dateKey) => {
     if (!dateKey) return ''
     const [, m, d] = dateKey.split('-').map(Number)
-    return lang === 'en' ? `${new Date(2000, m - 1).toLocaleString('en', { month: 'short' })} ${d}` : lang === 'es' ? `${new Date(2000, m - 1).toLocaleString('en', { month: 'short' })} ${d}` : `${m}月${d}日`
+    return lang === 'en' ? `${new Date(2000, m - 1).toLocaleString('en', { month: 'short' })} ${d}` : lang === 'es' ? `${new Date(2000, m - 1).toLocaleString('es', { month: 'short' })} ${d}` : `${m}月${d}日`
   }
 
   // Phase D: dense grid 用の overlay 表記（4/24 形式）
@@ -288,10 +288,10 @@ export default function AlbumPage({ lang = 'ja' }) {
     return (
       <div style={{ minHeight: '100dvh', background: '#FFF8FF', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', padding: 24 }}>
         <p style={{ fontSize: 16, color: '#7050C0', fontWeight: 600, textAlign: 'center' }}>
-          {lang === 'en' ? 'Pair ID required to view album.' : lang === 'es' ? 'Pair ID required to view album.' : 'アルバムを表示するにはペアIDが必要です。'}
+          {lang === 'en' ? 'Pair ID required to view album.' : lang === 'es' ? 'Se requiere ID de pareja para ver el álbum.' : 'アルバムを表示するにはペアIDが必要です。'}
         </p>
         <button type="button" onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/')} style={{ marginTop: 16, padding: '10px 24px', fontSize: 14, fontWeight: 600, color: '#fff', background: 'linear-gradient(135deg, #FF80C0, #A060FF)', border: 'none', borderRadius: 12, cursor: 'pointer' }}>
-          {lang === 'en' ? '← Back' : lang === 'es' ? '← Back' : '← 戻る'}
+          {lang === 'en' ? '← Back' : lang === 'es' ? '← Atrás' : '← 戻る'}
         </button>
       </div>
     )
@@ -321,12 +321,12 @@ export default function AlbumPage({ lang = 'ja' }) {
           type="button"
           onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/')}
           style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', padding: '0 4px', color: '#7050C0', lineHeight: 1 }}
-          aria-label={lang === 'en' ? 'Back' : lang === 'es' ? 'Back' : '戻る'}
+          aria-label={lang === 'en' ? 'Back' : lang === 'es' ? 'Atrás' : '戻る'}
         >
           ←
         </button>
         <h1 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#333', flex: 1 }}>
-          {lang === 'en' ? 'Album' : lang === 'es' ? 'Album' : 'アルバム'}
+          {lang === 'en' ? 'Album' : lang === 'es' ? 'Álbum' : 'アルバム'}
         </h1>
         {/* 段階10-b-fix: tap で role clear → /pair/:slug に戻り RootRoute が RoleSelectPage を表示 */}
         <RoleBadge
@@ -340,13 +340,13 @@ export default function AlbumPage({ lang = 'ja' }) {
       {(pairId || isDemo) && (
         <div style={{ display: 'flex', gap: 6, padding: '10px 16px', background: '#FFF8FF', position: 'sticky', top: 49, zIndex: 99 }}>
           <button type="button" onClick={() => setActiveTab('photo')} style={{ flex: 1, padding: '10px 0', fontSize: 13, fontWeight: 700, color: activeTab === 'photo' ? '#fff' : '#999', background: activeTab === 'photo' ? 'linear-gradient(90deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
-            📷 {lang === 'en' ? 'Photos' : lang === 'es' ? 'Photos' : '写真'}
+            📷 {lang === 'en' ? 'Photos' : lang === 'es' ? 'Fotos' : '写真'}
           </button>
           <button type="button" onClick={() => setActiveTab('voice')} style={{ flex: 1, padding: '10px 0', fontSize: 13, fontWeight: 700, color: activeTab === 'voice' ? '#fff' : '#999', background: activeTab === 'voice' ? 'linear-gradient(90deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
-            🎙 {lang === 'en' ? 'Voice' : lang === 'es' ? 'Voice' : '声'}
+            🎙 {lang === 'en' ? 'Voice' : lang === 'es' ? 'Voz' : '声'}
           </button>
           <button type="button" onClick={() => setActiveTab('calendar')} style={{ flex: 1, padding: '10px 0', fontSize: 13, fontWeight: 700, color: activeTab === 'calendar' ? '#fff' : '#999', background: activeTab === 'calendar' ? 'linear-gradient(90deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
-            📅 {lang === 'en' ? 'Calendar' : lang === 'es' ? 'Calendar' : 'カレンダー'}
+            📅 {lang === 'en' ? 'Calendar' : lang === 'es' ? 'Calendario' : 'カレンダー'}
           </button>
         </div>
       )}
@@ -371,7 +371,7 @@ export default function AlbumPage({ lang = 'ja' }) {
         <section style={{ width: '100%' }}>
           <style>{`@keyframes vwave { 0%,100% { transform: scaleY(0.4); } 50% { transform: scaleY(1); } }`}</style>
           <p style={{ textAlign: 'center', color: '#999', fontSize: 12, margin: '8px 0 16px', fontStyle: 'italic' }}>
-            {lang === 'en' ? 'Sample — your voice history will appear here' : lang === 'es' ? 'Sample — your voice history will appear here' : 'サンプル — 声の履歴がここに表示されます'}
+            {lang === 'en' ? 'Sample — your voice history will appear here' : lang === 'es' ? 'Muestra — tu historial de voz aparecerá aquí' : 'サンプル — 声の履歴がここに表示されます'}
           </p>
           {demoVoiceDays.map((day) => {
             const playVoice = (key) => {
@@ -411,8 +411,8 @@ export default function AlbumPage({ lang = 'ja' }) {
             return (
               <div key={day.dateKey} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #EEE8FF' }}>
                 <span style={{ fontSize: 12, color: '#8070A0', fontWeight: 600, minWidth: 50 }}>{day.label}</span>
-                {renderBtn('parent', day.parent, '👴', lang === 'en' ? 'Parent' : lang === 'es' ? 'Parent' : '親')}
-                {renderBtn('child', day.child, '🧑', lang === 'en' ? 'Child' : lang === 'es' ? 'Child' : '子')}
+                {renderBtn('parent', day.parent, '👴', lang === 'en' ? 'Parent' : lang === 'es' ? 'Padre/Madre' : '親')}
+                {renderBtn('child', day.child, '🧑', lang === 'en' ? 'Child' : lang === 'es' ? 'Hijo/Hija' : '子')}
               </div>
             )
           })}
@@ -426,17 +426,17 @@ export default function AlbumPage({ lang = 'ja' }) {
         {loading && (
           <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              {lang === 'en' ? '📷 Photos' : lang === 'es' ? '📷 Photos' : '📷 写真'}
+              {lang === 'en' ? '📷 Photos' : lang === 'es' ? '📷 Fotos' : '📷 写真'}
             </p>
             <p style={{ fontSize: 13, color: '#8070A0', textAlign: 'center', margin: 0 }}>
-              {lang === 'en' ? 'Loading...' : lang === 'es' ? 'Loading...' : '読み込み中…'}
+              {lang === 'en' ? 'Loading...' : lang === 'es' ? 'Cargando...' : '読み込み中…'}
             </p>
           </section>
         )}
         {error && (
           <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              {lang === 'en' ? '📷 Photos' : lang === 'es' ? '📷 Photos' : '📷 写真'}
+              {lang === 'en' ? '📷 Photos' : lang === 'es' ? '📷 Fotos' : '📷 写真'}
             </p>
             <p style={{ fontSize: 13, color: '#E04040', textAlign: 'center', margin: 0 }}>{error}</p>
           </section>
@@ -444,10 +444,10 @@ export default function AlbumPage({ lang = 'ja' }) {
         {!loading && !error && flatPhotos.length === 0 && !isDemo && (
           <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              {lang === 'en' ? '📷 Photos' : lang === 'es' ? '📷 Photos' : '📷 写真'}
+              {lang === 'en' ? '📷 Photos' : lang === 'es' ? '📷 Fotos' : '📷 写真'}
             </p>
             <p style={{ fontSize: 13, color: '#8070A0', textAlign: 'center', margin: 0 }}>
-              {lang === 'en' ? 'No photos yet.' : lang === 'es' ? 'No photos yet.' : 'まだ写真がありません'}
+              {lang === 'en' ? 'No photos yet.' : lang === 'es' ? 'Aún no hay fotos.' : 'まだ写真がありません'}
             </p>
           </section>
         )}
@@ -455,7 +455,7 @@ export default function AlbumPage({ lang = 'ja' }) {
           <>
             {isDemo && (
               <p style={{ textAlign: 'center', color: '#999', fontSize: 12, margin: '16px 0 12px', fontStyle: 'italic' }}>
-                {lang === 'en' ? 'Sample photos — your photos will appear here' : lang === 'es' ? 'Sample photos — your photos will appear here' : 'サンプル写真 — あなたの写真がここに表示されます'}
+                {lang === 'en' ? 'Sample photos — your photos will appear here' : lang === 'es' ? 'Fotos de muestra — tus fotos aparecerán aquí' : 'サンプル写真 — あなたの写真がここに表示されます'}
               </p>
             )}
             {/* Phase D: iPhone カメラロール風 dense grid（3 列、gap 2px、左下に M/D + 親/子 overlay） */}
@@ -497,7 +497,7 @@ export default function AlbumPage({ lang = 'ja' }) {
                       overflow: 'hidden',
                       display: 'block',
                     }}
-                    aria-label={lang === 'en' ? 'Enlarge photo' : lang === 'es' ? 'Enlarge photo' : '写真を拡大'}
+                    aria-label={lang === 'en' ? 'Enlarge photo' : lang === 'es' ? 'Ampliar foto' : '写真を拡大'}
                   >
                     <img
                       src={photo.url}
@@ -553,7 +553,7 @@ export default function AlbumPage({ lang = 'ja' }) {
             type="button"
             onClick={closeLightbox}
             style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: '#fff', fontSize: 30, cursor: 'pointer', padding: 8, lineHeight: 1, zIndex: 1 }}
-            aria-label={lang === 'en' ? 'Close' : lang === 'es' ? 'Close' : '閉じる'}
+            aria-label={lang === 'en' ? 'Close' : lang === 'es' ? 'Cerrar' : '閉じる'}
           >
             ×
           </button>
@@ -564,10 +564,10 @@ export default function AlbumPage({ lang = 'ja' }) {
             onClick={handleDownload}
             disabled={downloading}
             style={{ position: 'absolute', top: 16, left: 16, background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '8px 14px', borderRadius: 8, lineHeight: 1, zIndex: 1, display: 'flex', alignItems: 'center', gap: 6 }}
-            aria-label={lang === 'en' ? 'Download' : lang === 'es' ? 'Download' : 'ダウンロード'}
+            aria-label={lang === 'en' ? 'Download' : lang === 'es' ? 'Descargar' : 'ダウンロード'}
           >
             <span style={{ fontSize: 18 }}>⬇</span>
-            {downloading ? '...' : (lang === 'en' ? 'Save' : lang === 'es' ? 'Save' : '保存')}
+            {downloading ? '...' : (lang === 'en' ? 'Save' : lang === 'es' ? 'Guardar' : '保存')}
           </button>
 
           {/* iOS hint */}
@@ -577,7 +577,7 @@ export default function AlbumPage({ lang = 'ja' }) {
               background: 'rgba(0,0,0,0.85)', color: '#fff', fontSize: 13,
               padding: '12px 16px', borderRadius: 10, textAlign: 'center', zIndex: 2,
             }}>
-              {lang === 'en' ? 'Long press the photo to save it' : lang === 'es' ? 'Long press the photo to save it' : '写真を長押しして保存してください'}
+              {lang === 'en' ? 'Long press the photo to save it' : lang === 'es' ? 'Mantén presionada la foto para guardarla' : '写真を長押しして保存してください'}
             </div>
           )}
 
@@ -586,7 +586,7 @@ export default function AlbumPage({ lang = 'ja' }) {
               type="button"
               onClick={(e) => { e.stopPropagation(); prevPhoto() }}
               style={{ position: 'absolute', left: 8, background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', fontSize: 32, cursor: 'pointer', padding: '10px 14px', borderRadius: 8, lineHeight: 1 }}
-              aria-label={lang === 'en' ? 'Previous' : lang === 'es' ? 'Previous' : '前へ'}
+              aria-label={lang === 'en' ? 'Previous' : lang === 'es' ? 'Anterior' : '前へ'}
             >
               ‹
             </button>
@@ -610,7 +610,7 @@ export default function AlbumPage({ lang = 'ja' }) {
               type="button"
               onClick={(e) => { e.stopPropagation(); nextPhoto() }}
               style={{ position: 'absolute', right: 8, background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', fontSize: 32, cursor: 'pointer', padding: '10px 14px', borderRadius: 8, lineHeight: 1 }}
-              aria-label={lang === 'en' ? 'Next' : lang === 'es' ? 'Next' : '次へ'}
+              aria-label={lang === 'en' ? 'Next' : lang === 'es' ? 'Siguiente' : '次へ'}
             >
               ›
             </button>
@@ -634,9 +634,9 @@ export default function AlbumPage({ lang = 'ja' }) {
 
       {/* Bottom nav */}
       <nav className="bottom-nav">
-        <button type="button" onClick={() => { if (!slug) { console.error('slug required'); return } navigate(`/pair/${slug}`) }}><span style={{ fontSize: 20 }}>🏠</span><span>{lang === 'en' ? 'Home' : lang === 'es' ? 'Home' : 'ホーム'}</span></button>
-        <button type="button" className="active"><span style={{ fontSize: 20 }}>🖼</span><span>{lang === 'en' ? 'Album' : lang === 'es' ? 'Album' : 'アルバム'}</span></button>
-        <button type="button" onClick={handleShare}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : lang === 'es' ? 'Invite' : '招待'}</span></button>
+        <button type="button" onClick={() => { if (!slug) { console.error('slug required'); return } navigate(`/pair/${slug}`) }}><span style={{ fontSize: 20 }}>🏠</span><span>{lang === 'en' ? 'Home' : lang === 'es' ? 'Inicio' : 'ホーム'}</span></button>
+        <button type="button" className="active"><span style={{ fontSize: 20 }}>🖼</span><span>{lang === 'en' ? 'Album' : lang === 'es' ? 'Álbum' : 'アルバム'}</span></button>
+        <button type="button" onClick={handleShare}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : lang === 'es' ? 'Invitar' : '招待'}</span></button>
       </nav>
 
       {toastMsg && (
