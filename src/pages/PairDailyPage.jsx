@@ -769,16 +769,6 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <LanguageSwitch lang={lang} />
-          {daysSinceStart > 0 && (
-            <span style={{ padding: '4px 12px', fontSize: 13, fontWeight: 700, color: '#0077aa', background: 'rgba(0,150,199,0.12)', border: '1px solid rgba(0,150,199,0.25)', borderRadius: 20 }}>
-              {daysSinceStart}{lang === 'en' ? 'd' : lang === 'es' ? 'd' : '日目'}
-            </span>
-          )}
-          {streakCount > 0 && (
-            <span style={{ padding: '4px 12px', fontSize: 13, fontWeight: 700, color: '#0077aa', background: 'rgba(0,150,199,0.12)', border: '1px solid rgba(0,150,199,0.25)', borderRadius: 20 }}>
-              🔥{streakCount}{lang === 'en' ? 'd' : lang === 'es' ? 'd' : '日連続'}
-            </span>
-          )}
         </div>
       </header>
 
@@ -788,7 +778,23 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
           <span style={{ fontSize: 22, fontWeight: 600, color: '#6B5B95', lineHeight: 1 }}>{dateDay}</span>
           <span style={{ fontSize: 10, fontWeight: 500, color: '#6B5B95', opacity: 0.75, letterSpacing: '0.1em', whiteSpace: 'nowrap' }}>{dateMonthYear}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          {(daysSinceStart > 0 || streakCount > 0) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {daysSinceStart > 0 && (
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 2, lineHeight: 1 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#6040c0', lineHeight: 1 }}>{daysSinceStart}</span>
+                  <span style={{ fontSize: 7, fontWeight: 600, color: '#6040c0', lineHeight: 1 }}>{lang === 'en' ? 'days' : lang === 'es' ? 'días' : '日目'}</span>
+                </div>
+              )}
+              {streakCount > 0 && (
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 2, lineHeight: 1 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#e06020', lineHeight: 1 }}>🔥{streakCount}</span>
+                  <span style={{ fontSize: 7, fontWeight: 600, color: '#e06020', lineHeight: 1 }}>{lang === 'en' ? 'streak' : lang === 'es' ? 'racha' : '連続'}</span>
+                </div>
+              )}
+            </div>
+          )}
           {/* 段階10-b: Switch button を RoleBadge に吸収（常時 role 表示 + tap で変更） */}
           {onChangeRole && (
             <RoleBadge role={role} lang={lang} onClick={onChangeRole} />
