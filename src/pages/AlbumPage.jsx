@@ -6,6 +6,7 @@ import AlbumCalendar from '../components/AlbumCalendar'
 import { getUserRole, clearUserRole } from '../lib/pairDaily'
 import { buildInviteUrl, copyInviteLink } from '../lib/invite'
 import RoleBadge from '../components/RoleBadge'
+import { t } from '../lib/i18n'
 
 const DEMO_ALBUM_PHOTO_SETS = [
   ['/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp','/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp','/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png'],
@@ -320,7 +321,7 @@ export default function AlbumPage({ lang = 'ja' }) {
         <button
           type="button"
           onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/')}
-          style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', padding: '0 4px', color: '#7050C0', lineHeight: 1 }}
+          style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', padding: '0 4px', color: '#0096c7', lineHeight: 1 }}
           aria-label={lang === 'en' ? 'Back' : lang === 'es' ? 'Atrás' : '戻る'}
         >
           ←
@@ -336,16 +337,16 @@ export default function AlbumPage({ lang = 'ja' }) {
         />
       </header>
 
-      {/* Pill Tabs */}
+      {/* Pill Tabs — Caribbean 整合 (5984a56) */}
       {(pairId || isDemo) && (
         <div style={{ display: 'flex', gap: 6, padding: '10px 16px', background: '#FFF8FF', position: 'sticky', top: 49, zIndex: 99 }}>
-          <button type="button" onClick={() => setActiveTab('photo')} style={{ flex: 1, padding: '10px 0', fontSize: 13, fontWeight: 700, color: activeTab === 'photo' ? '#fff' : '#999', background: activeTab === 'photo' ? 'linear-gradient(90deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+          <button type="button" onClick={() => setActiveTab('photo')} style={{ flex: 1, padding: '10px 0', fontSize: 13, fontWeight: 700, color: activeTab === 'photo' ? '#fff' : '#999', background: activeTab === 'photo' ? 'linear-gradient(90deg, #0096c7, #00b4d8)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
             📷 {lang === 'en' ? 'Photos' : lang === 'es' ? 'Fotos' : '写真'}
           </button>
-          <button type="button" onClick={() => setActiveTab('voice')} style={{ flex: 1, padding: '10px 0', fontSize: 13, fontWeight: 700, color: activeTab === 'voice' ? '#fff' : '#999', background: activeTab === 'voice' ? 'linear-gradient(90deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+          <button type="button" onClick={() => setActiveTab('voice')} style={{ flex: 1, padding: '10px 0', fontSize: 13, fontWeight: 700, color: activeTab === 'voice' ? '#fff' : '#999', background: activeTab === 'voice' ? 'linear-gradient(90deg, #0096c7, #00b4d8)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
             🎙 {lang === 'en' ? 'Voice' : lang === 'es' ? 'Voz' : '声'}
           </button>
-          <button type="button" onClick={() => setActiveTab('calendar')} style={{ flex: 1, padding: '10px 0', fontSize: 13, fontWeight: 700, color: activeTab === 'calendar' ? '#fff' : '#999', background: activeTab === 'calendar' ? 'linear-gradient(90deg, #FF80C0, #A060FF)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+          <button type="button" onClick={() => setActiveTab('calendar')} style={{ flex: 1, padding: '10px 0', fontSize: 13, fontWeight: 700, color: activeTab === 'calendar' ? '#fff' : '#999', background: activeTab === 'calendar' ? 'linear-gradient(90deg, #0096c7, #00b4d8)' : 'rgba(0,0,0,0.04)', border: 'none', borderRadius: 20, cursor: 'pointer', transition: 'all 0.2s ease' }}>
             📅 {lang === 'en' ? 'Calendar' : lang === 'es' ? 'Calendario' : 'カレンダー'}
           </button>
         </div>
@@ -381,9 +382,21 @@ export default function AlbumPage({ lang = 'ja' }) {
               el.pause(); el.src = '/demo-audio.mp3'; el.currentTime = 0
               el.play().then(() => { setPlayingKey(key); setPlayedKeys(p => ({ ...p, [key]: true })) }).catch(() => {})
             }
-            const btnBase = { flex: 1, padding: '10px 8px', fontSize: 12, fontWeight: 600, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 5, minHeight: 42 }
+            const btnBase = { flex: 1, minWidth: 0, padding: '10px 8px', fontSize: 12, fontWeight: 600, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 5, minHeight: 42, boxSizing: 'border-box' }
             const renderBtn = (role, data, emoji, label) => {
-              if (!data) return <div key={role} style={{ ...btnBase, background: '#FAFAFA', border: '2px solid #EEE', color: '#ccc', justifyContent: 'center' }}>—</div>
+              if (!data) return (
+                <div key={role} style={{
+                  ...btnBase,
+                  background: 'linear-gradient(145deg, #f8f4ff, #fff5f5)',
+                  border: '1px dashed rgba(184,160,232,.35)',
+                  color: '#ccc',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}>
+                  <span style={{ fontSize: 14, opacity: 0.4 }}>🎙️</span>
+                  <span style={{ fontSize: 11 }}>{t(lang, 'noRecording')}</span>
+                </div>
+              )
               const key = `${day.dateKey}-${role}`
               const isPlaying = playingKey === key
               const hasPlayed = data.seen || !!playedKeys[key]
@@ -410,7 +423,7 @@ export default function AlbumPage({ lang = 'ja' }) {
             }
             return (
               <div key={day.dateKey} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #EEE8FF' }}>
-                <span style={{ fontSize: 12, color: '#8070A0', fontWeight: 600, minWidth: 50 }}>{day.label}</span>
+                <span style={{ fontSize: 12, color: '#8070A0', fontWeight: 600, width: 90, flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{day.label}</span>
                 {renderBtn('parent', day.parent, '👴', lang === 'en' ? 'Parent' : lang === 'es' ? 'Padre/Madre' : '親')}
                 {renderBtn('child', day.child, '🧑', lang === 'en' ? 'Child' : lang === 'es' ? 'Hijo/Hija' : '子')}
               </div>

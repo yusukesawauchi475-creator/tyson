@@ -124,6 +124,8 @@ const dict = {
     facilityTitle: '介護施設様向けプラン',
     facilityDesc: 'ご入居者様とご家族の毎日の繋がりを。3ヶ月無料 pilot 受付中',
     facilityCta: '→ 詳しく見る',
+    // Album voice empty cell
+    noRecording: '録音なし',
     monthNames: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
   },
   en: {
@@ -239,6 +241,8 @@ const dict = {
     facilityTitle: 'For Care Facilities',
     facilityDesc: 'Daily connection between residents and families. 3-month free pilot accepting now.',
     facilityCta: '→ Learn more',
+    // Album voice empty cell
+    noRecording: 'no recording',
     monthNames: ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'],
   },
   es: {
@@ -353,6 +357,8 @@ const dict = {
     facilityTitle: 'Para residencias',
     facilityDesc: 'Conexión diaria entre residentes y familias. Pilot gratuito de 3 meses.',
     facilityCta: '→ Más información',
+    // Album voice empty cell
+    noRecording: 'sin grabación',
     monthNames: ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'],
   },
 }

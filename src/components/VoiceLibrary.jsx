@@ -4,6 +4,7 @@ import { getIdTokenForApi } from '../lib/firebase'
 import { getEffectiveRole, isCorrected } from '../lib/voiceRole'
 import { formatTime12hLowerFromHHMM } from '../lib/dateFormat'
 import { isVoiceListened, markVoiceListened } from '../lib/listenedTracking'
+import { t } from '../lib/i18n'
 
 export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pairIdProp, onDataLoaded, adminMode = false, onCorrect }) {
   const [days, setDays] = useState([])
@@ -164,15 +165,17 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
     if (items.length === 0) {
       return (
         <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-          <button type="button" disabled style={{
+          <div style={{
             width: '100%', padding: '8px 6px', fontSize: 11, fontWeight: 600,
-            color: '#CCC', background: '#fff', border: '2px solid #E8E0FF',
-            borderRadius: 10, cursor: 'default', display: 'flex', alignItems: 'center', gap: 4,
-            boxSizing: 'border-box', overflow: 'hidden',
+            color: '#ccc',
+            background: 'linear-gradient(145deg, #f8f4ff, #fff5f5)',
+            border: '1px dashed rgba(184,160,232,.35)',
+            borderRadius: 12, display: 'flex', alignItems: 'center', gap: 4,
+            boxSizing: 'border-box', overflow: 'hidden', justifyContent: 'center',
           }}>
-            <span style={{ fontSize: 13 }}>—</span>
-            <span>{label}</span>
-          </button>
+            <span style={{ fontSize: 13, opacity: 0.4 }}>🎙️</span>
+            <span>{t(lang, 'noRecording')}</span>
+          </div>
         </div>
       )
     }
