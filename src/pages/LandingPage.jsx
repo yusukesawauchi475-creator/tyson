@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { t } from '../lib/i18n'
 
 const STYLE_ID = 'landing-animations'
 function ensureStyles() {
@@ -95,17 +96,27 @@ export default function LandingPage({ lang = 'ja' }) {
           </span>
         </p>
 
-        {/* Catchphrase */}
-        <p style={{ fontSize: 20, fontWeight: 600, color: '#5A4A6A', margin: '0 0 8px' }}>
-          {lang === 'en' ? '1 min a day, connected by voice' : lang === 'es' ? '1 minuto al día, conectados por voz' : '毎日1分、声でつながる'}
-        </p>
-
-        {/* Sub */}
-        <p style={{ fontSize: 15, color: '#9A8AAA', margin: '0 0 40px', lineHeight: 1.6 }}>
-          {lang === 'en'
-            ? 'Daily voice messages between you and your family'
-            : '家族との毎日のボイスメッセージ'}
-        </p>
+        {/* Mic value box — pink→purple gradient circle + emphasis copy */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '8px 0 32px' }}>
+          <div style={{
+            width: 80,
+            height: 80,
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #ec4899, #a855f7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 40,
+            color: '#fff',
+            boxShadow: '0 8px 24px rgba(168,85,247,.3)',
+          }}>🎙️</div>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#005f80', margin: '12px 0 4px' }}>
+            {t(lang, 'valueBoxMain')}
+          </h2>
+          <p style={{ fontSize: 13, color: '#6B5B95', margin: 0 }}>
+            {t(lang, 'valueBoxSub')}
+          </p>
+        </div>
 
         {/* CTA */}
         <button
@@ -132,6 +143,72 @@ export default function LandingPage({ lang = 'ja' }) {
         <p style={{ fontSize: 12, color: '#B0A0C0', margin: '12px 0 0' }}>
           {lang === 'en' ? 'No sign-up required' : lang === 'es' ? 'No se requiere registro' : 'アカウント登録不要'}
         </p>
+
+        {/* 4 segment grid */}
+        <section style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, 1fr)',
+          gap: 12,
+          maxWidth: 400,
+          margin: '32px auto 0',
+        }}>
+          {[
+            { icon: '✈️', titleKey: 'segOverseas', descKey: 'segOverseasDesc' },
+            { icon: '🏠', titleKey: 'segApart', descKey: 'segApartDesc' },
+            { icon: '🏥', titleKey: 'segFacility', descKey: 'segFacilityDesc' },
+            { icon: '🎂', titleKey: 'segAnniversary', descKey: 'segAnniversaryDesc' },
+          ].map((s) => (
+            <div key={s.titleKey} style={{
+              background: 'linear-gradient(145deg, #ffffff, #f8f4ff)',
+              borderRadius: 12,
+              padding: 16,
+              boxShadow: '0 4px 0 rgba(168,85,247,.15), 0 6px 12px rgba(0,0,0,.06), inset 0 1px 0 rgba(255,255,255,.8)',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 32, marginBottom: 8 }}>{s.icon}</div>
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: '#6040c0', margin: '0 0 4px' }}>
+                {t(lang, s.titleKey)}
+              </h3>
+              <p style={{ fontSize: 11, color: '#888', margin: 0, lineHeight: 1.4 }}>
+                {t(lang, s.descKey)}
+              </p>
+            </div>
+          ))}
+        </section>
+
+        {/* Facility CTA — For Facilities pilot */}
+        <section style={{
+          background: 'linear-gradient(135deg, rgba(0,180,216,.15), rgba(168,85,247,.10))',
+          borderRadius: 16,
+          padding: 24,
+          maxWidth: 400,
+          margin: '40px auto 0',
+          textAlign: 'center',
+        }}>
+          <span style={{
+            display: 'inline-block',
+            background: 'linear-gradient(90deg, #0096c7, #00b4d8)',
+            color: '#fff',
+            padding: '4px 12px',
+            borderRadius: 12,
+            fontSize: 10,
+            fontWeight: 700,
+            marginBottom: 8,
+            letterSpacing: '0.05em',
+          }}>For Facilities</span>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: '#005f80', margin: '0 0 8px' }}>
+            {t(lang, 'facilityTitle')}
+          </h2>
+          <p style={{ fontSize: 12, color: '#6B5B95', margin: '0 0 16px', lineHeight: 1.5 }}>
+            {t(lang, 'facilityDesc')}
+          </p>
+          <a href="mailto:hum.family.app@gmail.com?subject=Facility%20Pilot" style={{
+            color: '#0096c7',
+            fontSize: 13,
+            fontWeight: 700,
+            textDecoration: 'none',
+          }}>{t(lang, 'facilityCta')}</a>
+        </section>
       </div>
     </div>
   )
