@@ -122,9 +122,6 @@ export default function DemoPage({ lang = 'ja' }) {
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-sans)', background: 'var(--color-bg)', color: 'var(--color-text)', paddingBottom: 160, overflow: 'hidden' }}>
       {/* Hero Header */}
       <header style={{ flexShrink: 0, background: 'linear-gradient(135deg, #FF60B0 0%, #A060FF 50%, #60B0FF 100%)', padding: '20px 18px 24px', textAlign: 'center', position: 'relative' }}>
-        <div style={{ position: 'absolute', top: 12, right: 12 }}>
-          <LanguageSwitch lang={lang} />
-        </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
           <img src="/logo.png" alt="Hum" width={44} height={44} style={{ borderRadius: 12, objectFit: 'cover' }} />
           <span style={{ fontSize: 32, fontWeight: 800, color: '#fff' }}>Hum</span>
@@ -133,13 +130,16 @@ export default function DemoPage({ lang = 'ja' }) {
         <p style={{ fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.9)', margin: 0, letterSpacing: '0.02em' }}>
           {lang === 'en' ? '1 min a day, connected by voice' : lang === 'es' ? '1 minuto al día, conectados por voz' : '毎日1分、声でつながる家族アプリ'}
         </p>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
           <span style={{ padding: '4px 12px', fontSize: 13, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,0.25)', borderRadius: 20 }}>
             55{lang === 'en' ? 'd' : lang === 'es' ? 'd' : '日目'}
           </span>
           <span style={{ padding: '4px 12px', fontSize: 13, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,0.25)', borderRadius: 20 }}>
             🔥7{lang === 'en' ? 'd' : lang === 'es' ? 'd' : '日連続'}
           </span>
+          <div style={{ background: 'rgba(255,255,255,0.92)', borderRadius: 999, padding: '1px 4px', display: 'inline-flex', alignItems: 'center' }}>
+            <LanguageSwitch lang={lang} />
+          </div>
         </div>
       </header>
 

@@ -24,6 +24,8 @@ const US_HOLIDAYS = [
 const ES_HOLIDAYS = [
   { rule: 'mother-day-es', name: 'mothersDay', emoji: '🌹' },
   { date: '03-19', name: 'fathersDay', emoji: '👔' },
+  { date: '05-10', name: 'mothersDay', emoji: '🌷' },       // Mexico: Día de las Madres (5/10 fixed)
+  { rule: 'father-day-mx', name: 'fathersDay', emoji: '👔' }, // Mexico: Día del Padre (6 月第 3 日曜)
   { date: '07-26', name: 'grandparentsDay', emoji: '🌻' },
   { date: '12-25', name: 'christmas', emoji: '🎄' },
   { date: '01-01', name: 'newYear', emoji: '🎉' },
@@ -47,6 +49,7 @@ function resolveDateRule(rule, year) {
       return nthDayOfMonth(year, 4, 0, 1)   // May 1st Sunday
     case 'father-day-jp':
     case 'father-day-us':
+    case 'father-day-mx':
       return nthDayOfMonth(year, 5, 0, 3)   // June 3rd Sunday
     case 'respect-aged-jp':
       return nthDayOfMonth(year, 8, 1, 3)   // Sep 3rd Monday
