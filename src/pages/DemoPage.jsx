@@ -1,9 +1,14 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { t } from '../lib/i18n'
+import { isVoiceListened, markVoiceListened } from '../lib/listenedTracking'
+import { getDateKeyNY } from '../lib/pairDaily'
 
 const DEMO_PAIR_ID = 'PAIR-DEMOTEST'
 const DEMO_AUDIO_URL = '/demo-audio.mp3'
+// Phase 1 統合 (302d609) を demo にも適用するための fixed voice id (sample = 1 件、role='parent'、hhmm='demo')
+const DEMO_VOICE_ROLE = 'parent'
+const DEMO_VOICE_HHMM = 'demo'
 
 const albumDays = [
   {
@@ -82,6 +87,13 @@ export default function DemoPage({ lang = 'ja' }) {
   const parentAudioRef = useRef(null)
   const touchStartRef = useRef(null)
 
+  // Phase 1 統合 (302d609) 整合: demo voice 1 件 sample の listened tracking
+  const [partnerStats, setPartnerStats] = useState(() => {
+    const todayKey = getDateKeyNY()
+    const listened = isVoiceListened(DEMO_PAIR_ID, todayKey, DEMO_VOICE_ROLE, DEMO_VOICE_HHMM)
+    return { unlistened: listened ? 0 : 1, total: 1 }
+  })
+
   const allPhotos = useMemo(() => getAllPhotos(), [])
 
   useEffect(() => { ensurePulseStyle() }, [])
@@ -101,6 +113,12 @@ export default function DemoPage({ lang = 'ja' }) {
       el.currentTime = 0
       await el.play()
       setIsPlayingParent(true)
+      // Phase 1 統合 (302d609) 整合: demo voice を listened にマーク + 即 count 減
+      if (partnerStats.unlistened > 0) {
+        const todayKey = getDateKeyNY()
+        markVoiceListened(DEMO_PAIR_ID, todayKey, DEMO_VOICE_ROLE, DEMO_VOICE_HHMM)
+        setPartnerStats((prev) => ({ ...prev, unlistened: 0 }))
+      }
     } catch (err) {
       setErrorLine(`再生に失敗しました (${err?.name}: ${err?.message})`)
     }
@@ -177,6 +195,10 @@ export default function DemoPage({ lang = 'ja' }) {
           </p>
           <button type="button" onClick={handlePlayParent} style={{ width: '100%', padding: 14, fontSize: 15, fontWeight: 700, color: '#fff', background: isPlayingParent ? 'linear-gradient(160deg,#E04040,#C02020)' : 'linear-gradient(160deg,#40D890,#18B868)', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: isPlayingParent ? '0 5px 0 #901010' : '0 5px 0 #109848', marginBottom: 10 }}>
             {isPlayingParent ? (lang === 'en' ? '⏹ Stop' : lang === 'es' ? '⏹ Detener' : '⏹ 停止') : (lang === 'en' ? '▶ Play' : lang === 'es' ? '▶ Reproducir' : '▶ 再生')}
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', fontWeight: 600, marginLeft: 6 }}>
+              ({partnerStats.total - partnerStats.unlistened}/{partnerStats.total})
+            </span>
+            {!isPlayingParent && partnerStats.unlistened > 0 ? ' 🔴' : ''}
           </button>
         </section>
 
