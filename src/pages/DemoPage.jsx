@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { t } from '../lib/i18n'
 import { isVoiceListened, markVoiceListened } from '../lib/listenedTracking'
 import { getDateKeyNY } from '../lib/pairDaily'
+import { getNearestHoliday } from '../lib/holidayBanner'
 
 const DEMO_PAIR_ID = 'PAIR-DEMOTEST'
 const DEMO_AUDIO_URL = '/demo-audio.mp3'
@@ -93,8 +94,17 @@ export default function DemoPage({ lang = 'ja' }) {
     const listened = isVoiceListened(DEMO_PAIR_ID, todayKey, DEMO_VOICE_ROLE, DEMO_VOICE_HHMM)
     return { unlistened: listened ? 0 : 1, total: 1 }
   })
+  // Holiday banner: demo は cutoff なし、常時最近接 holiday 表示
+  const [nearestHoliday, setNearestHoliday] = useState(() => getNearestHoliday(lang))
 
   const allPhotos = useMemo(() => getAllPhotos(), [])
+
+  useEffect(() => {
+    setNearestHoliday(getNearestHoliday(lang))
+    const onVis = () => { if (document.visibilityState === 'visible') setNearestHoliday(getNearestHoliday(lang)) }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [lang])
 
   useEffect(() => { ensurePulseStyle() }, [])
 
@@ -180,6 +190,37 @@ export default function DemoPage({ lang = 'ja' }) {
         </div>
       </header>
 
+      {/* Holiday banner — demo: cutoff なし、常時最近接 holiday 表示。tap で record-card scroll */}
+      {nearestHoliday && (
+        <div
+          onClick={() => document.getElementById('record-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          style={{
+            margin: '6px 8px 0',
+            padding: '6px 10px',
+            borderRadius: 10,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            background: 'linear-gradient(90deg, rgba(255,180,200,.35), rgba(255,210,180,.35))',
+            border: '1px solid rgba(255,140,170,.3)',
+            cursor: 'pointer',
+          }}
+        >
+          <span style={{ fontSize: 15, flexShrink: 0 }}>{nearestHoliday.emoji}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#a04060' }}>
+              {nearestHoliday.daysLeft === 0
+                ? t(lang, 'holidayToday', { name: t(lang, `holiday_${nearestHoliday.name}`) })
+                : t(lang, 'holidayUpcoming', { name: t(lang, `holiday_${nearestHoliday.name}`), days: nearestHoliday.daysLeft })}
+            </div>
+            <div style={{ fontSize: 9, color: '#c06080', fontWeight: 500 }}>
+              {t(lang, 'holidayCta')}
+            </div>
+          </div>
+          <span style={{ fontSize: 12, color: '#a04060', opacity: 0.6 }}>→</span>
+        </div>
+      )}
+
       {/* Date bar */}
       <div style={{ background: '#F8F0FF', borderBottom: '1px solid #EEE8FF', padding: '8px 18px' }}>
         <time style={{ fontSize: 11, color: '#8070A0', fontWeight: 600 }}>{today}</time>
@@ -203,7 +244,7 @@ export default function DemoPage({ lang = 'ja' }) {
         </section>
 
         {/* (2) Send card - disabled */}
-        <section style={{ width: '100%', minHeight: 120, background: '#FFF4E8', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(208,112,48,0.06)', overflow: 'hidden', opacity: 0.6 }}>
+        <section id="record-card" style={{ width: '100%', minHeight: 120, background: '#FFF4E8', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(208,112,48,0.06)', overflow: 'hidden', opacity: 0.6 }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: '#D07030', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t(lang, 'myRecordingRecordSend')}</p>
           <button type="button" disabled style={{ width: '100%', padding: 14, fontSize: 15, fontWeight: 700, color: '#fff', background: '#B0A0C8', border: 'none', borderRadius: 14, cursor: 'not-allowed', boxShadow: 'none' }}>
             {t(lang, 'record')}

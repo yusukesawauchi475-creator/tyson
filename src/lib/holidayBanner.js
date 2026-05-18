@@ -101,3 +101,36 @@ export function getUpcomingHoliday(lang, today = new Date()) {
   candidates.sort((a, b) => a.daysLeft - b.daysLeft)
   return candidates[0]
 }
+
+// demo 専用: cutoff なしで全 holiday 収集
+function collectAllFuture(list, year, today) {
+  const out = []
+  for (const h of list) {
+    const dateStr = h.date || resolveDateRule(h.rule, year)
+    if (!dateStr) continue
+    const [mm, dd] = dateStr.split('-').map(Number)
+    const holiday = new Date(year, mm - 1, dd)
+    const daysLeft = getDaysUntil(holiday, today)
+    if (daysLeft >= 0) out.push({ ...h, year, daysLeft })
+  }
+  return out
+}
+
+/**
+ * cutoff なし、最近接 holiday を 1 件常時返す (demo 専用)。
+ * 当年内に future holiday がなければ翌年 1 月から fallback。
+ * @param {'ja'|'en'|'es'} lang
+ * @param {Date} [today=new Date()]
+ * @returns {{ name: string, emoji: string, daysLeft: number, year: number } | null}
+ */
+export function getNearestHoliday(lang, today = new Date()) {
+  const list = lang === 'en' ? US_HOLIDAYS : lang === 'es' ? ES_HOLIDAYS : JP_HOLIDAYS
+  const year = today.getFullYear()
+  let candidates = collectAllFuture(list, year, today)
+  if (candidates.length === 0) {
+    candidates = collectAllFuture(list, year + 1, today)
+  }
+  if (candidates.length === 0) return null
+  candidates.sort((a, b) => a.daysLeft - b.daysLeft)
+  return candidates[0]
+}
