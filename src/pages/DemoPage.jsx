@@ -4,6 +4,8 @@ import { t } from '../lib/i18n'
 import { isVoiceListened, markVoiceListened } from '../lib/listenedTracking'
 import { getDateKeyNY } from '../lib/pairDaily'
 import { getNearestHoliday } from '../lib/holidayBanner'
+import { getDemoAlbumDays, getDemoAllPhotos } from '../lib/demoPhotos'
+import LanguageSwitch from '../components/LanguageSwitch'
 
 const DEMO_PAIR_ID = 'PAIR-DEMOTEST'
 const DEMO_AUDIO_URL = '/demo-audio.mp3'
@@ -11,64 +13,8 @@ const DEMO_AUDIO_URL = '/demo-audio.mp3'
 const DEMO_VOICE_ROLE = 'parent'
 const DEMO_VOICE_HHMM = 'demo'
 
-const albumDays = [
-  {
-    date: '4月1日',
-    photos: [
-      '/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp',
-      '/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp',
-      '/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png',
-    ]
-  },
-  {
-    date: '3月31日',
-    photos: [
-      '/demo-photos/nekocyanPAKE5233-481_TP_V.webp',
-      '/demo-photos/Gemini_Generated_Image_dm6kcmdm6kcmdm6k.png',
-    ]
-  },
-  {
-    date: '3月30日',
-    photos: [
-      '/demo-photos/08redsugar720_TP_V.webp',
-      '/demo-photos/susipakuKYPKPAR52703_TP_V.webp',
-      '/demo-photos/Gemini_Generated_Image_9jztwk9jztwk9jzt.png',
-      '/demo-photos/CCIMG_8140_TP_V4.webp',
-    ]
-  },
-  {
-    date: '3月28日',
-    photos: [
-      '/demo-photos/pakutaso_go33036_TP_V.jpg',
-      '/demo-photos/Gemini_Generated_Image_ejq9x3ejq9x3ejq9.png',
-    ]
-  },
-  {
-    date: '3月25日',
-    photos: [
-      '/demo-photos/TKLA__7DA5611_TP_V.jpg',
-      '/demo-photos/Family%20fun%20in%20winter%20wonderland.png',
-      '/demo-photos/Gemini_Generated_Image_v6ips5v6ips5v6ip.png',
-    ]
-  },
-  {
-    date: '3月20日',
-    photos: [
-      '/demo-photos/nekocyanPAKE5233-481_TP_V4.webp',
-      '/demo-photos/Gemini_Generated_Image_7if52r7if52r7if5.png',
-      '/demo-photos/Gemini_Generated_Image_bnqbafbnqbafbnqb.png',
-    ]
-  },
-]
-
-// Flatten all photos for lightbox navigation
-function getAllPhotos() {
-  const all = []
-  for (const day of albumDays) {
-    for (const url of day.photos) all.push(url)
-  }
-  return all
-}
+// albumDays / getAllPhotos は src/lib/demoPhotos.js に移行 (i18n structure 用意)
+// 後日 Yusuke 撮影で en/es 別 photo 差替可能
 
 // Inject pulse animation CSS once
 const PULSE_STYLE_ID = 'demo-pulse-style'
@@ -99,7 +45,9 @@ export default function DemoPage({ lang = 'ja' }) {
   // Demo funnel popup: 録音 / 写真追加 tap で表示、OK で 「このアプリを使ってみる」 CTA と同 link
   const [showDemoTryPopup, setShowDemoTryPopup] = useState(false)
 
-  const allPhotos = useMemo(() => getAllPhotos(), [])
+  // Demo photos: lang 別 (現状全 lang 同 URL、後日差替)
+  const albumDays = useMemo(() => getDemoAlbumDays(lang), [lang])
+  const allPhotos = useMemo(() => getDemoAllPhotos(lang), [lang])
 
   useEffect(() => {
     setNearestHoliday(getNearestHoliday(lang))
@@ -173,7 +121,10 @@ export default function DemoPage({ lang = 'ja' }) {
   return (
     <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', fontFamily: 'var(--font-sans)', background: 'var(--color-bg)', color: 'var(--color-text)', paddingBottom: 160, overflow: 'hidden' }}>
       {/* Hero Header */}
-      <header style={{ flexShrink: 0, background: 'linear-gradient(135deg, #FF60B0 0%, #A060FF 50%, #60B0FF 100%)', padding: '20px 18px 24px', textAlign: 'center' }}>
+      <header style={{ flexShrink: 0, background: 'linear-gradient(135deg, #FF60B0 0%, #A060FF 50%, #60B0FF 100%)', padding: '20px 18px 24px', textAlign: 'center', position: 'relative' }}>
+        <div style={{ position: 'absolute', top: 12, right: 12 }}>
+          <LanguageSwitch lang={lang} />
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
           <img src="/logo.png" alt="Hum" width={44} height={44} style={{ borderRadius: 12, objectFit: 'cover' }} />
           <span style={{ fontSize: 32, fontWeight: 800, color: '#fff' }}>Hum</span>
