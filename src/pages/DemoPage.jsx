@@ -96,6 +96,8 @@ export default function DemoPage({ lang = 'ja' }) {
   })
   // Holiday banner: demo は cutoff なし、常時最近接 holiday 表示
   const [nearestHoliday, setNearestHoliday] = useState(() => getNearestHoliday(lang))
+  // Demo funnel popup: 録音 / 写真追加 tap で表示、OK で 「このアプリを使ってみる」 CTA と同 link
+  const [showDemoTryPopup, setShowDemoTryPopup] = useState(false)
 
   const allPhotos = useMemo(() => getAllPhotos(), [])
 
@@ -243,39 +245,18 @@ export default function DemoPage({ lang = 'ja' }) {
           </button>
         </section>
 
-        {/* (2) Send card - disabled */}
-        <section id="record-card" style={{ width: '100%', minHeight: 120, background: '#FFF4E8', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(208,112,48,0.06)', overflow: 'hidden', opacity: 0.6 }}>
+        {/* (2) Send card — funnel (録音 tap で popup → CTA) */}
+        <section id="record-card" style={{ width: '100%', minHeight: 120, background: '#FFF4E8', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(208,112,48,0.06)', overflow: 'hidden' }}>
           <p style={{ fontSize: 11, fontWeight: 700, color: '#D07030', margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{t(lang, 'myRecordingRecordSend')}</p>
-          <button type="button" disabled style={{ width: '100%', padding: 14, fontSize: 15, fontWeight: 700, color: '#fff', background: '#B0A0C8', border: 'none', borderRadius: 14, cursor: 'not-allowed', boxShadow: 'none' }}>
+          <button type="button" onClick={() => setShowDemoTryPopup(true)} style={{ width: '100%', padding: 14, fontSize: 15, fontWeight: 700, color: '#fff', background: 'linear-gradient(160deg, #f97316, #c084fc)', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 5px 0 #b06820' }}>
             {t(lang, 'record')}
           </button>
-          <p style={{ fontSize: 11, color: '#B08050', textAlign: 'center', margin: '8px 0 0' }}>
-            {lang === 'en' ? 'Recording is disabled in demo mode' : lang === 'es' ? 'La grabación está desactivada en modo demo' : 'デモモードでは録音できません'}
-          </p>
-        </section>
-
-        {/* Today's Photos */}
-        <section style={{ width: '100%', minHeight: 120, background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
-          <p style={{ fontSize: 13, fontWeight: 700, color: '#7050C0', margin: '0 0 10px' }}>
-            📷 {lang === 'en' ? "Today's Photos" : lang === 'es' ? "Fotos de hoy" : '今日の写真'}　<span style={{ fontWeight: 500, color: '#8070A0' }}>3{lang === 'en' ? '' : lang === 'es' ? '' : '枚'}</span>
-          </p>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {[
-              '/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp',
-              '/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png',
-              '/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp',
-            ].map((url, i) => (
-              <button key={i} type="button" onClick={() => setLightboxIndex(allPhotos.indexOf(url) >= 0 ? allPhotos.indexOf(url) : 0)} style={{ padding: 0, border: 'none', background: 'none', cursor: 'pointer', borderRadius: 11, overflow: 'hidden', flexShrink: 0 }}>
-                <img src={url} alt="" width={88} height={88} style={{ width: 88, height: 88, objectFit: 'cover', display: 'block', borderRadius: 11 }} />
-              </button>
-            ))}
-          </div>
         </section>
 
         {/* (3) Photo album grouped by date */}
         <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 18, padding: 18, boxShadow: '0 2px 16px rgba(112,80,192,0.06)', overflow: 'hidden' }}>
           <p style={{ fontSize: 13, fontWeight: 700, color: '#7050C0', margin: '0 0 14px' }}>
-            📷 {lang === 'en' ? 'Photo Album' : lang === 'es' ? 'Álbum de fotos' : 'フォトアルバム'}　<span style={{ fontWeight: 500, color: '#8070A0' }}>{allPhotos.length}{lang === 'en' ? ' photos' : lang === 'es' ? ' fotos' : '枚'}</span>
+            📷 {lang === 'en' ? 'Photo Album' : lang === 'es' ? 'Álbum de fotos' : 'フォトアルバム'}
           </p>
 
           {albumDays.map((day) => (
@@ -300,9 +281,9 @@ export default function DemoPage({ lang = 'ja' }) {
           ))}
         </section>
 
-        {/* Photo upload button (demo disabled) */}
+        {/* Photo upload button — funnel (tap で popup → CTA) */}
         <section style={{ width: '100%', background: '#F0EEFF', borderRadius: 18, padding: 18, overflow: 'hidden' }}>
-          <button type="button" onClick={() => { setErrorLine(lang === 'en' ? 'Photo upload is disabled in demo mode' : lang === 'es' ? 'La subida de fotos está desactivada en modo demo' : 'デモモードでは写真を追加できません'); setTimeout(() => setErrorLine(null), 3000) }} style={{ width: '100%', padding: 16, fontSize: 15, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg, #7050C0, #A060FF)', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 16px rgba(112,80,192,0.3)' }}>
+          <button type="button" onClick={() => setShowDemoTryPopup(true)} style={{ width: '100%', padding: 16, fontSize: 15, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg, #7050C0, #A060FF)', border: 'none', borderRadius: 14, cursor: 'pointer', boxShadow: '0 4px 16px rgba(112,80,192,0.3)' }}>
             📷 {lang === 'en' ? 'Add Photos' : lang === 'es' ? 'Añadir fotos' : '写真を追加する'}
           </button>
         </section>
@@ -362,6 +343,41 @@ export default function DemoPage({ lang = 'ja' }) {
           <p style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', color: 'rgba(255,255,255,0.6)', fontSize: 13, margin: 0 }}>
             {lightboxIndex + 1} / {allPhotos.length}
           </p>
+        </div>
+      )}
+
+      {/* Demo funnel popup — 録音 / 写真追加 tap で表示、OK で 「このアプリを使ってみる」 CTA と同 link */}
+      {showDemoTryPopup && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setShowDemoTryPopup(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 12000, padding: 16 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: '#fff', borderRadius: 18, padding: 24, maxWidth: 320, width: '100%', boxShadow: '0 12px 32px rgba(0,0,0,0.25)' }}
+          >
+            <p style={{ margin: '0 0 18px', fontSize: 15, color: '#005f80', lineHeight: 1.55, fontWeight: 600 }}>
+              {t(lang, 'demoTryPopupBody')}
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setShowDemoTryPopup(false)}
+                style={{ background: 'transparent', color: '#7050C0', border: 'none', borderRadius: 12, padding: '10px 14px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+              >
+                {t(lang, 'demoTryPopupCancel')}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowDemoTryPopup(false); navigate(`/pair/${DEMO_PAIR_ID}`) }}
+                style={{ background: 'linear-gradient(90deg, #0096c7, #00b4d8)', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 18px', fontSize: 14, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,150,199,0.3)' }}
+              >
+                {t(lang, 'demoTryPopupOk')}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

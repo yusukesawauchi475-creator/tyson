@@ -138,6 +138,10 @@ const dict = {
     holiday_newYear: '元旦',
     holiday_valentine: 'バレンタイン',
     holiday_christmas: 'クリスマス',
+    // Demo try popup (funnel)
+    demoTryPopupBody: 'このアプリを試したい場合は、Hum を使ってみませんか?',
+    demoTryPopupOk: '使ってみる',
+    demoTryPopupCancel: 'キャンセル',
     monthNames: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
   },
   en: {
@@ -267,6 +271,10 @@ const dict = {
     holiday_newYear: 'New Year',
     holiday_valentine: "Valentine's Day",
     holiday_christmas: 'Christmas',
+    // Demo try popup (funnel)
+    demoTryPopupBody: 'Want to try this app? Open Hum and start sharing voices.',
+    demoTryPopupOk: 'Try it',
+    demoTryPopupCancel: 'Cancel',
     monthNames: ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'],
   },
   es: {
@@ -395,6 +403,10 @@ const dict = {
     holiday_newYear: 'Año Nuevo',
     holiday_valentine: 'San Valentín',
     holiday_christmas: 'Navidad',
+    // Demo try popup (funnel)
+    demoTryPopupBody: '¿Quieres probarlo? Abre Hum y comienza a compartir voces.',
+    demoTryPopupOk: 'Probar',
+    demoTryPopupCancel: 'Cancelar',
     monthNames: ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'],
   },
 }
