@@ -126,6 +126,18 @@ const dict = {
     facilityCta: '→ 詳しく見る',
     // Album voice empty cell
     noRecording: '録音なし',
+    // Holiday banner
+    holidayUpcoming: '{{name}}まで あと{{days}}日',
+    holidayToday: '今日は{{name}}',
+    holidayCta: '声でお祝いを届けよう',
+    holiday_mothersDay: '母の日',
+    holiday_fathersDay: '父の日',
+    holiday_respectAgedDay: '敬老の日',
+    holiday_grandparentsDay: '祖父母の日',
+    holiday_thanksgiving: 'Thanksgiving',
+    holiday_newYear: '元旦',
+    holiday_valentine: 'バレンタイン',
+    holiday_christmas: 'クリスマス',
     monthNames: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
   },
   en: {
@@ -243,6 +255,18 @@ const dict = {
     facilityCta: '→ Learn more',
     // Album voice empty cell
     noRecording: 'no recording',
+    // Holiday banner
+    holidayUpcoming: '{{name}} in {{days}} days',
+    holidayToday: "Today is {{name}}",
+    holidayCta: 'Send a voice message of love',
+    holiday_mothersDay: "Mother's Day",
+    holiday_fathersDay: "Father's Day",
+    holiday_respectAgedDay: 'Respect for the Aged Day',
+    holiday_grandparentsDay: 'Grandparents Day',
+    holiday_thanksgiving: 'Thanksgiving',
+    holiday_newYear: 'New Year',
+    holiday_valentine: "Valentine's Day",
+    holiday_christmas: 'Christmas',
     monthNames: ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'],
   },
   es: {
@@ -359,6 +383,18 @@ const dict = {
     facilityCta: '→ Más información',
     // Album voice empty cell
     noRecording: 'sin grabación',
+    // Holiday banner
+    holidayUpcoming: '{{name}} en {{days}} días',
+    holidayToday: 'Hoy es {{name}}',
+    holidayCta: 'Envía tu cariño con la voz',
+    holiday_mothersDay: 'Día de la Madre',
+    holiday_fathersDay: 'Día del Padre',
+    holiday_respectAgedDay: 'Día del Respeto a los Mayores',
+    holiday_grandparentsDay: 'Día de los Abuelos',
+    holiday_thanksgiving: 'Acción de Gracias',
+    holiday_newYear: 'Año Nuevo',
+    holiday_valentine: 'San Valentín',
+    holiday_christmas: 'Navidad',
     monthNames: ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'],
   },
 }

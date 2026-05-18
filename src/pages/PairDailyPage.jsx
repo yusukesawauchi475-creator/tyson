@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { getDateKey, fetchAudioForPlayback, hasTodayAudio, getListenRoleMeta, markSeen, uploadAudio, genRequestId, getStreak, updateStreak } from '../lib/pairDaily'
 import { markVoiceListened, getTodayPartnerUnlistenedStats } from '../lib/listenedTracking'
+import { getUpcomingHoliday } from '../lib/holidayBanner'
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { buildInviteUrl, copyInviteLink } from '../lib/invite'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
@@ -40,6 +41,8 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   const [isPlaying, setIsPlaying] = useState(false)
   // Phase 1: 今日 partner (parent) voice の 未聴 stats
   const [partnerStats, setPartnerStats] = useState({ unlistened: 0, total: 0, latestHhmm: null })
+  // Holiday banner: 14 日以内の最近接 holiday (再 mount + visibilitychange で再計算)
+  const [upcomingHoliday, setUpcomingHoliday] = useState(() => getUpcomingHoliday(lang))
   const [errorLine, setErrorLine] = useState(null)
   const [isRecording, setIsRecording] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -336,6 +339,14 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
     document.addEventListener('visibilitychange', onVis)
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [refreshPartnerStats])
+
+  // Holiday banner: lang 変更 + visibilitychange (日跨ぎ) で再計算
+  useEffect(() => {
+    setUpcomingHoliday(getUpcomingHoliday(lang))
+    const onVis = () => { if (document.visibilityState === 'visible') setUpcomingHoliday(getUpcomingHoliday(lang)) }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [lang])
 
   const handleStop = () => {
     const el = audioRef.current
@@ -772,6 +783,37 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
         </div>
       </header>
 
+      {/* Holiday banner — 14 日以内最近接 holiday、tap で録音 card scroll */}
+      {upcomingHoliday && (
+        <div
+          onClick={() => document.getElementById('record-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+          style={{
+            margin: '6px 8px 0',
+            padding: '6px 10px',
+            borderRadius: 10,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            background: 'linear-gradient(90deg, rgba(255,180,200,.35), rgba(255,210,180,.35))',
+            border: '1px solid rgba(255,140,170,.3)',
+            cursor: 'pointer',
+          }}
+        >
+          <span style={{ fontSize: 15, flexShrink: 0 }}>{upcomingHoliday.emoji}</span>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#a04060' }}>
+              {upcomingHoliday.daysLeft === 0
+                ? t(lang, 'holidayToday', { name: t(lang, `holiday_${upcomingHoliday.name}`) })
+                : t(lang, 'holidayUpcoming', { name: t(lang, `holiday_${upcomingHoliday.name}`), days: upcomingHoliday.daysLeft })}
+            </div>
+            <div style={{ fontSize: 9, color: '#c06080', fontWeight: 500 }}>
+              {t(lang, 'holidayCta')}
+            </div>
+          </div>
+          <span style={{ fontSize: 12, color: '#a04060', opacity: 0.6 }}>→</span>
+        </div>
+      )}
+
       {/* Date bar */}
       <div style={{ background: '#F8F0FF', borderBottom: '1px solid #EEE8FF', padding: '10px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0, flexShrink: 1 }}>
@@ -842,7 +884,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
         </section>
 
         {/* (2) Send card — 3D pink */}
-        <section style={{ width: '100%', background: 'linear-gradient(145deg, #fff0f5, #fff5ee)', borderRadius: 20, padding: 16, boxShadow: '0 4px 0 #f0b8cc, 0 6px 12px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8)', overflow: 'hidden', fontFamily: 'Nunito, sans-serif' }}>
+        <section id="record-card" style={{ width: '100%', background: 'linear-gradient(145deg, #fff0f5, #fff5ee)', borderRadius: 20, padding: 16, boxShadow: '0 4px 0 #f0b8cc, 0 6px 12px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8)', overflow: 'hidden', fontFamily: 'Nunito, sans-serif' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
             <span style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>🎙</span>
             <span style={{ fontSize: 15, fontWeight: 800, color: '#6b2a3a' }}>{lang === 'en' ? 'Record & send your voice' : lang === 'es' ? 'Graba y envía tu voz' : '声を録って送る'}</span>
