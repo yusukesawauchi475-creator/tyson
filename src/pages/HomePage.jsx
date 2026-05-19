@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, getDateKey, genRequestId, getStreak, updateStreak } from '../lib/pairDaily'
-import { markVoiceListened, getTodayPartnerUnlistenedStats } from '../lib/listenedTracking'
+import { markVoiceListened, getTodayPartnerUnlistenedStats, getAnyPartnerUnlistenedFlag } from '../lib/listenedTracking'
 import { getUpcomingHoliday } from '../lib/holidayBanner'
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { buildInviteUrl, copyInviteLink } from '../lib/invite'
@@ -43,6 +43,8 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   const [isPlayingParent, setIsPlayingParent] = useState(false)
   // Phase 1: 今日 partner (child) voice の 未聴 stats
   const [partnerStats, setPartnerStats] = useState({ unlistened: 0, total: 0, latestHhmm: null })
+  // Fix 1+2: 全期間 partner 未聴 count (date またぎ 🔴 + Album badge 全期間カウント用)
+  const [anyPartnerUnlistened, setAnyPartnerUnlistened] = useState(0)
   // Holiday banner: 14 日以内の最近接 holiday (再 mount + visibilitychange で再計算)
   const [upcomingHoliday, setUpcomingHoliday] = useState(() => getUpcomingHoliday(lang))
   const [oneLiner, setOneLiner] = useState('')
@@ -482,6 +484,10 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
     getTodayPartnerUnlistenedStats(currentPairId, LISTEN_ROLE_CHILD)
       .then((s) => setPartnerStats(s))
       .catch(() => {})
+    // Fix 2: 全期間 partner 未聴 flag (date またぎ 🔴 + Album badge)
+    getAnyPartnerUnlistenedFlag(currentPairId, LISTEN_ROLE_CHILD)
+      .then((flag) => setAnyPartnerUnlistened(flag))
+      .catch(() => {})
   }, [currentPairId, isDemoTest])
 
   useEffect(() => {
@@ -668,7 +674,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
                     <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', fontWeight: 600, marginLeft: 6 }}>
                       ({partnerStats.total - partnerStats.unlistened}/{partnerStats.total})
                     </span>
-                    {!isPlayingParent && partnerStats.unlistened > 0 ? ' 🔴' : ''}
+                    {!isPlayingParent && anyPartnerUnlistened > 0 ? ' 🔴' : ''}
                   </>
                 )}
               </button>
@@ -759,9 +765,9 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           }
           if (!slug) { console.error('slug required'); return }
           navigate(`/pair/${slug}/album`)
-        }}><span style={{ fontSize: 20, position: 'relative', display: 'inline-block' }}>🖼{partnerStats.unlistened > 0 && (
+        }}><span style={{ fontSize: 20, position: 'relative', display: 'inline-block' }}>🖼{anyPartnerUnlistened > 0 && (
           <span style={{ position: 'absolute', top: -4, right: -10, minWidth: 18, height: 18, padding: '0 5px', boxSizing: 'border-box', borderRadius: 9, background: '#B8A0E8', color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, border: '1.5px solid #fff', fontFamily: 'Nunito, sans-serif' }}>
-            {partnerStats.unlistened >= 10 ? '9+' : partnerStats.unlistened}
+            {anyPartnerUnlistened >= 10 ? '9+' : anyPartnerUnlistened}
           </span>
         )}</span><span>{lang === 'en' ? 'Album' : lang === 'es' ? 'Álbum' : 'アルバム'}</span></button>
         <button type="button" onClick={handleShare}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : lang === 'es' ? 'Invitar' : '招待'}</span></button>

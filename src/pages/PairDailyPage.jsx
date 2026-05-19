@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { getDateKey, fetchAudioForPlayback, hasTodayAudio, getListenRoleMeta, markSeen, uploadAudio, genRequestId, getStreak, updateStreak } from '../lib/pairDaily'
-import { markVoiceListened, getTodayPartnerUnlistenedStats } from '../lib/listenedTracking'
+import { markVoiceListened, getTodayPartnerUnlistenedStats, getAnyPartnerUnlistenedFlag } from '../lib/listenedTracking'
 import { getUpcomingHoliday } from '../lib/holidayBanner'
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { buildInviteUrl, copyInviteLink } from '../lib/invite'
@@ -41,6 +41,8 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   const [isPlaying, setIsPlaying] = useState(false)
   // Phase 1: 今日 partner (parent) voice の 未聴 stats
   const [partnerStats, setPartnerStats] = useState({ unlistened: 0, total: 0, latestHhmm: null })
+  // Fix 1+2: 全期間 partner 未聴 count (date またぎ 🔴 + Album badge 全期間カウント用)
+  const [anyPartnerUnlistened, setAnyPartnerUnlistened] = useState(0)
   // Holiday banner: 14 日以内の最近接 holiday (再 mount + visibilitychange で再計算)
   const [upcomingHoliday, setUpcomingHoliday] = useState(() => getUpcomingHoliday(lang))
   const [errorLine, setErrorLine] = useState(null)
@@ -330,6 +332,10 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
     if (isDemoTest || !currentPairId) return
     getTodayPartnerUnlistenedStats(currentPairId, LISTEN_ROLE_PARENT)
       .then((s) => setPartnerStats(s))
+      .catch(() => {})
+    // Fix 2: 全期間 partner 未聴 count (date またぎ 🔴 + Album badge)
+    getAnyPartnerUnlistenedFlag(currentPairId, LISTEN_ROLE_PARENT)
+      .then((count) => setAnyPartnerUnlistened(count))
       .catch(() => {})
   }, [currentPairId, isDemoTest])
 
@@ -865,7 +871,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
                     <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', fontWeight: 600, marginLeft: 6 }}>
                       ({partnerStats.total - partnerStats.unlistened}/{partnerStats.total})
                     </span>
-                    {!isPlaying && partnerStats.unlistened > 0 ? ' 🔴' : ''}
+                    {!isPlaying && anyPartnerUnlistened > 0 ? ' 🔴' : ''}
                   </>
                 )}
               </button>
@@ -946,7 +952,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
       <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9000, display: 'flex', background: '#fff', borderTop: '2px solid #F0E8FF', boxShadow: '0 -4px 20px rgba(180,120,255,0.15)', paddingBottom: 'max(4px, env(safe-area-inset-bottom))' }}>
         {[
           { icon: '🏠', label: lang === 'en' ? 'Home' : lang === 'es' ? 'Inicio' : 'ホーム', bg: '#FFE8F4', bgActive: '#FFD0E8', active: true, onClick: null, badge: 0 },
-          { icon: '🖼', label: lang === 'en' ? 'Album' : lang === 'es' ? 'Álbum' : 'アルバム', bg: '#F0E8FF', bgActive: '#E0D0FF', active: false, badge: partnerStats.unlistened, onClick: () => {
+          { icon: '🖼', label: lang === 'en' ? 'Album' : lang === 'es' ? 'Álbum' : 'アルバム', bg: '#F0E8FF', bgActive: '#E0D0FF', active: false, badge: anyPartnerUnlistened, onClick: () => {
             if (isRecording) {
               const msg = lang === 'en' ? 'Recording in progress. Stop and navigate away?' : lang === 'es' ? 'Grabación en curso. ¿Detener y salir?' : '録音中です。中断して移動しますか？'
               if (!window.confirm(msg)) return

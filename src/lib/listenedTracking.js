@@ -41,6 +41,37 @@ export function markVoiceListened(pairId, dateKey, role, hhmm) {
 }
 
 /**
+ * 全期間 (最大 90 日) で partner role の未聴 voice 合計件数を返す。
+ * Fix 2: date またぎ関係なく 🔴 表示 + Fix 1: Album badge 全期間カウント用。
+ * getTodayPartnerUnlistenedStats (today scope) とは別 helper、改変禁止。
+ * @returns {Promise<number>} 未聴件数 (0 = 全聴済み or エラー)
+ */
+export async function getAnyPartnerUnlistenedFlag(pairId, partnerRole) {
+  if (!pairId || !partnerRole) return 0
+  try {
+    const idToken = await getIdTokenForApi()
+    if (!idToken) return 0
+    const res = await fetch(
+      `/api/pair-media?action=voice-history&pairId=${encodeURIComponent(pairId)}&limit=90&v=${Date.now()}`,
+      { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }
+    )
+    if (!res.ok) return 0
+    const data = await res.json()
+    const days = Array.isArray(data?.days) ? data.days : []
+    let count = 0
+    for (const day of days) {
+      const items = Array.isArray(day[partnerRole]?.items) ? day[partnerRole].items : []
+      for (const item of items) {
+        if (!isVoiceListened(pairId, day.dateKey, partnerRole, item.hhmm)) count++
+      }
+    }
+    return count
+  } catch {
+    return 0
+  }
+}
+
+/**
  * 今日 (NY 時刻) の partner role voice 全 item を取得。
  * voice-history endpoint を limit=1 で叩いて最新日を取得し、今日の dateKey と一致する場合のみ items を返す。
  * @returns {Promise<{ unlistened: number, total: number, dateKey: string, latestHhmm: string|null }>}
