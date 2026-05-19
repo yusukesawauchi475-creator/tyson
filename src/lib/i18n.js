@@ -122,7 +122,8 @@ const dict = {
     segAnniversary: '記念日に',
     segAnniversaryDesc: '大切な日に声を贈る',
     facilityTitle: '介護施設様向けプラン',
-    facilityDesc: 'ご入居者様とご家族の毎日の繋がりを。3ヶ月無料 pilot 受付中',
+    facilityDesc: '介護施設様には全面無料でご提供',
+    facilitySub: 'ご家族と入居者様の毎日の繋がりを支援',
     facilityCta: '→ 詳しく見る',
     // Album voice empty cell
     noRecording: '録音なし',
@@ -268,7 +269,8 @@ const dict = {
     segAnniversary: 'Anniversary',
     segAnniversaryDesc: 'Give your voice on special days',
     facilityTitle: 'For Care Facilities',
-    facilityDesc: 'Daily connection between residents and families. 3-month free pilot accepting now.',
+    facilityDesc: 'Free for all care facilities',
+    facilitySub: 'Supporting daily connection between residents and families',
     facilityCta: '→ Learn more',
     // Album voice empty cell
     noRecording: 'no recording',
@@ -413,7 +415,8 @@ const dict = {
     segAnniversary: 'Aniversario',
     segAnniversaryDesc: 'Regala tu voz en días especiales',
     facilityTitle: 'Para residencias',
-    facilityDesc: 'Conexión diaria entre residentes y familias. Pilot gratuito de 3 meses.',
+    facilityDesc: 'Gratis para todos los centros de cuidado',
+    facilitySub: 'Apoyando la conexión diaria entre residentes y familias',
     facilityCta: '→ Más información',
     // Album voice empty cell
     noRecording: 'sin grabación',
