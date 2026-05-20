@@ -14,7 +14,9 @@ function readSet() {
 }
 
 function writeSet(obj) {
-  try { localStorage.setItem(KEY, JSON.stringify(obj)) } catch {}
+  try { localStorage.setItem(KEY, JSON.stringify(obj)) } catch {
+    // localStorage may be unavailable in private or restricted browser modes.
+  }
 }
 
 export function makeVoiceId(pairId, dateKey, role, hhmm) {
@@ -38,6 +40,14 @@ export function markVoiceListened(pairId, dateKey, role, hhmm) {
     sorted.slice(0, Math.floor(MAX_ENTRIES / 2)).forEach(k => delete cur[k])
   }
   writeSet(cur)
+}
+
+function logListenedDebug(event, payload) {
+  try {
+    console.log(`[listenedTracking:${event}]`, payload)
+  } catch {
+    // Debug logging must never affect badge calculation.
+  }
 }
 
 /**
@@ -67,6 +77,60 @@ export async function getAnyPartnerUnlistenedFlag(pairId, partnerRole) {
     }
     return count
   } catch {
+    return 0
+  }
+}
+
+/**
+ * 全期間 badge 用。server の day/role isUnseen=false は既読済み source として尊重する。
+ * 既存 getAnyPartnerUnlistenedFlag は互換維持のため残し、badge caller だけこちらへ移行する。
+ * @returns {Promise<number>} 未聴件数 (0 = 全聴済み or エラー)
+ */
+export async function getAnyPartnerUnlistenedFlagServerSeen(pairId, partnerRole) {
+  if (!pairId || !partnerRole) return 0
+  try {
+    const idToken = await getIdTokenForApi()
+    if (!idToken) return 0
+    const res = await fetch(
+      `/api/pair-media?action=voice-history&pairId=${encodeURIComponent(pairId)}&limit=90&v=${Date.now()}`,
+      { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }
+    )
+    if (!res.ok) return 0
+    const data = await res.json()
+    const days = Array.isArray(data?.days) ? data.days : []
+    let count = 0
+    for (const day of days) {
+      const roleData = day?.[partnerRole]
+      const items = Array.isArray(roleData?.items) ? roleData.items : []
+      if (!roleData?.isUnseen) {
+        for (const item of items) {
+          logListenedDebug('badge-skip-server-seen', {
+            id: makeVoiceId(pairId, day.dateKey, partnerRole, item.hhmm),
+            dateKey: day.dateKey,
+            role: partnerRole,
+            hhmm: item.hhmm || null,
+            isUnseen: roleData?.isUnseen ?? null,
+          })
+        }
+        continue
+      }
+      for (const item of items) {
+        const listened = isVoiceListened(pairId, day.dateKey, partnerRole, item.hhmm)
+        logListenedDebug('badge-check', {
+          id: makeVoiceId(pairId, day.dateKey, partnerRole, item.hhmm),
+          dateKey: day.dateKey,
+          role: partnerRole,
+          hhmm: item.hhmm || null,
+          isUnseen: roleData.isUnseen,
+          listened,
+        })
+        if (!listened) count++
+      }
+    }
+    logListenedDebug('badge-total', { pairId, partnerRole, count, days: days.length })
+    return count
+  } catch (e) {
+    logListenedDebug('badge-error', { pairId, partnerRole, error: e?.message || String(e) })
     return 0
   }
 }

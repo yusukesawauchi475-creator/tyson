@@ -20,6 +20,14 @@ export default function InviteModal({ isOpen, onClose, inviteText, lang = 'ja' }
 
   if (!isOpen) return null
 
+  const getTargetTextColor = (id) => {
+    if (id === 'line') return '#06C755'
+    if (id === 'whatsapp') return '#25D366'
+    if (id === 'sms' || id === 'imessage') return '#0096c7'
+    if (id === 'mail') return '#6040c0'
+    return '#777'
+  }
+
   const handleShareClick = (target) => {
     if (!target.url || !inviteText) return
     window.location.assign(target.url(inviteText, lang))
@@ -49,7 +57,7 @@ export default function InviteModal({ isOpen, onClose, inviteText, lang = 'ja' }
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0, 60, 78, 0.42)',
+        background: 'rgba(50, 20, 70, 0.42)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -60,48 +68,54 @@ export default function InviteModal({ isOpen, onClose, inviteText, lang = 'ja' }
     >
       <div
         style={{
-          background: 'linear-gradient(135deg, rgba(0,180,216,.96), rgba(72,202,228,.94))',
+          background: 'linear-gradient(135deg, rgba(131,58,180,.96) 0%, rgba(225,48,108,.94) 52%, rgba(252,176,69,.92) 100%)',
           borderRadius: 16,
           padding: 24,
           maxWidth: 400,
           width: '100%',
-          boxShadow: '0 18px 0 #0084a8, 0 26px 42px rgba(0, 91, 120, 0.28), inset 0 1px 0 rgba(255,255,255,.55)',
+          boxShadow: '0 18px 0 rgba(96,64,192,.36), 0 26px 42px rgba(96, 64, 192, 0.24), inset 0 1px 0 rgba(255,255,255,.55)',
           border: '1px solid rgba(255,255,255,.48)',
         }}
       >
-        <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 800, color: '#fff', textAlign: 'center', textShadow: '0 2px 0 rgba(0,0,0,.12)' }}>
+        <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 800, color: '#fff', textAlign: 'center', textShadow: '0 2px 8px rgba(0,0,0,.2)' }}>
           {t(lang, 'inviteMessengerTitle')}
         </h2>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {getMessengerTargets(lang).map((target) => (
-            <button
-              key={target.id}
-              type="button"
-              onClick={target.id === 'copy' ? handleCopy : () => handleShareClick(target)}
-              style={{
-                padding: '14px 24px',
-                borderRadius: 12,
-                border: '1px solid rgba(255,255,255,.52)',
-                background: target.id === 'copy' && copyState === 'copied' ? '#2FBF71' : target.color,
-                color: target.textColor,
-                cursor: 'pointer',
-                fontSize: 16,
-                fontWeight: 800,
-                width: '100%',
-                fontFamily: 'inherit',
-                boxShadow: '0 5px 0 rgba(0,86,112,.22), inset 0 1px 0 rgba(255,255,255,.34)',
-                transform: 'translateY(0)',
-                textAlign: 'center',
-              }}
-            >
-              {target.id === 'copy' && copyState === 'copied'
-                ? t(lang, 'inviteCopySuccess')
-                : target.id === 'copy' && copyState === 'failed'
-                  ? t(lang, 'inviteCopyFailed')
-                  : t(lang, target.labelKey)}
-            </button>
-          ))}
+          {getMessengerTargets(lang).map((target) => {
+            const isCopied = target.id === 'copy' && copyState === 'copied'
+            return (
+              <button
+                key={target.id}
+                type="button"
+                onClick={target.id === 'copy' ? handleCopy : () => handleShareClick(target)}
+                style={{
+                  position: 'relative',
+                  overflow: 'hidden',
+                  padding: '14px 24px',
+                  borderRadius: 12,
+                  border: '1px solid rgba(255,255,255,.7)',
+                  background: isCopied ? '#fff' : 'rgba(255,255,255,.96)',
+                  color: isCopied ? '#087F5B' : getTargetTextColor(target.id),
+                  cursor: 'pointer',
+                  fontSize: 16,
+                  fontWeight: 800,
+                  width: '100%',
+                  fontFamily: 'inherit',
+                  boxShadow: '0 4px 0 rgba(0,0,0,.10), 0 6px 12px rgba(0,0,0,.08), inset 0 1px 0 rgba(255,255,255,.8)',
+                  transform: 'translateY(0)',
+                  textAlign: 'center',
+                }}
+              >
+                <span aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(180deg, rgba(255,255,255,.18), transparent)', pointerEvents: 'none' }} />
+                {target.id === 'copy' && copyState === 'copied'
+                  ? t(lang, 'inviteCopySuccess')
+                  : target.id === 'copy' && copyState === 'failed'
+                    ? t(lang, 'inviteCopyFailed')
+                    : t(lang, target.labelKey)}
+              </button>
+            )
+          })}
         </div>
 
         {copyState !== 'idle' && (
@@ -127,8 +141,9 @@ export default function InviteModal({ isOpen, onClose, inviteText, lang = 'ja' }
             type="button"
             onClick={onClose}
             style={{
-              background: 'none',
-              border: 'none',
+              background: 'rgba(255,255,255,.2)',
+              border: '1px solid rgba(255,255,255,.4)',
+              borderRadius: 12,
               color: '#fff',
               fontSize: 14,
               fontWeight: 800,

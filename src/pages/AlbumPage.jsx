@@ -4,8 +4,10 @@ import { fetchAlbum } from '../lib/journal'
 import VoiceLibrary from '../components/VoiceLibrary'
 import AlbumCalendar from '../components/AlbumCalendar'
 import { getUserRole, clearUserRole } from '../lib/pairDaily'
-import { buildInviteUrl, copyInviteLink } from '../lib/invite'
+import { buildInviteUrl } from '../lib/invite'
+import { buildInviteMessage } from '../lib/inviteShare'
 import RoleBadge from '../components/RoleBadge'
+import InviteModal from '../components/InviteModal'
 import { t } from '../lib/i18n'
 
 const DEMO_ALBUM_PHOTO_SETS = [
@@ -40,6 +42,9 @@ export default function AlbumPage({ lang = 'ja' }) {
   const [playingKey, setPlayingKey] = useState(null)
   const [playedKeys, setPlayedKeys] = useState({})
   const [toastMsg, setToastMsg] = useState(null)
+  const [inviteModalOpen, setInviteModalOpen] = useState(false)
+  const [inviteUrl, setInviteUrl] = useState(null)
+  const [inviteText, setInviteText] = useState(null)
   const voiceAudioRef = useRef(null)
   // pairId は /pair/:slug/album ルート下の outletContext から取得（公理1: URL = Source of Truth）
   const rawPairId = outletContext?.pairId ?? null
@@ -214,18 +219,17 @@ export default function AlbumPage({ lang = 'ja' }) {
     touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
   }, [])
 
-  const handleShare = async () => {
+  const handleShare = () => {
     if (!slug) {
       setToastMsg(lang === 'en' ? 'Cannot share: invalid pair URL' : lang === 'es' ? 'No se puede compartir: URL de pareja inválida' : '共有できません。有効なペアURLからアクセスしてください')
       setTimeout(() => setToastMsg(null), 2500)
       return
     }
     const url = buildInviteUrl(slug)
-    const result = await copyInviteLink(url)
-    setToastMsg(result.success
-      ? (lang === 'en' ? 'Link copied' : lang === 'es' ? 'Enlace copiado' : 'リンクをコピーしました')
-      : (lang === 'en' ? 'Failed to copy' : lang === 'es' ? 'Error al copiar' : 'コピーに失敗しました'))
-    setTimeout(() => setToastMsg(null), 2500)
+    const text = buildInviteMessage(lang, null, url)
+    setInviteUrl(url)
+    setInviteText(text)
+    setInviteModalOpen(true)
   }
 
   const handleTouchEnd = useCallback((e) => {
@@ -655,6 +659,14 @@ export default function AlbumPage({ lang = 'ja' }) {
       {toastMsg && (
         <div style={{ position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.75)', color: '#fff', fontSize: 14, padding: '8px 20px', borderRadius: 20, zIndex: 20000, whiteSpace: 'nowrap', pointerEvents: 'none' }}>{toastMsg}</div>
       )}
+
+      <InviteModal
+        isOpen={inviteModalOpen}
+        onClose={() => setInviteModalOpen(false)}
+        inviteUrl={inviteUrl}
+        inviteText={inviteText}
+        lang={lang}
+      />
     </div>
   )
 }
