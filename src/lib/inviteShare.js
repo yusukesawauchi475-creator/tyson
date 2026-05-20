@@ -8,23 +8,23 @@ const mailSubject = {
 
 export const MESSENGER_CONFIG = {
   ja: [
-    { id: 'line', labelKey: 'messengerLine', color: '#06C755', textColor: '#fff', url: (msg) => `https://line.me/R/msg/text/?${encodeURIComponent(msg)}` },
-    { id: 'sms', labelKey: 'messengerSms', color: '#36A3FF', textColor: '#fff', url: (msg) => `sms:?body=${encodeURIComponent(msg)}` },
-    { id: 'mail', labelKey: 'messengerMail', color: '#FF9F43', textColor: '#fff', url: (msg, lang) => `mailto:?subject=${encodeURIComponent(mailSubject[normalizeLang(lang)])}&body=${encodeURIComponent(msg)}` },
-    { id: 'copy', labelKey: 'messengerCopy', color: '#FFFFFF', textColor: '#136B7A' },
+    { id: 'line', labelKey: 'messengerLine', icon: '🟩', color: '#06C755', textColor: '#fff', url: (msg) => `https://line.me/R/msg/text/?${encodeURIComponent(msg)}` },
+    { id: 'sms', labelKey: 'messengerSms', icon: '💬', color: '#36A3FF', textColor: '#fff', url: (msg) => `sms:?body=${encodeURIComponent(msg)}` },
+    { id: 'mail', labelKey: 'messengerMail', icon: '✉️', color: '#FF9F43', textColor: '#fff', url: (msg, lang) => `mailto:?subject=${encodeURIComponent(mailSubject[normalizeLang(lang)])}&body=${encodeURIComponent(msg)}` },
+    { id: 'copy', labelKey: 'messengerCopy', icon: '📋', color: '#FFFFFF', textColor: '#136B7A' },
   ],
   en: [
-    { id: 'imessage', labelKey: 'messengerIMessage', color: '#36A3FF', textColor: '#fff', url: (msg) => `sms:?body=${encodeURIComponent(msg)}` },
-    { id: 'whatsapp', labelKey: 'messengerWhatsApp', color: '#25D366', textColor: '#fff', url: (msg) => `https://wa.me/?text=${encodeURIComponent(msg)}` },
-    { id: 'sms', labelKey: 'messengerSms', color: '#4B9DFF', textColor: '#fff', url: (msg) => `sms:?body=${encodeURIComponent(msg)}` },
-    { id: 'mail', labelKey: 'messengerMail', color: '#FF9F43', textColor: '#fff', url: (msg, lang) => `mailto:?subject=${encodeURIComponent(mailSubject[normalizeLang(lang)])}&body=${encodeURIComponent(msg)}` },
-    { id: 'copy', labelKey: 'messengerCopy', color: '#FFFFFF', textColor: '#136B7A' },
+    { id: 'imessage', labelKey: 'messengerIMessage', icon: '🔵', color: '#36A3FF', textColor: '#fff', url: (msg) => `sms:?body=${encodeURIComponent(msg)}` },
+    { id: 'whatsapp', labelKey: 'messengerWhatsApp', icon: '🟢', color: '#25D366', textColor: '#fff', url: (msg) => `https://wa.me/?text=${encodeURIComponent(msg)}` },
+    { id: 'sms', labelKey: 'messengerSms', icon: '💬', color: '#4B9DFF', textColor: '#fff', url: (msg) => `sms:?body=${encodeURIComponent(msg)}` },
+    { id: 'mail', labelKey: 'messengerMail', icon: '✉️', color: '#FF9F43', textColor: '#fff', url: (msg, lang) => `mailto:?subject=${encodeURIComponent(mailSubject[normalizeLang(lang)])}&body=${encodeURIComponent(msg)}` },
+    { id: 'copy', labelKey: 'messengerCopy', icon: '📋', color: '#FFFFFF', textColor: '#136B7A' },
   ],
   es: [
-    { id: 'whatsapp', labelKey: 'messengerWhatsApp', color: '#25D366', textColor: '#fff', url: (msg) => `https://wa.me/?text=${encodeURIComponent(msg)}` },
-    { id: 'sms', labelKey: 'messengerSms', color: '#36A3FF', textColor: '#fff', url: (msg) => `sms:?body=${encodeURIComponent(msg)}` },
-    { id: 'mail', labelKey: 'messengerMail', color: '#FF9F43', textColor: '#fff', url: (msg, lang) => `mailto:?subject=${encodeURIComponent(mailSubject[normalizeLang(lang)])}&body=${encodeURIComponent(msg)}` },
-    { id: 'copy', labelKey: 'messengerCopy', color: '#FFFFFF', textColor: '#136B7A' },
+    { id: 'whatsapp', labelKey: 'messengerWhatsApp', icon: '🟢', color: '#25D366', textColor: '#fff', url: (msg) => `https://wa.me/?text=${encodeURIComponent(msg)}` },
+    { id: 'sms', labelKey: 'messengerSms', icon: '💬', color: '#36A3FF', textColor: '#fff', url: (msg) => `sms:?body=${encodeURIComponent(msg)}` },
+    { id: 'mail', labelKey: 'messengerMail', icon: '✉️', color: '#FF9F43', textColor: '#fff', url: (msg, lang) => `mailto:?subject=${encodeURIComponent(mailSubject[normalizeLang(lang)])}&body=${encodeURIComponent(msg)}` },
+    { id: 'copy', labelKey: 'messengerCopy', icon: '📋', color: '#FFFFFF', textColor: '#136B7A' },
   ],
 }
 

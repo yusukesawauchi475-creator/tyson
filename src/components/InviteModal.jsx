@@ -112,7 +112,12 @@ export default function InviteModal({ isOpen, onClose, inviteText, lang = 'ja' }
                   ? t(lang, 'inviteCopySuccess')
                   : target.id === 'copy' && copyState === 'failed'
                     ? t(lang, 'inviteCopyFailed')
-                    : t(lang, target.labelKey)}
+                    : (
+                      <>
+                        <span style={{ marginRight: 8, fontSize: 18, verticalAlign: 'middle' }}>{target.icon}</span>
+                        <span style={{ verticalAlign: 'middle' }}>{t(lang, target.labelKey)}</span>
+                      </>
+                      )}
               </button>
             )
           })}
