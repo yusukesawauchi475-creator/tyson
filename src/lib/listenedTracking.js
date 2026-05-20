@@ -136,6 +136,25 @@ export async function getAnyPartnerUnlistenedFlagServerSeen(pairId, partnerRole)
 }
 
 /**
+ * Album bottom-nav badge 用。
+ * Phase 1 統合の原 spec に戻し、今日の partner voice を per-item localStorage state で数える。
+ * 過去日の振り返り表示は Album 内に委ね、bottom-nav badge では historical cache miss を数えない。
+ * @returns {Promise<number>} 今日の未聴件数 (0 = 非表示)
+ */
+export async function getAlbumBadgePartnerUnlistenedCount(pairId, partnerRole) {
+  const stats = await getTodayPartnerUnlistenedStats(pairId, partnerRole)
+  logListenedDebug('album-badge-today-total', {
+    pairId,
+    partnerRole,
+    dateKey: stats.dateKey,
+    unlistened: stats.unlistened,
+    total: stats.total,
+    latestHhmm: stats.latestHhmm,
+  })
+  return stats.unlistened
+}
+
+/**
  * 今日 (NY 時刻) の partner role voice 全 item を取得。
  * voice-history endpoint を limit=1 で叩いて最新日を取得し、今日の dateKey と一致する場合のみ items を返す。
  * @returns {Promise<{ unlistened: number, total: number, dateKey: string, latestHhmm: string|null }>}

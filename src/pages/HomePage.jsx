@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, getDateKey, genRequestId, getStreak, updateStreak } from '../lib/pairDaily'
-import { markVoiceListened, getTodayPartnerUnlistenedStats, getAnyPartnerUnlistenedFlagServerSeen } from '../lib/listenedTracking'
+import { markVoiceListened, getTodayPartnerUnlistenedStats, getAlbumBadgePartnerUnlistenedCount } from '../lib/listenedTracking'
 import { getUpcomingHoliday } from '../lib/holidayBanner'
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { buildInviteUrl } from '../lib/invite'
@@ -483,8 +483,8 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
     getTodayPartnerUnlistenedStats(currentPairId, LISTEN_ROLE_CHILD)
       .then((s) => setPartnerStats(s))
       .catch(() => {})
-    // Fix 2: 全期間 partner 未聴 flag (date またぎ 🔴 + Album badge)
-    getAnyPartnerUnlistenedFlagServerSeen(currentPairId, LISTEN_ROLE_CHILD)
+    // Album badge: Phase 1 原 spec に合わせ、今日の partner voice を per-item listened state で count
+    getAlbumBadgePartnerUnlistenedCount(currentPairId, LISTEN_ROLE_CHILD)
       .then((flag) => setAnyPartnerUnlistened(flag))
       .catch(() => {})
   }, [currentPairId, isDemoTest])
