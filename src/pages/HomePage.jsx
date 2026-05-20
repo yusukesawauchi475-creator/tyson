@@ -4,7 +4,8 @@ import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, getDat
 import { markVoiceListened, getTodayPartnerUnlistenedStats, getAnyPartnerUnlistenedFlag } from '../lib/listenedTracking'
 import { getUpcomingHoliday } from '../lib/holidayBanner'
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
-import { buildInviteUrl, copyInviteLink } from '../lib/invite'
+import { buildInviteUrl } from '../lib/invite'
+import { buildInviteMessage } from '../lib/inviteShare'
 import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import { t, getMonthName } from '../lib/i18n'
 import DailyPromptCard from '../components/DailyPromptCard'
@@ -372,9 +373,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
     }
     // Phase II-share: iOS share sheet 廃止、InviteModal 経由で LINE + clipboard 統一
     const url = buildInviteUrl(slug)
-    const text = lang === 'en'
-      ? `Hum — daily 1-min voice with family\n\n${url}`
-      : `家族専用の音声メッセージリンクができました\n\n${url}`
+    const text = buildInviteMessage(lang, null, url)
     setInviteUrl(url)
     setInviteText(text)
     setInviteModalOpen(true)
@@ -796,6 +795,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
         onClose={() => setInviteModalOpen(false)}
         inviteUrl={inviteUrl}
         inviteText={inviteText}
+        lang={lang}
       />
     </div>
   )
