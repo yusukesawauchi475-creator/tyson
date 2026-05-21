@@ -6,6 +6,7 @@ import AdminPage from './pages/AdminPage'
 import AlbumPage from './pages/AlbumPage'
 import DemoPage from './pages/DemoPage'
 import LandingPage from './pages/LandingPage'
+import FacilitiesPage from './pages/FacilitiesPage'
 import RoleSelectPage from './pages/RoleSelectPage'
 import PairWorld from './components/PairWorld'
 import InvitePage from './pages/InvitePage'
@@ -75,6 +76,7 @@ function AppRoutes() {
           <Route path="/admin" element={<AdminPage lang={lang} />} />
           <Route path="/demo" element={<DemoPage lang={lang} />} />
           <Route path="/landing" element={<LandingPage lang={lang} />} />
+          <Route path="/facilities" element={<FacilitiesPage lang={lang} />} />
           <Route path="/welcome" element={<WelcomePage lang={lang} />} />
           <Route path="/pair/:slug" element={<PairWorld lang={lang} />}>
             <Route index element={<RootRoute lang={lang} />} />

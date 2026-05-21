@@ -205,7 +205,7 @@ export default function LandingPage({ lang = 'ja' }) {
           <p style={{ fontSize: 11, color: '#7A6BA8', margin: '-8px 0 16px', lineHeight: 1.45 }}>
             {t(lang, 'facilitySub')}
           </p>
-          <a href="mailto:hum.family.app@gmail.com?subject=Facility%20Pilot" style={{
+          <a href="/facilities" onClick={(e) => { e.preventDefault(); navigate('/facilities') }} style={{
             color: '#0096c7',
             fontSize: 13,
             fontWeight: 700,
