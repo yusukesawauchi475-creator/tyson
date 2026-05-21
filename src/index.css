@@ -97,3 +97,104 @@ button:active { transform: translateY(3px) !important; }
   transform-origin: center center;
   animation: sticker-peel 3000ms ease-out forwards 1;
 }
+
+/* Phase 2-A: /facilities animation section */
+.facility-animation-section {
+  background: linear-gradient(135deg, rgba(0,180,216,.05), rgba(232,121,160,.05));
+  padding: 20px 24px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: 16px;
+}
+
+.facility-iphone-frame {
+  max-width: 280px;
+  width: 100%;
+  margin: 0 auto;
+  border: 8px solid #1a1a1a;
+  border-radius: 36px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.15);
+  position: relative;
+  overflow: hidden;
+  background: #1a1a1a;
+}
+
+.facility-iphone-screen {
+  aspect-ratio: 9 / 19.5;
+  background: white;
+  border-radius: 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+.facility-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  animation: facilityFade 9s infinite;
+}
+
+@keyframes facilityFade {
+  0%, 30%, 100% { opacity: 1; }
+  33.33%, 96.66% { opacity: 0; }
+}
+
+.facility-screen-1 { animation-delay: 0s; }
+.facility-screen-2 { animation-delay: -6s; }
+.facility-screen-3 { animation-delay: -3s; }
+
+.facility-page-indicator {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.facility-page-indicator .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ddd;
+  animation: facilityDot 9s infinite;
+}
+
+.facility-page-indicator .dot-1 { animation-delay: 0s; }
+.facility-page-indicator .dot-2 { animation-delay: -6s; }
+.facility-page-indicator .dot-3 { animation-delay: -3s; }
+
+@keyframes facilityDot {
+  0%, 30%, 100% { background: #0096c7; transform: scale(1.2); }
+  33.33%, 96.66% { background: #ddd; transform: scale(1); }
+}
+
+.facility-caption-container {
+  margin-top: 24px;
+  height: 48px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  min-width: 180px;
+}
+
+.facility-caption {
+  position: absolute;
+  background: rgba(255,255,255,.92);
+  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  padding: 8px 24px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #005f80;
+  opacity: 0;
+  animation: facilityFade 9s infinite;
+  white-space: nowrap;
+  line-height: 1.25;
+}
+
+.facility-caption-1 { animation-delay: 0s; }
+.facility-caption-2 { animation-delay: -6s; }
+.facility-caption-3 { animation-delay: -3s; }

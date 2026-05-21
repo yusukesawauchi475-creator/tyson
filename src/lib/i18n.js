@@ -155,6 +155,9 @@ const dict = {
     facilityPageFormDoneBody: '3 営業日以内にご返信いたします',
     facilityPageFormError: '送信に失敗しました。時間を置いて再度お試しください',
     facilityPageFooterBack: '← ホームへ戻る',
+    facilityPageAnimCaption1: '録音',
+    facilityPageAnimCaption2: '届く',
+    facilityPageAnimCaption3: '思い出に',
     // Album voice empty cell
     noRecording: '録音なし',
     // Holiday banner
@@ -332,6 +335,9 @@ const dict = {
     facilityPageFormDoneBody: "We'll get back within 3 business days",
     facilityPageFormError: 'Submission failed. Please try again later',
     facilityPageFooterBack: '← Back to Hum',
+    facilityPageAnimCaption1: 'Record',
+    facilityPageAnimCaption2: 'Receive',
+    facilityPageAnimCaption3: 'Remember',
     // Album voice empty cell
     noRecording: 'no recording',
     // Holiday banner
@@ -508,6 +514,9 @@ const dict = {
     facilityPageFormDoneBody: 'Le responderemos en 3 días hábiles',
     facilityPageFormError: 'Error al enviar. Intente nuevamente más tarde',
     facilityPageFooterBack: '← Volver a Hum',
+    facilityPageAnimCaption1: 'Grabar',
+    facilityPageAnimCaption2: 'Recibir',
+    facilityPageAnimCaption3: 'Recordar',
     // Album voice empty cell
     noRecording: 'sin grabación',
     // Holiday banner
