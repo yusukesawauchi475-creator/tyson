@@ -61,22 +61,27 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 進行中の将来機能: Memory Surfacing（docs/features/memory-surfacing.md 参照）
 
 ## スタック
-- **フロントエンド**: Vite + React (HashRouter), インラインCSS中心
+- **フロントエンド**: Vite + React (BrowserRouter), インラインCSS中心, i18n 3言語 (ja/en/es)
 - **バックエンド**: Vercel Serverless Functions (`api/` ディレクトリ)
 - **データ**: Firebase Firestore + Firebase Storage
 - **認証**: Firebase Anonymous Auth
 - **デプロイ**: Vercel Pro（mainブランチ push で自動デプロイ）
 - **フォント**: Nunito (Google Fonts, 700/800)
 
-## ルーティング (HashRouter)
+## ルーティング (BrowserRouter)
+vercel.json の SPA rewrite で全パスを index.html にフォールバック。
+
 | パス | コンポーネント | 説明 |
 |------|-------------|------|
-| `/#/` | RootOrLanding → RootRoute | pairId有→ホーム, 無→ランディング |
-| `/#/?number=X` | NumberResolver → RootRoute | /pair/X 経由のスラグ解決 |
-| `/#/album` | AlbumPage | 写真・声アルバム |
-| `/#/admin` | AdminPage | 管理画面 |
-| `/#/demo` | DemoPage | デモ |
-| `/#/landing` | LandingPage | ランディングページ |
+| `/` | RootOrLanding → RootRoute | pairId有→ホーム, 無→ランディング |
+| `/admin` | AdminPage | 管理画面 |
+| `/demo` | DemoPage | デモ体験 |
+| `/landing` | LandingPage | 初回訪問ランディング |
+| `/facilities` | FacilitiesPage | B2B 介護施設向けページ |
+| `/welcome` | WelcomePage | 招待受け取り後ウェルカム画面 |
+| `/pair/:slug` | PairWorld → RootRoute | スラグ解決済みペアホーム (親/子で振り分け) |
+| `/pair/:slug/album` | AlbumPage | 写真・声アルバム |
+| `/pair/:slug/invite` | InvitePage | 招待リンク共有 |
 
 ## ペアの仕組み
 - 公開URL: `humfamily.com/pair/{6文字スラグ}` (例: /pair/ulf1q6)
@@ -86,47 +91,91 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 
 ## 主要ファイル
 
-### フロントエンド
+### Pages
 | ファイル | 役割 |
 |---------|------|
-| `src/App.jsx` | ルーティング, NumberResolver, RootRoute (role振り分け) |
-| `src/pages/HomePage.jsx` | 親のホーム画面 (緑/ピンク/紫の3カード) |
-| `src/pages/PairDailyPage.jsx` | 子のホーム画面 (同上) |
-| `src/pages/AlbumPage.jsx` | アルバム (写真タブ/声タブ, ライトボックス) |
+| `src/App.jsx` | BrowserRouter ルーティング, lang state, PairWorld wrapper |
+| `src/pages/HomePage.jsx` | 親のホーム画面 (緑/ピンク/紫の3カード) ⚠️ /api/analyze 参照残存 |
+| `src/pages/PairDailyPage.jsx` | 子のホーム画面 (同上) ⚠️ /api/analyze 参照残存 |
+| `src/pages/AlbumPage.jsx` | アルバム (写真タブ/声タブ, ライトボックス) ⚠️ 日付ラベル日本語 hardcode |
 | `src/pages/AdminPage.jsx` | 管理画面 (ペア発行, ダッシュボード) |
 | `src/pages/RoleSelectPage.jsx` | 親/子の役割選択 |
 | `src/pages/LandingPage.jsx` | 初回訪問ランディング |
 | `src/pages/DemoPage.jsx` | デモ体験 |
+| `src/pages/FacilitiesPage.jsx` | B2B 介護施設向けページ (animation section, contact form) ⚠️ VITE_FORMSPREE_ENDPOINT 要 Vercel 設定 |
+| `src/pages/WelcomePage.jsx` | 招待受け取り後ウェルカム画面 ⚠️ lang prop 無視・日本語 hardcode |
+| `src/pages/InvitePage.jsx` | 招待リンク共有 ⚠️ lang='ja' hardcode |
+
+### Components
+| ファイル | 役割 |
+|---------|------|
+| `src/components/PairWorld.jsx` | /pair/:slug の wrapper、slug→pairId 解決 |
 | `src/components/DailyPromptCard.jsx` | 今日の話題pill (AI話題 + 別の話題ボタン) |
 | `src/components/VoiceLibrary.jsx` | 声の履歴一覧 (アルバム声タブ用) |
+| `src/components/InviteModal.jsx` | 招待モーダル (SNS シェア) |
+| `src/components/DemoModal.jsx` | デモ誘導モーダル |
+| `src/components/AlbumCalendar.jsx` | カレンダービュー (アルバム内) |
+| `src/components/LanguageSwitch.jsx` | 言語切替 UI (ja/en/es) |
+| `src/components/Visualizer.jsx` | 録音・再生時の波形 visualizer |
+| `src/components/UploadErrorModal.jsx` | アップロードエラーモーダル |
+| `src/components/RoleBadge.jsx` | 親/子ロールバッジ |
 | `src/components/PwaInstallBanner.jsx` | Android PWAインストールバナー |
 | `src/components/WeeklySummary.jsx` | 週次サマリー (日曜のみ) |
-| `src/lib/pairDaily.js` | getPairId, getUserRole, markSeen, uploadAudio, fetchAudio 等 |
+| `src/components/OneYearAgoBanner.jsx` | 1年前バナー ⚠️ どのページにも import されていない |
+| `src/components/FamilyInsightCard.jsx` | 家族インサイト ⚠️ import なし・キャッシュキーに lang/pairId 欠落 |
+| `src/components/AdminAuth.jsx` | 管理画面認証 ⚠️ dead code (未 import) |
+
+### Lib
+| ファイル | 役割 |
+|---------|------|
+| `src/lib/pairDaily.js` | getUserRole, markSeen, uploadAudio, fetchAudio 等 |
 | `src/lib/journal.js` | 写真アップロード, fetchTodayJournalMeta, fetchAlbum |
 | `src/lib/firebase.js` | Firebase初期化, getIdTokenForApi (匿名認証) |
-| `src/lib/i18n.js` | 日英翻訳 |
-| `src/index.css` | グローバルCSS (.page, .bottom-nav 等) |
+| `src/lib/i18n.js` | ja/en/es 翻訳 |
+| `src/lib/invite.js` | 招待 URL 生成 |
+| `src/lib/inviteShare.js` | SNS シェアターゲット定義 |
+| `src/lib/listenedTracking.js` | 既読 tracking ⚠️ getAnyPartnerUnlistenedFlagServerSeen export されるが未 import |
+| `src/lib/demoPhotos.js` | デモ用写真データ ⚠️ 日付ラベル全言語で日本語固定 |
+| `src/lib/holidayBanner.js` | 国別祝日 countdown バナー |
+| `src/lib/dateFormat.js` | 日付フォーマット (NY timezone) |
+| `src/lib/pairSlug.js` | スラグ生成 (Crockford Base32) |
+| `src/lib/uiCopy.js` | UI 文言定義 |
+| `src/lib/tysonThemes.js` | Caribbean テーマ色設定 |
+| `src/lib/voiceRole.js` | 音声ロール判定 |
+| `src/lib/fcm.js` | Firebase Cloud Messaging (push 通知) |
+| `src/lib/indexedDB.js` | IndexedDB キャッシュ |
+| `src/lib/shareTargets.js` | Web Share Target API |
+| `src/lib/useAudioLevel.js` | マイクレベル取得 hook |
+| `src/lib/deployHealthCheck.js` | デプロイ後ヘルスチェック |
+| `src/index.css` | グローバルCSS (.page, .bottom-nav, animation keyframes 等) |
 
 ### API (Vercel Serverless)
 | ファイル | 役割 |
 |---------|------|
-| `api/pair-media.js` | 音声 GET/POST/PATCH(markSeen) + voice-history |
-| `api/journal.js` | 写真 GET(今日→最新日フォールバック)/POST |
+| `api/pair-media.js` | 音声 GET/POST/PATCH(markSeen) + voice-history ⚠️ pairId\|\|'demo' fallback L683, merge:true L811/L1071 |
+| `api/journal.js` | 写真 GET(今日→最新日フォールバック)/POST ⚠️ pairId\|\|'demo' fallback L402, merge:true L541 |
 | `api/album.js` | アルバム全日写真取得 |
 | `api/invite.js` | ペア発行(create-numbered), スラグ解決(resolve) |
-| `api/streak.js` | 連続記録ストリーク |
-| `api/daily-theme.js` | AI話題生成 |
-| `api/admin-reset.js` | 管理リセット |
-| `api/admin-restore.js` | 管理復元 |
+| `api/streak.js` | 連続記録ストリーク ⚠️ POST が PAIR-DEMOTEST 書き込みをブロックしない |
+| `api/daily-theme.js` | AI話題生成 ⚠️ verifyIdToken 未実装 (認証なし) |
+| `api/admin-reset.js` | 管理リセット ⚠️ pairId\|\|'demo' fallback L110, merge:true L156 |
+| `api/admin-restore.js` | 管理復元 ⚠️ pairId\|\|'demo' fallback L109, merge:true L150 |
 | `api/admin-pairs.js` | ペアダッシュボード |
+| `api/family-insight.js` | 家族インサイト生成 ⚠️ pairId 欠落時に HTTP 200, 日付計算が UTC |
+| `api/journal-analysis.js` | 日記分析 ⚠️ merge:true L120/L176 |
+| `api/lib/pair-access.js` | TYSON-ZH90 アクセス制御 |
+| `api/lib/parseFirebaseServiceAccount.js` | Firebase 認証情報パース |
+| `api/_disabled/` | 無効化済み API (analyze, analysis-comment 等) — src からの参照が HomePage/PairDailyPage に残存 |
 
 ### 設定
 | ファイル | 役割 |
 |---------|------|
-| `vercel.json` | リダイレクト (/pair/:number), リライト, キャッシュヘッダー |
+| `vercel.json` | /pair/:slug リダイレクト, SPA rewrite (全パス→index.html), キャッシュヘッダー |
 | `firebase.json` | Firestore/Storage ルール参照 |
 | `firestore.rules` | Firestore セキュリティルール (auth必須) |
 | `storage.rules` | Storage セキュリティルール (auth必須) |
+| `firestore.indexes.json` | Firestore インデックス ⚠️ 空 (indexes: []) |
+| `public/firebase-messaging-sw.js` | FCM Service Worker ⚠️ 通知 body が日本語 hardcode |
 | `index.html` | エントリポイント, PWA manifest, OGP, Nunito読み込み |
 | `vite.config.js` | Vite設定 |
 
@@ -170,7 +219,7 @@ firebase deploy --only firestore:rules,storage  # ルールデプロイ
 - pairId='demo' でAPIを叩いたとき PAIR-DEMOTEST のデータが返らないか確認
 
 ### 2. データ整合性
-- api/pair-media.js の set() が全て merge:true なしか確認
+- 全 API の set() で merge:true の有無を確認（既知 bug: pair-media.js L811/L1071, journal.js L541, admin-reset.js L156, admin-restore.js L150, journal-analysis.js L120/L176）
 - 「送信しました」表示がFirestore書き込み確認後のみか確認
 - Firebase Admin Storage が全て admin.storage().bucket(storageBucketName) か確認
 
@@ -186,7 +235,7 @@ firebase deploy --only firestore:rules,storage  # ルールデプロイ
 
 ### 5. UIの一貫性
 - BottomNavがHomePage/AlbumPage/PairDailyPageに存在するか確認
-- HashRouter形式（/#/path）が全リンクで使われてるか確認
+- BrowserRouter形式（/pair/:slug/album 等）が全リンクで使われてるか確認（HashRouter /#/ 形式の混入がないか）
 - pairId=PAIR-DEMOTESTでデモ写真・音声のフォールバックがあるか確認（他pairIdに漏れてないか）
 
 ### 6. Firestore インデックス
