@@ -26,6 +26,15 @@ const valueCards = [
   },
 ]
 
+const memoryPhotos = [
+  '/demo-photos/Gemini_Generated_Image_ejq9x3ejq9x3ejq9.png',
+  '/demo-photos/pakutaso_go33036_TP_V.jpg',
+  '/demo-photos/Gemini_Generated_Image_7if52r7if52r7if5.png',
+  '/demo-photos/CCIMG_8140_TP_V4.webp',
+  '/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp',
+  '/demo-photos/Gemini_Generated_Image_dm6kcmdm6kcmdm6k.png',
+]
+
 const steps = [
   { icon: '🎙️', titleKey: 'facilityPageStep1' },
   { icon: '📤', titleKey: 'facilityPageStep2' },
@@ -88,14 +97,34 @@ export default function FacilitiesPage({ lang = 'ja' }) {
         </div>
       </header>
 
-      <main className="page" style={{ padding: '0 8px 28px', gap: 18 }}>
+      <main className="page" style={{ padding: '0 8px 28px', gap: 18, maxWidth: 375 }}>
         <section style={{ padding: '48px 24px 32px', textAlign: 'center' }}>
           <h1 style={{ fontSize: 28, fontWeight: 800, color: '#005f80', margin: '0 0 12px', lineHeight: 1.25 }}>
             {t(lang, 'facilityPageHeroTitle')}
           </h1>
-          <p style={{ fontSize: 15, color: '#6B5B95', lineHeight: 1.6, margin: 0 }}>
+          <p style={{ fontSize: 15, color: '#6B5B95', lineHeight: 1.6, margin: '0 auto', maxWidth: 300, overflowWrap: 'anywhere' }}>
             {t(lang, 'facilityPageHeroSub')}
           </p>
+        </section>
+
+        <section style={{ background: '#fff', borderRadius: 16, padding: '18px 16px', boxShadow: '0 2px 16px rgba(80,40,120,0.07)', textAlign: 'center' }}>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#005f80', margin: '0 0 14px' }}>
+            {t(lang, 'facilityPageHowTitle')}
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+            {steps.map((step, index) => (
+              <div key={step.titleKey} style={{ width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                  <span style={{ width: 22, height: 22, borderRadius: '50%', background: '#fff', color: '#0096c7', border: '1px solid rgba(0,150,199,0.25)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, flexShrink: 0 }}>{index + 1}</span>
+                  <span style={{ fontSize: 24, lineHeight: 1 }}>{step.icon}</span>
+                  <span style={{ fontSize: 14, fontWeight: 800, color: '#005f80', minWidth: 86, textAlign: 'left' }}>{t(lang, step.titleKey)}</span>
+                </div>
+                {index < steps.length - 1 && (
+                  <div style={{ fontSize: 16, color: '#0096c7', marginTop: 8, lineHeight: 1 }}>↓</div>
+                )}
+              </div>
+            ))}
+          </div>
         </section>
 
         {/* Phase 2-A: Screenshot animation section */}
@@ -203,30 +232,26 @@ export default function FacilitiesPage({ lang = 'ja' }) {
           </div>
         </section>
 
-        <section style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <section style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 8, padding: '0 2px' }}>
           {valueCards.map((card) => (
-            <div key={card.titleKey} style={{ background: card.background, borderRadius: 16, padding: '24px 20px', boxShadow: card.shadow, textAlign: 'center' }}>
-              <div style={{ fontSize: 32, lineHeight: 1, marginBottom: 10 }}>{card.icon}</div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: '#005f80' }}>{t(lang, card.titleKey)}</div>
+            <div key={card.titleKey} style={{ background: card.background, borderRadius: 999, padding: '8px 10px', boxShadow: '0 2px 8px rgba(80,40,120,0.07), inset 0 1px 0 rgba(255,255,255,0.8)', display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 34 }}>
+              <span style={{ fontSize: card.titleKey === 'facilityPageValue2Title' ? 10 : 16, lineHeight: 1, fontWeight: 900, color: card.titleKey === 'facilityPageValue2Title' ? '#e06080' : undefined }}>{card.titleKey === 'facilityPageValue2Title' ? 'FREE' : card.icon}</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color: '#005f80', whiteSpace: 'nowrap' }}>{t(lang, card.titleKey)}</span>
             </div>
           ))}
         </section>
 
-        <section style={{ background: '#fff', borderRadius: 16, padding: '24px 20px', boxShadow: '0 2px 16px rgba(80,40,120,0.07)', textAlign: 'center' }}>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#005f80', margin: '0 0 18px' }}>
-            {t(lang, 'facilityPageHowTitle')}
+        <section style={{ background: '#fff', borderRadius: 16, padding: '22px 16px', boxShadow: '0 2px 16px rgba(80,40,120,0.07)', textAlign: 'center' }}>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#005f80', margin: '0 0 6px' }}>
+            {t(lang, 'facilityPageMemoryTitle')}
           </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
-            {steps.map((step, index) => (
-              <div key={step.titleKey} style={{ width: '100%' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-                  <span style={{ width: 24, height: 24, borderRadius: '50%', background: '#fff', color: '#0096c7', border: '1px solid rgba(0,150,199,0.25)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>{index + 1}</span>
-                  <span style={{ fontSize: 28, lineHeight: 1 }}>{step.icon}</span>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: '#005f80', minWidth: 96, textAlign: 'left' }}>{t(lang, step.titleKey)}</span>
-                </div>
-                {index < steps.length - 1 && (
-                  <div style={{ fontSize: 18, color: '#0096c7', marginTop: 10, lineHeight: 1 }}>↓</div>
-                )}
+          <p style={{ fontSize: 13, color: '#6B5B95', lineHeight: 1.5, margin: '0 0 16px' }}>
+            {t(lang, 'facilityPageMemorySub')}
+          </p>
+          <div className="facility-memory-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            {memoryPhotos.map((src) => (
+              <div key={src} className="facility-memory-photo" style={{ aspectRatio: '1 / 1', borderRadius: 12, overflow: 'hidden', boxShadow: '0 5px 14px rgba(80,40,120,0.12)', background: '#f4f0ff' }}>
+                <img src={src} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
               </div>
             ))}
           </div>

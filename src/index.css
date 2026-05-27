@@ -198,3 +198,23 @@ button:active { transform: translateY(3px) !important; }
 .facility-caption-1 { animation-delay: 0s; }
 .facility-caption-2 { animation-delay: -6s; }
 .facility-caption-3 { animation-delay: -3s; }
+
+.facility-memory-photo {
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.facility-memory-photo:hover,
+.facility-memory-photo:active {
+  transform: scale(1.03);
+  box-shadow: 0 8px 18px rgba(80,40,120,0.18);
+}
+
+@media (max-width: 520px) {
+  .facility-memory-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .facility-memory-photo:nth-child(n + 5) {
+    display: none;
+  }
+}
