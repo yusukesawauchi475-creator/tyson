@@ -24,6 +24,8 @@
     "verify:audio": "node scripts/verify-audio-bulletproof.js",
     "verify:date": "node scripts/verify-date-display.js",
     "verify": "node scripts/verify_all.mjs",
+    "test:unread": "node --test tests/unreadState.test.mjs",
+    "verify:unread": "npm run test:unread && npm run build",
     "soak:verify": "node scripts/soak_verify.mjs",
     "kill-orange": "node scripts/kill-orange.js",
     "smoke:uiCopy": "node scripts/smoke_uiCopy.mjs"

@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { getDateKey, fetchAudioForPlayback, hasTodayAudio, getListenRoleMeta, markSeen, uploadAudio, genRequestId, getStreak, updateStreak } from '../lib/pairDaily'
-import { markVoiceListened, getTodayPartnerUnlistenedStats, getAlbumBadgePartnerUnlistenedCount } from '../lib/listenedTracking'
+import { markVoiceListened } from '../lib/listenedTracking'
+import { getPartnerUnreadState } from '../lib/unreadState'
 import { getUpcomingHoliday } from '../lib/holidayBanner'
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { buildInviteUrl } from '../lib/invite'
@@ -40,10 +41,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
   const [audioUrl, setAudioUrl] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
-  // Phase 1: 今日 partner (parent) voice の 未聴 stats
-  const [partnerStats, setPartnerStats] = useState({ unlistened: 0, total: 0, latestHhmm: null })
-  // Fix 1+2: 全期間 partner 未聴 count (date またぎ 🔴 + Album badge 全期間カウント用)
-  const [anyPartnerUnlistened, setAnyPartnerUnlistened] = useState(0)
+  const [unreadState, setUnreadState] = useState({ todayUnreadCount: 0, todayTotalCount: 0, anyPeriodUnreadExists: false, albumBadgeCount: 0 })
   // Holiday banner: 14 日以内の最近接 holiday (再 mount + visibilitychange で再計算)
   const [upcomingHoliday, setUpcomingHoliday] = useState(() => getUpcomingHoliday(lang))
   const [errorLine, setErrorLine] = useState(null)
@@ -328,15 +326,11 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
     refreshComment()
   }, [refreshComment])
 
-  // Phase 1: 今日 partner (parent) voice の 未聴 stats fetch (mount + visibilitychange)
+  // Phase 1: partner (parent) voice の unread state fetch (mount + visibilitychange)
   const refreshPartnerStats = useCallback(() => {
     if (isDemoTest || !currentPairId) return
-    getTodayPartnerUnlistenedStats(currentPairId, LISTEN_ROLE_PARENT)
-      .then((s) => setPartnerStats(s))
-      .catch(() => {})
-    // Album badge: Phase 1 原 spec に合わせ、今日の partner voice を per-item listened state で count
-    getAlbumBadgePartnerUnlistenedCount(currentPairId, LISTEN_ROLE_PARENT)
-      .then((count) => setAnyPartnerUnlistened(count))
+    getPartnerUnreadState(currentPairId, LISTEN_ROLE_PARENT)
+      .then((state) => setUnreadState(state))
       .catch(() => {})
   }, [currentPairId, isDemoTest])
 
@@ -413,11 +407,19 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
         setIsPlaying(true)
         const seenDateKey = result.dateKey || partnerDateKeyRef.current
         markSeen(LISTEN_ROLE_PARENT, currentPairId, seenDateKey).then(() => setIsChildUnseen(false)).catch(() => {})
-        // Phase 1: Home Play は最新 voice 再生 → 該当 hhmm を listened にマーク + count 即減
+        // Phase 1: Home Play は最新 voice 再生 → unread count 即減
         const todayKey = getDateKey()
-        if (seenDateKey === todayKey && partnerStats.latestHhmm !== null) {
-          markVoiceListened(currentPairId, todayKey, LISTEN_ROLE_PARENT, partnerStats.latestHhmm)
-          setPartnerStats((prev) => ({ ...prev, unlistened: Math.max(0, prev.unlistened - 1) }))
+        if (seenDateKey) {
+          markVoiceListened(currentPairId, seenDateKey, LISTEN_ROLE_PARENT, null)
+          setUnreadState((prev) => {
+            const newAlbumBadgeCount = Math.max(0, prev.albumBadgeCount - 1)
+            return {
+              todayTotalCount: prev.todayTotalCount,
+              todayUnreadCount: seenDateKey === todayKey ? Math.max(0, prev.todayUnreadCount - 1) : prev.todayUnreadCount,
+              albumBadgeCount: newAlbumBadgeCount,
+              anyPeriodUnreadExists: newAlbumBadgeCount > 0,
+            }
+          })
         }
       }
     } catch (playErr) {
@@ -868,9 +870,9 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
                       ? (lang === 'en' ? '⏹ Stop' : lang === 'es' ? '⏹ Detener' : '⏹ 停止')
                       : (lang === 'en' ? '▶ Play' : lang === 'es' ? '▶ Reproducir' : '▶ 再生')}
                     <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', fontWeight: 600, marginLeft: 6 }}>
-                      ({partnerStats.total - partnerStats.unlistened}/{partnerStats.total})
+                      ({unreadState.todayTotalCount - unreadState.todayUnreadCount}/{unreadState.todayTotalCount})
                     </span>
-                    {!isPlaying && anyPartnerUnlistened > 0 ? ' 🔴' : ''}
+                    {!isPlaying && unreadState.anyPeriodUnreadExists ? ' 🔴' : ''}
                   </>
                 )}
               </button>
@@ -951,7 +953,7 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
       <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9000, display: 'flex', background: '#fff', borderTop: '2px solid #F0E8FF', boxShadow: '0 -4px 20px rgba(180,120,255,0.15)', paddingBottom: 'max(4px, env(safe-area-inset-bottom))' }}>
         {[
           { icon: '🏠', label: lang === 'en' ? 'Home' : lang === 'es' ? 'Inicio' : 'ホーム', bg: '#FFE8F4', bgActive: '#FFD0E8', active: true, onClick: null, badge: 0 },
-          { icon: '🖼', label: lang === 'en' ? 'Album' : lang === 'es' ? 'Álbum' : 'アルバム', bg: '#F0E8FF', bgActive: '#E0D0FF', active: false, badge: anyPartnerUnlistened, onClick: () => {
+          { icon: '🖼', label: lang === 'en' ? 'Album' : lang === 'es' ? 'Álbum' : 'アルバム', bg: '#F0E8FF', bgActive: '#E0D0FF', active: false, badge: unreadState.albumBadgeCount, onClick: () => {
             if (isRecording) {
               const msg = lang === 'en' ? 'Recording in progress. Stop and navigate away?' : lang === 'es' ? 'Grabación en curso. ¿Detener y salir?' : '録音中です。中断して移動しますか？'
               if (!window.confirm(msg)) return

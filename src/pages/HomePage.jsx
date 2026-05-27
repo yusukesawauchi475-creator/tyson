@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import { uploadAudio, fetchAudioForPlayback, getListenRoleMeta, markSeen, getDateKey, genRequestId, getStreak, updateStreak } from '../lib/pairDaily'
-import { markVoiceListened, getTodayPartnerUnlistenedStats, getAlbumBadgePartnerUnlistenedCount } from '../lib/listenedTracking'
+import { markVoiceListened } from '../lib/listenedTracking'
+import { getPartnerUnreadState } from '../lib/unreadState'
 import { getUpcomingHoliday } from '../lib/holidayBanner'
 import { uploadJournalImage, fetchTodayJournalMeta, fetchJournalViewUrl, resizeImageIfNeeded } from '../lib/journal'
 import { buildInviteUrl } from '../lib/invite'
@@ -42,10 +43,7 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
   const [parentAudioUrl, setParentAudioUrl] = useState(null)
   const [isLoadingParent, setIsLoadingParent] = useState(false)
   const [isPlayingParent, setIsPlayingParent] = useState(false)
-  // Phase 1: 今日 partner (child) voice の 未聴 stats
-  const [partnerStats, setPartnerStats] = useState({ unlistened: 0, total: 0, latestHhmm: null })
-  // Fix 1+2: 全期間 partner 未聴 count (date またぎ 🔴 + Album badge 全期間カウント用)
-  const [anyPartnerUnlistened, setAnyPartnerUnlistened] = useState(0)
+  const [unreadState, setUnreadState] = useState({ todayUnreadCount: 0, todayTotalCount: 0, anyPeriodUnreadExists: false, albumBadgeCount: 0 })
   // Holiday banner: 14 日以内の最近接 holiday (再 mount + visibilitychange で再計算)
   const [upcomingHoliday, setUpcomingHoliday] = useState(() => getUpcomingHoliday(lang))
   const [oneLiner, setOneLiner] = useState('')
@@ -477,15 +475,11 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
     return () => { stop(); document.removeEventListener('visibilitychange', onVisibility) }
   }, [])
 
-  // Phase 1: 今日 partner (child) voice の 未聴 stats fetch (mount + visibilitychange)
+  // Phase 1: partner (child) voice の unread state fetch (mount + visibilitychange)
   const refreshPartnerStats = useCallback(() => {
     if (isDemoTest || !currentPairId) return
-    getTodayPartnerUnlistenedStats(currentPairId, LISTEN_ROLE_CHILD)
-      .then((s) => setPartnerStats(s))
-      .catch(() => {})
-    // Album badge: Phase 1 原 spec に合わせ、今日の partner voice を per-item listened state で count
-    getAlbumBadgePartnerUnlistenedCount(currentPairId, LISTEN_ROLE_CHILD)
-      .then((flag) => setAnyPartnerUnlistened(flag))
+    getPartnerUnreadState(currentPairId, LISTEN_ROLE_CHILD)
+      .then((state) => setUnreadState(state))
       .catch(() => {})
   }, [currentPairId, isDemoTest])
 
@@ -548,11 +542,19 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
         setIsPlayingParent(true)
         const seenDateKey = result.dateKey || partnerDateKeyRef.current
         markSeen(LISTEN_ROLE_CHILD, currentPairId, seenDateKey).then(() => setIsParentUnseen(false)).catch(() => {})
-        // Phase 1: Home Play は最新 voice 再生 → 該当 hhmm を listened にマーク + count 即減
+        // Phase 1: Home Play は最新 voice 再生 → unread count 即減
         const todayKey = getDateKey()
-        if (seenDateKey === todayKey && partnerStats.latestHhmm !== null) {
-          markVoiceListened(currentPairId, todayKey, LISTEN_ROLE_CHILD, partnerStats.latestHhmm)
-          setPartnerStats((prev) => ({ ...prev, unlistened: Math.max(0, prev.unlistened - 1) }))
+        if (seenDateKey) {
+          markVoiceListened(currentPairId, seenDateKey, LISTEN_ROLE_CHILD, null)
+          setUnreadState((prev) => {
+            const newAlbumBadgeCount = Math.max(0, prev.albumBadgeCount - 1)
+            return {
+              todayTotalCount: prev.todayTotalCount,
+              todayUnreadCount: seenDateKey === todayKey ? Math.max(0, prev.todayUnreadCount - 1) : prev.todayUnreadCount,
+              albumBadgeCount: newAlbumBadgeCount,
+              anyPeriodUnreadExists: newAlbumBadgeCount > 0,
+            }
+          })
         }
       }
     } catch (playErr) {
@@ -671,9 +673,9 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
                       ? (lang === 'en' ? '⏹ Stop' : lang === 'es' ? '⏹ Detener' : '⏹ 停止')
                       : (lang === 'en' ? '▶ Play' : lang === 'es' ? '▶ Reproducir' : '▶ 再生')}
                     <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', fontWeight: 600, marginLeft: 6 }}>
-                      ({partnerStats.total - partnerStats.unlistened}/{partnerStats.total})
+                      ({unreadState.todayTotalCount - unreadState.todayUnreadCount}/{unreadState.todayTotalCount})
                     </span>
-                    {!isPlayingParent && anyPartnerUnlistened > 0 ? ' 🔴' : ''}
+                    {!isPlayingParent && unreadState.anyPeriodUnreadExists ? ' 🔴' : ''}
                   </>
                 )}
               </button>
@@ -764,9 +766,9 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           }
           if (!slug) { console.error('slug required'); return }
           navigate(`/pair/${slug}/album`)
-        }}><span style={{ fontSize: 20, position: 'relative', display: 'inline-block' }}>🖼{anyPartnerUnlistened > 0 && (
+        }}><span style={{ fontSize: 20, position: 'relative', display: 'inline-block' }}>🖼{unreadState.albumBadgeCount > 0 && (
           <span style={{ position: 'absolute', top: -4, right: -10, minWidth: 18, height: 18, padding: '0 5px', boxSizing: 'border-box', borderRadius: 9, background: '#B8A0E8', color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, border: '1.5px solid #fff', fontFamily: 'Nunito, sans-serif' }}>
-            {anyPartnerUnlistened >= 10 ? '9+' : anyPartnerUnlistened}
+            {unreadState.albumBadgeCount >= 10 ? '9+' : unreadState.albumBadgeCount}
           </span>
         )}</span><span>{lang === 'en' ? 'Album' : lang === 'es' ? 'Álbum' : 'アルバム'}</span></button>
         <button type="button" onClick={handleShare}><span style={{ fontSize: 20 }}>👋</span><span>{lang === 'en' ? 'Invite' : lang === 'es' ? 'Invitar' : '招待'}</span></button>
