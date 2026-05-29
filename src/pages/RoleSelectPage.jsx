@@ -47,7 +47,7 @@ export default function RoleSelectPage({ onSelect, lang = 'ja', pairId = null })
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 8px', color: '#005f80' }}>
           {t(lang, 'roleSelectTitle')}
         </h1>
-        <p style={{ fontSize: 13, color: '#555', margin: '0 0 12px', lineHeight: 1.5 }}>
+        <p style={{ fontSize: 13, color: '#555', margin: '0 0 12px', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
           {t(lang, 'roleSelectHint')}
         </p>
         <p style={{ fontSize: 12, color: '#AAA', margin: '0 0 40px', whiteSpace: 'nowrap' }}>
@@ -138,7 +138,7 @@ export default function RoleSelectPage({ onSelect, lang = 'ja', pairId = null })
             <h3 style={{ fontSize: 20, fontWeight: 800, color: '#005f80', margin: '0 0 8px' }}>
               {popupRole === 'parent' ? t(lang, 'roleParentPopupTitle') : t(lang, 'roleChildPopupTitle')}
             </h3>
-            <p style={{ fontSize: 13, color: '#6B5B95', margin: '0 0 20px', lineHeight: 1.5 }}>
+            <p style={{ fontSize: 13, color: '#6B5B95', margin: '0 0 20px', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
               {popupRole === 'parent' ? t(lang, 'roleParentPopupBody') : t(lang, 'roleChildPopupBody')}
             </p>
             <button
