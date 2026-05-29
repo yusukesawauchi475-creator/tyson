@@ -328,7 +328,11 @@ export default function PairDailyPage({ lang = 'ja', onChangeRole, role = 'child
 
   // Phase 1: partner (parent) voice の unread state fetch (mount + visibilitychange)
   const refreshPartnerStats = useCallback(() => {
-    if (isDemoTest || !currentPairId) return
+    if (isDemoTest) {
+      setUnreadState({ todayUnreadCount: 2, todayTotalCount: 4, anyPeriodUnreadExists: true, albumBadgeCount: 9 })
+      return
+    }
+    if (!currentPairId) return
     getPartnerUnreadState(currentPairId, LISTEN_ROLE_PARENT)
       .then((state) => setUnreadState(state))
       .catch(() => {})

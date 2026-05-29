@@ -6,7 +6,7 @@ const COMMON_ALBUM_DAYS = [
     date: '4月1日',
     photos: [
       '/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp',
-      '/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp',
+      '/demo-photos/Gemini_Generated_Image_ejq9x3ejq9x3ejq9.png',
       '/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png',
     ],
   },

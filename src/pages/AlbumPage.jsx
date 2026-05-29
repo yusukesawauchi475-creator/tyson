@@ -10,19 +10,35 @@ import RoleBadge from '../components/RoleBadge'
 import InviteModal from '../components/InviteModal'
 import { t } from '../lib/i18n'
 
-const DEMO_ALBUM_PHOTO_SETS = [
-  ['/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp','/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp','/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png'],
-  ['/demo-photos/nekocyanPAKE5233-481_TP_V.webp','/demo-photos/Gemini_Generated_Image_dm6kcmdm6kcmdm6k.png'],
-  ['/demo-photos/08redsugar720_TP_V.webp','/demo-photos/susipakuKYPKPAR52703_TP_V.webp','/demo-photos/CCIMG_8140_TP_V4.webp'],
-  ['/demo-photos/TKLA__7DA5611_TP_V.jpg','/demo-photos/Family fun in winter wonderland.png','/demo-photos/pakutaso_go33036_TP_V.jpg'],
+const DEMO_ALBUM_DAYS = [
+  { date: '2026-05-29', photos: ['/demo-photos/Gemini_Generated_Image_ejq9x3ejq9x3ejq9.png', '/demo-photos/CCIMG_8140_TP_V4.webp'] },
+  { date: '2026-05-28', photos: ['/demo-photos/kidstravelpakutasoIMG_3146_TP_V4.webp', '/demo-photos/Gemini_Generated_Image_ejq9x3ejq9x3ejq9.png', '/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png'] },
+  { date: '2026-05-27', photos: ['/demo-photos/nekocyanPAKE5233-481_TP_V.webp', '/demo-photos/Gemini_Generated_Image_dm6kcmdm6kcmdm6k.png'] },
+  { date: '2026-05-26', photos: ['/demo-photos/08redsugar720_TP_V.webp', '/demo-photos/susipakuKYPKPAR52703_TP_V.webp', '/demo-photos/CCIMG_8140_TP_V4.webp'] },
+  { date: '2026-05-25', photos: ['/demo-photos/TKLA__7DA5611_TP_V.jpg', '/demo-photos/Family fun in winter wonderland.png', '/demo-photos/pakutaso_go33036_TP_V.jpg'] },
+  { date: '2026-05-23', photos: ['/demo-photos/pakutaso_go33036_TP_V.jpg', '/demo-photos/Gemini_Generated_Image_4fx62a4fx62a4fx6.png'] },
+  { date: '2026-05-21', photos: ['/demo-photos/Gemini_Generated_Image_9jztwk9jztwk9jzt.png'] },
+  { date: '2026-05-18', photos: ['/demo-photos/nekocyanPAKE5233-481_TP_V.webp', '/demo-photos/Gemini_Generated_Image_a8fon3a8fon3a8fo.png'] },
+  { date: '2026-05-16', photos: ['/demo-photos/Gemini_Generated_Image_dkjiz0dkjiz0dkji.png', '/demo-photos/08redsugar720_TP_V.webp'] },
+  { date: '2026-05-13', photos: ['/demo-photos/kidstravelpakutasoIMG_3155_TP_V.webp'] },
+  { date: '2026-05-11', photos: ['/demo-photos/Gemini_Generated_Image_jq19t9jq19t9jq19.png', '/demo-photos/CCIMG_8140_TP_V4.webp'] },
+  { date: '2026-05-08', photos: ['/demo-photos/Gemini_Generated_Image_oth8wvoth8wvoth8.png'] },
+  { date: '2026-05-06', photos: ['/demo-photos/nekocyanPAKE5233-481_TP_V4.webp', '/demo-photos/TKLA__7DA5611_TP_V.jpg'] },
+  { date: '2026-05-03', photos: ['/demo-photos/Gemini_Generated_Image_s0fbejs0fbejs0fb.png'] },
+  { date: '2026-05-01', photos: ['/demo-photos/Gemini_Generated_Image_v6ips5v6ips5v6ip.png', '/demo-photos/pakutaso_go33036_TP_V.jpg'] },
 ]
 
-const DEMO_VOICE_META = [
-  { parent: { dur: '0:42', seen: false }, child: { dur: '1:05', seen: false } },
-  { parent: { dur: '1:12', seen: true }, child: { dur: '0:58', seen: true } },
-  { parent: { dur: '0:33', seen: true }, child: null },
-  { parent: null, child: { dur: '0:27', seen: true } },
-  { parent: { dur: '0:45', seen: true }, child: { dur: '1:10', seen: true } },
+const DEMO_VOICE_DAYS = [
+  { dateKey: '2026-05-29', parent: { dur: '0:42', seen: false }, child: { dur: '1:05', seen: false } },
+  { dateKey: '2026-05-28', parent: { dur: '1:12', seen: false }, child: { dur: '0:58', seen: false } },
+  { dateKey: '2026-05-27', parent: { dur: '0:33', seen: true }, child: { dur: '0:44', seen: false } },
+  { dateKey: '2026-05-25', parent: { dur: '0:51', seen: false }, child: { dur: '1:10', seen: true } },
+  { dateKey: '2026-05-23', parent: { dur: '0:45', seen: false }, child: { dur: '0:37', seen: false } },
+  { dateKey: '2026-05-21', parent: { dur: '1:03', seen: true }, child: { dur: '0:49', seen: false } },
+  { dateKey: '2026-05-18', parent: { dur: '0:56', seen: false }, child: { dur: '0:32', seen: true } },
+  { dateKey: '2026-05-16', parent: { dur: '0:39', seen: false }, child: { dur: '1:01', seen: false } },
+  { dateKey: '2026-05-13', parent: { dur: '0:47', seen: true }, child: { dur: '0:52', seen: false } },
+  { dateKey: '2026-05-11', parent: { dur: '1:08', seen: false }, child: { dur: '0:41', seen: true } },
 ]
 
 const BLOCKED_PAIR_IDS = []
@@ -52,16 +68,11 @@ export default function AlbumPage({ lang = 'ja' }) {
   const pairId = (!rawPairId || BLOCKED_PAIR_IDS.includes(rawPairId) || isDemo) ? null : rawPairId
 
   const demoAlbumDays = useMemo(() => {
-    const today = new Date()
-    return DEMO_ALBUM_PHOTO_SETS.map((photos, i) => {
-      const d = new Date(today)
-      d.setDate(today.getDate() - i)
-      const y = d.getFullYear()
-      const m = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
+    return DEMO_ALBUM_DAYS.map(({ date, photos }) => {
+      const [, mm, dd] = date.split('-')
       return {
-        date: `${y}-${m}-${day}`,
-        label: `${d.getMonth() + 1}月${d.getDate()}日`,
+        date,
+        label: `${parseInt(mm, 10)}月${parseInt(dd, 10)}日`,
         photos,
       }
     })
@@ -76,19 +87,14 @@ export default function AlbumPage({ lang = 'ja' }) {
   }, [demoAlbumDays])
 
   const demoVoiceDays = useMemo(() => {
-    const today = new Date()
-    return DEMO_VOICE_META.map((meta, i) => {
-      const d = new Date(today)
-      d.setDate(today.getDate() - i)
-      const y = d.getFullYear()
-      const m = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
-      const monthDay = `${d.getMonth() + 1}月${d.getDate()}日`
+    return DEMO_VOICE_DAYS.map((day, i) => {
+      const [, mm, dd] = day.dateKey.split('-')
+      const monthDay = `${parseInt(mm, 10)}月${parseInt(dd, 10)}日`
       return {
-        dateKey: `${y}-${m}-${day}`,
+        dateKey: day.dateKey,
         label: i === 0 ? `今日 · ${monthDay}` : monthDay,
-        parent: meta.parent,
-        child: meta.child,
+        parent: day.parent,
+        child: day.child,
       }
     })
   }, [])

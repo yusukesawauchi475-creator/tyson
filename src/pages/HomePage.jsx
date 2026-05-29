@@ -477,7 +477,11 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
 
   // Phase 1: partner (child) voice の unread state fetch (mount + visibilitychange)
   const refreshPartnerStats = useCallback(() => {
-    if (isDemoTest || !currentPairId) return
+    if (isDemoTest) {
+      setUnreadState({ todayUnreadCount: 3, todayTotalCount: 5, anyPeriodUnreadExists: true, albumBadgeCount: 8 })
+      return
+    }
+    if (!currentPairId) return
     getPartnerUnreadState(currentPairId, LISTEN_ROLE_CHILD)
       .then((state) => setUnreadState(state))
       .catch(() => {})
