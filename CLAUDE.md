@@ -14,6 +14,15 @@
 毎日1分、家族と声・写真を交換するアプリ。  
 本番: https://www.humfamily.com / https://tyson-two.vercel.app
 
+## SSOT sync 2026-05-30
+
+- Monetize は post-GC defer。現時点の想定は 1-3 年。
+- Google Maps model は free + branding 先行。10K user を 18ヶ月 target とする。
+- 介護施設は user acquisition channel。B2B 営業 target ではない。
+- Security reframe: B2B cert 系は drop。user data safety のみ focus。累計 $5-30K target。
+- Current bottleneck は distribution + retention + emotional hook (driver)。security は enabler layer。
+- Hum Boss 5 push back items は CEO 判断 hold: 10K gate / WTP test / GC scenario / PR consent / KPI rename。
+
 ## Core Philosophy
 
 Humの全ての判断はこの3原則から逆算される。機能追加・バグ修正・UI変更のあらゆる場面で優先される。
