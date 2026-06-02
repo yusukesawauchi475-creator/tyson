@@ -5,6 +5,7 @@
  */
 import admin from 'firebase-admin';
 import { parseFirebaseServiceAccount } from './lib/parseFirebaseServiceAccount.js';
+import { isPairAllowed } from './lib/pair-access.js';
 
 let adminApp;
 let firestore;
@@ -62,11 +63,6 @@ async function verifyIdToken(idToken) {
   return { uid: decoded.uid };
 }
 
-function isPairAllowed(uid, pairId) {
-  if (pairId === 'demo') return true;
-  return true;
-}
-
 async function readJsonBody(req) {
   return new Promise((resolve, reject) => {
     let data = '';
@@ -107,7 +103,7 @@ export default async function handler(req, res) {
       body = await readJsonBody(req);
     }
 
-    const pairId = (body.pairId || body.pair_id || 'demo').trim();
+    const pairId = (body.pairId || body.pair_id || '').trim();
     const clientDateKey = body.dateKey || null;
     const serverDateKey = getDateKeyNY();
     const dateKey = clientDateKey || serverDateKey;
@@ -116,11 +112,10 @@ export default async function handler(req, res) {
     if (!pairId) {
       return res.status(400).json({ success: false, error: 'pairId required', requestId: reqId });
     }
-    if (!isPairAllowed(uid, pairId)) {
+    initFirebaseAdmin();
+    if (!(await isPairAllowed(uid, pairId, firestore))) {
       return res.status(403).json({ success: false, error: 'Not a pair member', requestId: reqId });
     }
-
-    initFirebaseAdmin();
 
     const dayDocRef = firestore.collection('journal').doc(pairId).collection('months').doc(monthKey).collection('days').doc(dateKey);
     const daySnap = await dayDocRef.get();

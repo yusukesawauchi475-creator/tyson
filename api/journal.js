@@ -34,7 +34,7 @@ import admin from 'firebase-admin';
 import {
   parseFirebaseServiceAccount,
 } from './lib/parseFirebaseServiceAccount.js';
-import { isTysonOnlyBlocked } from './lib/pair-access.js';
+import { isTysonOnlyBlocked, isPairAllowed } from './lib/pair-access.js';
 
 let adminApp;
 let firestore;
@@ -187,11 +187,6 @@ async function verifyIdToken(idToken) {
   return { uid: decoded.uid };
 }
 
-function isPairAllowed(uid, pairId) {
-  if (pairId === 'demo') return true;
-  return true;
-}
-
 /** Vercel serverless 用: JSON body を読み取り */
 async function readJsonBody(req) {
   return new Promise((resolve, reject) => {
@@ -258,11 +253,10 @@ async function handleGet(req, res) {
     if (isTysonOnlyBlocked(pairId, uid)) {
       return res.status(403).json({ success: false, error: 'Access denied', requestId: reqId });
     }
-    if (!isPairAllowed(uid, pairId)) {
+    initFirebaseAdmin();
+    if (!(await isPairAllowed(uid, pairId, firestore))) {
       return res.status(403).json({ success: false, error: 'Not a pair member', requestId: reqId });
     }
-
-    initFirebaseAdmin();
 
     // 指定日のドキュメントを読み、journal_image + generic_images (photos) を解決するヘルパー
     const resolveDay = async (dk) => {
@@ -422,7 +416,8 @@ async function handlePost(req, res) {
       logObserve({ requestId: reqId, stage: 'journal_post_validate', status: 'error', pairId, role, clientDateKey, serverDateKey, storagePath: null, firestoreDocPath: null, httpStatus: 400, errorCode: 'invalid_role', errorMessage: 'role must be parent or child' });
       return res.status(400).json({ success: false, error: 'role must be parent or child', requestId: reqId });
     }
-    if (!isPairAllowed(uid, pairId)) {
+    initFirebaseAdmin();
+    if (!(await isPairAllowed(uid, pairId, firestore))) {
       return res.status(403).json({ success: false, error: 'Not a pair member', requestId: reqId });
     }
 

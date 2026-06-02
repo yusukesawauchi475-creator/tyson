@@ -29,4 +29,41 @@ function isTysonOnlyBlocked(pairId, uid) {
   return false;
 }
 
-export { TYSON_ZH90_ALLOWED_UIDS, TYSON_ONLY_PAIR_IDS, isTysonOnlyBlocked };
+// Phase 1 pair-membership: demo pair allowlist。
+// 既存 canonical 定数 (src/pages/DemoPage.jsx DEMO_PAIR_ID = 'PAIR-DEMOTEST'、
+// api/pair-media.js READ_ONLY_PAIR_IDS = ['PAIR-DEMOTEST']) と整合。
+// 'demo' literal は legacy stub 由来であり canonical ではないため含めない。
+const DEMO_PAIR_IDS = new Set(['PAIR-DEMOTEST']);
+
+/**
+ * Phase 1 pair-membership canonical check.
+ * - pairId / uid / firestore のいずれかが falsy なら false
+ * - DEMO_PAIR_IDS に含まれる pairId は membership 不要で true
+ * - それ以外: pair_users/{pairId}/members/{uid} doc 存在で true
+ *
+ * @param {string} uid Firebase Auth UID
+ * @param {string} pairId pair identifier
+ * @param {FirebaseFirestore.Firestore} firestore initialized admin firestore instance
+ * @returns {Promise<boolean>}
+ */
+async function isPairAllowed(uid, pairId, firestore) {
+  if (!uid || !pairId || !firestore) return false;
+  if (DEMO_PAIR_IDS.has(pairId)) return true;
+  try {
+    const snap = await firestore
+      .collection('pair_users').doc(pairId)
+      .collection('members').doc(uid)
+      .get();
+    return snap.exists;
+  } catch (_) {
+    return false;
+  }
+}
+
+export {
+  TYSON_ZH90_ALLOWED_UIDS,
+  TYSON_ONLY_PAIR_IDS,
+  isTysonOnlyBlocked,
+  DEMO_PAIR_IDS,
+  isPairAllowed,
+};

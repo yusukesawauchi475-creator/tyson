@@ -73,7 +73,7 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // GET ?action=resolve&number=N → no auth required, redirect only
+  // GET ?action=resolve&number=N → redirect (auth optional; if present, claim membership)
   if (req.method === 'GET' && req.query?.action === 'resolve' && req.query?.number) {
     try {
       initFirebaseAdmin();
@@ -90,6 +90,26 @@ export default async function handler(req, res) {
       if (!resolvedPairId) {
         return res.status(404).json({ success: false, error: 'pairId not found for number', requestId });
       }
+
+      // Phase 1 pair-membership: 認証済み uid があれば pair_users/{pairId}/members/{uid} を claim (idempotent)
+      const claimToken = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+      if (claimToken) {
+        try {
+          const decoded = await admin.auth().verifyIdToken(claimToken);
+          const claimUid = decoded.uid;
+          const claimRole = req.query.role === 'parent' || req.query.role === 'child' ? req.query.role : 'unknown';
+          await firestore
+            .collection('pair_users').doc(resolvedPairId)
+            .collection('members').doc(claimUid)
+            .set({
+              role: claimRole,
+              claimedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+        } catch (_) {
+          // claim 失敗しても resolve UX は維持 (lockout 別 phase で扱う)
+        }
+      }
+
       const roleParam = req.query.role === 'parent' || req.query.role === 'child' ? `&role=${req.query.role}` : '';
       return res.redirect(302, `https://www.humfamily.com/#/?number=${encodeURIComponent(req.query.number)}${roleParam}`);
     } catch (e) {

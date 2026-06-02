@@ -4,7 +4,7 @@ import {
   CODE_PARSE_ERROR,
   CODE_EMPTY,
 } from './lib/parseFirebaseServiceAccount.js';
-import { isTysonOnlyBlocked } from './lib/pair-access.js';
+import { isTysonOnlyBlocked, isPairAllowed } from './lib/pair-access.js';
 
 let adminApp;
 let firestore;
@@ -168,12 +168,6 @@ function validateAudioPathItem(item) {
   const missing = requiredFields.filter((f) => !item || !item[f]);
   if (missing.length > 0) return { valid: false, missing };
   return { valid: true };
-}
-
-/** MVP: pairId=demo は誰でもアクセス可。後でinvite token方式に戻す */
-function isPairAllowed(uid, pairId) {
-  if (pairId === 'demo') return true;
-  return true; // 暫定: 全許可
 }
 
 const READ_ONLY_PAIR_IDS = ['PAIR-DEMOTEST'];
@@ -502,15 +496,14 @@ async function handleGet(req, res) {
     if (isTysonOnlyBlocked(pairId, uid)) {
       return res.status(403).json({ success: false, error: 'Access denied', requestId: reqId });
     }
-    if (!isPairAllowed(uid, pairId)) {
+    initFirebaseAdmin();
+    if (!(await isPairAllowed(uid, pairId, firestore))) {
       return res.status(403).json({
         success: false,
         error: 'Not a pair member',
         requestId: reqId,
       });
     }
-
-    initFirebaseAdmin();
 
     // roleData から有効なオーディオパス（文字列）を解決
     const extractEffectivePath = (rd) => {
@@ -706,15 +699,14 @@ async function handlePost(req, res) {
       });
     }
     
-    if (!isPairAllowed(uid, pairId)) {
+    initFirebaseAdmin();
+    if (!(await isPairAllowed(uid, pairId, firestore))) {
       return res.status(403).json({
         success: false,
         error: 'Not a pair member',
         requestId: reqId,
       });
     }
-
-    initFirebaseAdmin();
 
     const mimeType = audioFile.mimeType || 'audio/mp4';
     const ext = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('m4a') ? 'm4a' : 'webm';
@@ -1045,10 +1037,10 @@ async function handlePatch(req, res) {
     if (isTysonOnlyBlocked(pairId, uid)) {
       return res.status(403).json({ success: false, error: 'Access denied', requestId: reqId });
     }
-    if (!isPairAllowed(uid, pairId)) {
+    initFirebaseAdmin();
+    if (!(await isPairAllowed(uid, pairId, firestore))) {
       return res.status(403).json({ success: false, error: 'Not a pair member', requestId: reqId });
     }
-    initFirebaseAdmin();
 
     const metaRef = firestore.collection('pair_media').doc(pairId).collection('days').doc(dateKey);
     const metaSnap = await metaRef.get();

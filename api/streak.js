@@ -1,6 +1,7 @@
 import admin from 'firebase-admin';
 import { parseFirebaseServiceAccount } from './lib/parseFirebaseServiceAccount.js';
 import { getEffectiveRole } from '../src/lib/voiceRole.js';
+import { isPairAllowed } from './lib/pair-access.js';
 
 let adminApp;
 let firestore;
@@ -224,8 +225,9 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, error: 'Unauthorized', requestId });
   }
 
+  let uid;
   try {
-    await verifyIdToken(idToken);
+    ({ uid } = await verifyIdToken(idToken));
   } catch {
     return res.status(401).json({ success: false, error: 'Invalid token', requestId });
   }
@@ -237,6 +239,10 @@ export default async function handler(req, res) {
     }
 
     try {
+      initFirebaseAdmin();
+      if (!(await isPairAllowed(uid, pairId, firestore))) {
+        return res.status(403).json({ success: false, error: 'Not a pair member', requestId });
+      }
       const streak = await calculateStreakFromUploads(pairId);
       return res.status(200).json({
         success: true,
@@ -257,11 +263,13 @@ export default async function handler(req, res) {
     }
 
     try {
+      initFirebaseAdmin();
+      if (!(await isPairAllowed(uid, pairId, firestore))) {
+        return res.status(403).json({ success: false, error: 'Not a pair member', requestId });
+      }
       // Recalculate streak from actual upload data
       const streak = await calculateStreakFromUploads(pairId);
 
-      // Save to Firestore for caching
-      initFirebaseAdmin();
       const ref = firestore.doc(`pairs/${pairId}/meta/streak`);
       const data = { count: streak.count, lastDateKey: streak.lastDateKey, firstDateKey: streak.firstDateKey, updatedAt: Date.now() };
       await ref.set(data);
