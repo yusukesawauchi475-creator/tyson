@@ -72,11 +72,15 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 | パス | コンポーネント | 説明 |
 |------|-------------|------|
 | `/#/` | RootOrLanding → RootRoute | pairId有→ホーム, 無→ランディング |
-| `/#/?number=X` | NumberResolver → RootRoute | /pair/X 経由のスラグ解決 |
-| `/#/album` | AlbumPage | 写真・声アルバム |
 | `/#/admin` | AdminPage | 管理画面 |
-| `/#/demo` | DemoPage | デモ |
+| `/#/demo` | DemoPage | デモ体験 |
 | `/#/landing` | LandingPage | ランディングページ |
+| `/#/facilities` | FacilitiesPage | 介護施設向けランディング |
+| `/#/welcome` | WelcomePage | DEMO CTA 経由の新 pair 発行 |
+| `/#/pair/:slug` | PairWorld | ペアの世界 (slug→pairId解決) |
+| `/#/pair/:slug/` | RootRoute | ペアホーム (role振り分け) |
+| `/#/pair/:slug/album` | AlbumPage | 写真・声アルバム |
+| `/#/pair/:slug/invite` | InvitePage | 招待リンク共有 |
 
 ## ペアの仕組み
 - 公開URL: `humfamily.com/pair/{6文字スラグ}` (例: /pair/ulf1q6)
@@ -89,7 +93,7 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 ### フロントエンド
 | ファイル | 役割 |
 |---------|------|
-| `src/App.jsx` | ルーティング, NumberResolver, RootRoute (role振り分け) |
+| `src/App.jsx` | ルーティング, AppRoutes, RootRoute (role振り分け) |
 | `src/pages/HomePage.jsx` | 親のホーム画面 (緑/ピンク/紫の3カード) |
 | `src/pages/PairDailyPage.jsx` | 子のホーム画面 (同上) |
 | `src/pages/AlbumPage.jsx` | アルバム (写真タブ/声タブ, ライトボックス) |
@@ -97,14 +101,43 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 | `src/pages/RoleSelectPage.jsx` | 親/子の役割選択 |
 | `src/pages/LandingPage.jsx` | 初回訪問ランディング |
 | `src/pages/DemoPage.jsx` | デモ体験 |
+| `src/pages/FacilitiesPage.jsx` | 介護施設向けランディング + contact form |
+| `src/pages/InvitePage.jsx` | 招待リンクコピー・シェア (PairWorld 配下) |
+| `src/pages/WelcomePage.jsx` | DEMO CTA 経由の新 pair 自動発行 + LINE 共有 |
+| `src/components/AlbumCalendar.jsx` | アルバムカレンダービュー |
 | `src/components/DailyPromptCard.jsx` | 今日の話題pill (AI話題 + 別の話題ボタン) |
-| `src/components/VoiceLibrary.jsx` | 声の履歴一覧 (アルバム声タブ用) |
+| `src/components/DemoModal.jsx` | デモ用 CTA モーダル |
+| `src/components/FamilyInsightCard.jsx` | AI 家族インサイトカード |
+| `src/components/InviteModal.jsx` | 招待モーダル (Instagram / LINE / コピー) |
+| `src/components/LanguageSwitch.jsx` | 言語切替 UI (ja/en/es) |
+| `src/components/OneYearAgoBanner.jsx` | 1年前の記録バナー (未使用) |
+| `src/components/PairWorld.jsx` | slug→pairId 解決ラッパー (Outlet) |
 | `src/components/PwaInstallBanner.jsx` | Android PWAインストールバナー |
+| `src/components/RoleBadge.jsx` | 親/子ロールバッジ表示 |
+| `src/components/UploadErrorModal.jsx` | アップロードエラーモーダル |
+| `src/components/Visualizer.jsx` | 録音/再生時の波形ビジュアライザー |
+| `src/components/VoiceLibrary.jsx` | 声の履歴一覧 (アルバム声タブ用) |
 | `src/components/WeeklySummary.jsx` | 週次サマリー (日曜のみ) |
-| `src/lib/pairDaily.js` | getPairId, getUserRole, markSeen, uploadAudio, fetchAudio 等 |
-| `src/lib/journal.js` | 写真アップロード, fetchTodayJournalMeta, fetchAlbum |
+| `src/lib/dateFormat.js` | 日付フォーマットユーティリティ |
+| `src/lib/deployHealthCheck.js` | デプロイ健全性確認 |
+| `src/lib/fcm.js` | Firebase Cloud Messaging プッシュ通知 |
 | `src/lib/firebase.js` | Firebase初期化, getIdTokenForApi (匿名認証) |
-| `src/lib/i18n.js` | 日英翻訳 |
+| `src/lib/holidayBanner.js` | 国別記念日カウントダウンバナーデータ |
+| `src/lib/i18n.js` | 日英西翻訳 (ja/en/es) |
+| `src/lib/indexedDB.js` | IndexedDB キャッシュユーティリティ |
+| `src/lib/invite.js` | 招待リンク生成・コピーユーティリティ |
+| `src/lib/inviteShare.js` | SNS シェアターゲット (LINE / Instagram 等) |
+| `src/lib/journal.js` | 写真アップロード, fetchTodayJournalMeta, fetchAlbum |
+| `src/lib/listenedTracking.js` | 音声既読状態トラッキング |
+| `src/lib/pairDaily.js` | getPairId, getUserRole, markSeen, uploadAudio, fetchAudio 等 |
+| `src/lib/pairSlug.js` | slug ↔ pairId 解決ユーティリティ |
+| `src/lib/shareTargets.js` | Web Share Target 設定 |
+| `src/lib/tysonThemes.js` | ペアごとのテーマカラー定義 |
+| `src/lib/uiCopy.js` | UI 文言定数 |
+| `src/lib/unreadState.js` | 未読状態管理 (UI 層) |
+| `src/lib/unreadStateCore.js` | 未読状態計算コア (pure compute) |
+| `src/lib/useAudioLevel.js` | 録音レベル取得 React hook |
+| `src/lib/voiceRole.js` | 音声ロール判定ユーティリティ |
 | `src/index.css` | グローバルCSS (.page, .bottom-nav 等) |
 
 ### API (Vercel Serverless)
@@ -113,9 +146,11 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 | `api/pair-media.js` | 音声 GET/POST/PATCH(markSeen) + voice-history |
 | `api/journal.js` | 写真 GET(今日→最新日フォールバック)/POST |
 | `api/album.js` | アルバム全日写真取得 |
-| `api/invite.js` | ペア発行(create-numbered), スラグ解決(resolve) |
+| `api/invite.js` | ペア発行(create-numbered / create-welcome), スラグ解決(resolve) |
 | `api/streak.js` | 連続記録ストリーク |
-| `api/daily-theme.js` | AI話題生成 |
+| `api/daily-theme.js` | AI話題生成 (要注意: 認証なし — issue #44) |
+| `api/family-insight.js` | AI 家族インサイトコメント生成 |
+| `api/journal-analysis.js` | 写真 OCR + AI 分析 (admin password 認証) |
 | `api/admin-reset.js` | 管理リセット |
 | `api/admin-restore.js` | 管理復元 |
 | `api/admin-pairs.js` | ペアダッシュボード |
