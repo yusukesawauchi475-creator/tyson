@@ -7,6 +7,7 @@
 import OpenAI from 'openai';
 import admin from 'firebase-admin';
 import { parseFirebaseServiceAccount } from './lib/parseFirebaseServiceAccount.js';
+import { isPairAllowed } from './lib/pair-access.js';
 
 let adminApp;
 let firestore;
@@ -38,9 +39,10 @@ export default async function handler(req, res) {
   const idToken = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
   if (!idToken) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
+  let uid;
   try {
     initFirebaseAdmin();
-    await admin.auth().verifyIdToken(idToken);
+    ({ uid } = await admin.auth().verifyIdToken(idToken));
   } catch {
     return res.status(401).json({ success: false, error: 'Invalid token' });
   }
@@ -50,6 +52,10 @@ export default async function handler(req, res) {
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!pairId || !apiKey) return res.status(200).json({ success: false, comment: null });
+
+  if (!(await isPairAllowed(uid, pairId, firestore))) {
+    return res.status(403).json({ success: false, error: 'Not a pair member' });
+  }
 
   try {
     // Collect 7-day activity data

@@ -212,6 +212,12 @@ export default function LandingPage({ lang = 'ja' }) {
             textDecoration: 'none',
           }}>{t(lang, 'facilityCta')}</a>
         </section>
+
+        <footer style={{ textAlign: 'center', padding: 24, fontSize: 12, color: '#888' }}>
+          <a href="/privacy.html" style={{ color: '#888', textDecoration: 'none' }}>プライバシーポリシー</a>
+          <span style={{ margin: '0 10px' }}>·</span>
+          <a href="/terms.html" style={{ color: '#888', textDecoration: 'none' }}>利用規約</a>
+        </footer>
       </div>
     </div>
   )
