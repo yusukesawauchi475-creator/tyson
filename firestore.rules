@@ -1,24 +1,74 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isDemoPair(pairId) {
+      return pairId == 'PAIR-DEMOTEST';
+    }
+
+    function isPairMember(pairId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/pair_users/$(pairId)/members/$(request.auth.uid));
+    }
+
+    function canReadPair(pairId) {
+      return signedIn() && (isDemoPair(pairId) || isPairMember(pairId));
+    }
 
     // Phase X-1: pair_numbers (slug → pairId mapping) は client write 禁止、admin SDK のみ
     // generateSlug() helper 経由化を物理 enforcement (core-philosophy.md 軸 3)
+    // PairWorld の slug 解決は member claim 前に必要なため、read は auth のみで維持。
     match /pair_numbers/{slug} {
-      allow read: if request.auth != null;
+      allow read: if signedIn();
       allow write: if false;
     }
 
-    // Phase X-1: pairs (pair metadata) も client write 禁止、admin SDK のみ
+    // pairs (pair metadata) は invite URL 生成 helper が client read。
+    // pair-scoped metadata のため member/demo のみ read、write は admin SDK のみ。
     match /pairs/{pairId} {
-      allow read: if request.auth != null;
+      allow read: if canReadPair(pairId);
       allow write: if false;
     }
 
-    // 他 collection は既存挙動維持 (Phase X-3 で個別 rules 厳格化検討)
-    // 認証済みユーザー（匿名認証含む）のみ読み書き可能
+    // pair media / journal は通常 API(Admin SDK) 経由だが、client SDK 直 read が発生しても
+    // pair member/demo 以外には漏らさない。
+    match /pair_media/{pairId}/{document=**} {
+      allow read: if canReadPair(pairId);
+      allow write: if false;
+    }
+
+    match /journal/{pairId}/{document=**} {
+      allow read: if canReadPair(pairId);
+      allow write: if false;
+    }
+
+    // Membership は invite resolve API(Admin SDK) が claim する。client 直 write は禁止。
+    match /pair_users/{pairId}/members/{uid} {
+      allow read: if isPairMember(pairId) && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // FCM token 保存のみ client SDK 直 write が存在する。
+    match /pair_users/{pairId}/parentDevices/{deviceId} {
+      allow read: if false;
+      allow create, update: if isPairMember(pairId);
+      allow delete: if false;
+    }
+
+    match /pair_users/{pairId}/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /pair_members/{pairId}/{document=**} {
+      allow read, write: if false;
+    }
+
+    // Default deny: permissive wildcard を撤廃。
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if false;
     }
   }
 }
