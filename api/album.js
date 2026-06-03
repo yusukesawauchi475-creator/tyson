@@ -1,6 +1,6 @@
 import admin from 'firebase-admin';
 import { parseFirebaseServiceAccount } from './lib/parseFirebaseServiceAccount.js';
-import { isTysonOnlyBlocked } from './lib/pair-access.js';
+import { isTysonOnlyBlocked, isPairAllowed } from './lib/pair-access.js';
 
 let adminApp;
 let firestore;
@@ -117,6 +117,9 @@ export default async function handler(req, res) {
 
   if (isTysonOnlyBlocked(pairId, uid)) {
     return res.status(403).json({ success: false, error: 'Access denied', requestId });
+  }
+  if (!(await isPairAllowed(uid, pairId, firestore))) {
+    return res.status(403).json({ success: false, error: 'Not a pair member', requestId });
   }
 
   console.log('[album] request', { pairId, month: month || 'all', requestId });

@@ -673,7 +673,14 @@ async function handlePost(req, res) {
       });
     }
 
-    const pairId = fields.pairId || fields.pair_id || 'demo';
+    const pairId = fields.pairId || fields.pair_id;
+    if (!pairId) {
+      return res.status(400).json({
+        success: false,
+        error: 'pairId is required',
+        requestId: reqId,
+      });
+    }
 
     if (isTysonOnlyBlocked(pairId, uid)) {
       return res.status(403).json({ success: false, error: 'Access denied', requestId: reqId });

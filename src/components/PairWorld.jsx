@@ -3,6 +3,27 @@ import { useParams, Outlet, Link } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
 import { db, getIdTokenForApi } from '../lib/firebase'
 
+async function claimPairMembership(slug, idToken) {
+  if (!slug || !idToken) return
+
+  const url = `/api/invite?action=resolve&number=${encodeURIComponent(String(slug))}`
+  let lastError = null
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${idToken}` },
+        redirect: 'manual',
+      })
+      if (response.type === 'opaqueredirect' || (response.status >= 200 && response.status < 400)) return
+      throw new Error(`claim failed: ${response.status}`)
+    } catch (e) {
+      lastError = e
+    }
+  }
+  if (import.meta.env.DEV) console.warn('[PairWorld] membership claim failed:', lastError?.message)
+}
+
 /**
  * PairWorld — /pair/:slug route のコンテキストプロバイダ。
  * slug を Firestore pair_numbers から pairId に解決し、子ルートへ Outlet context として渡す。
@@ -21,7 +42,7 @@ export default function PairWorld({ lang = 'ja' }) {
     setPairId(null)
     ;(async () => {
       try {
-        await getIdTokenForApi()
+        const idToken = await getIdTokenForApi()
         const snap = await getDoc(doc(db, 'pair_numbers', String(slug)))
         if (cancelled) return
         if (!snap.exists()) {
@@ -43,6 +64,8 @@ export default function PairWorld({ lang = 'ja' }) {
           setLoading(false)
           return
         }
+        await claimPairMembership(slug, idToken)
+        if (cancelled) return
         setPairId(resolvedPairId)
         setLoading(false)
       } catch (e) {

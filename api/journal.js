@@ -393,14 +393,18 @@ async function handlePost(req, res) {
       }
     }
 
-    const pairId = body.pairId || body.pair_id || 'demo';
+    const pairId = body.pairId || body.pair_id;
+    const role = body.role || 'parent';
+    if (!pairId) {
+      logObserve({ requestId: reqId, stage: 'journal_post_validate', status: 'error', pairId: null, role, clientDateKey: null, serverDateKey, storagePath: null, firestoreDocPath: null, httpStatus: 400, errorCode: 'missing_params', errorMessage: 'pairId required' });
+      return res.status(400).json({ success: false, error: 'pairId is required', requestId: reqId });
+    }
     if (isTysonOnlyBlocked(pairId, uid)) {
       return res.status(403).json({ success: false, error: 'Access denied', requestId: reqId });
     }
     if (pairId === 'PAIR-DEMOTEST') {
       return res.status(403).json({ success: false, error: 'This pair is read-only', requestId: reqId });
     }
-    const role = body.role || 'parent';
     logPairId = pairId;
     logRole = role;
 
@@ -408,10 +412,6 @@ async function handlePost(req, res) {
     const requestIdFromBody = (body.requestId || body.request_id || '').trim() || reqId;
     const clientDateKey = body.dateKey || body.clientDateKey || null;
 
-    if (!pairId) {
-      logObserve({ requestId: reqId, stage: 'journal_post_validate', status: 'error', pairId: null, role, clientDateKey, serverDateKey, storagePath: null, firestoreDocPath: null, httpStatus: 400, errorCode: 'missing_params', errorMessage: 'pairId required' });
-      return res.status(400).json({ success: false, error: 'pairId is required', requestId: reqId });
-    }
     if (role !== 'parent' && role !== 'child') {
       logObserve({ requestId: reqId, stage: 'journal_post_validate', status: 'error', pairId, role, clientDateKey, serverDateKey, storagePath: null, firestoreDocPath: null, httpStatus: 400, errorCode: 'invalid_role', errorMessage: 'role must be parent or child' });
       return res.status(400).json({ success: false, error: 'role must be parent or child', requestId: reqId });
