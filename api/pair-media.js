@@ -318,6 +318,9 @@ async function handleVoiceHistory(req, res) {
 
   try {
     initFirebaseAdmin();
+    if (!(await isPairAllowed(uid, pairId, firestore))) {
+      return res.status(403).json({ error: 'Not a pair member', requestId: reqId });
+    }
     const daysSnap = await firestore
       .collection('pair_media').doc(pairId).collection('days')
       .get();
@@ -418,6 +421,9 @@ async function handleVoiceMonth(req, res) {
 
   try {
     initFirebaseAdmin();
+    if (!(await isPairAllowed(uid, pairId, firestore))) {
+      return res.status(403).json({ error: 'Not a pair member' });
+    }
     const daysSnap = await firestore
       .collection('pair_media').doc(pairId).collection('days')
       .get();
