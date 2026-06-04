@@ -20,3 +20,6 @@
 
 ## hard rules
 - set()のみ merge禁止 / 明示 bucket名 / pairId fallback to default 禁止 / main直pushはCEO承認のみ / 新Vercel function禁止 / 重要決定は Codex が docs/SSOT.md に追記して canonical 維持
+
+## decisions log
+- 2026-06-01 COO決定: マーケの客選定(segmentation/scoring)は Hum-internal で reusable-by-design。module 境界を切り scoring基準/除外ルールを config 差し替え可能に(後で lift out 可)。PJ Union 共通 infra 化は今やらない。再検討 trigger = 2個目の実 consumer。施設 channel = gentle。技術設計詳細は Boss lane + CTO 協議。
