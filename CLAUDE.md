@@ -5,6 +5,8 @@
 本 file の全内容は **docs/core-philosophy.md** の SSoT (Single Source of Truth) に従う。
 矛盾発生時は core-philosophy.md が優先。
 
+現在の pair inventory / security 状態 / thread onboarding の canonical truth は **docs/SSOT.md** に従う。
+
 新規 PR / Phase 実装前に **docs/audit-checklist.md** の 4 軸 audit を実施。
 違反検出時は post-mortem 化検討。
 
@@ -154,7 +156,7 @@ journal/{pairId}/{YYYY-MM}/{YYYY-MM-DD}/{role}/generic_image/photo-0{N}.{ext}
 ```
 
 ## 重要な制約
-- **TYSON-ZH90**: テスト用ペア。データ・コードともに絶対に触らない
+- **TYSON-ZH90**: legacy/廃止 pair。active/重要 pair として扱わない。data は purge 候補で、勝手に触らない
 - **PAIR-DEMOTEST**: デモ用。READ_ONLY_PAIR_IDS で書き込みブロック
 - **日付**: 全てNY時間 (America/New_York) の YYYY-MM-DD
 - **音声**: 同じ日に複数回録音可能 (recording_{HHMM}.ext)
