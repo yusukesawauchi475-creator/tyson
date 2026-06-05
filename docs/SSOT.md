@@ -23,3 +23,4 @@
 
 ## decisions log
 - 2026-06-01 COO決定: マーケの客選定(segmentation/scoring)は Hum-internal で reusable-by-design。module 境界を切り scoring基準/除外ルールを config 差し替え可能に(後で lift out 可)。PJ Union 共通 infra 化は今やらない。再検討 trigger = 2個目の実 consumer。施設 channel = gentle。技術設計詳細は Boss lane + CTO 協議。
+- 2026-06-05 CEO決定: MVP は現セキュリティ水準で go(追加 build せず)。硬化は docs/security-roadmap.md に plan 化、trigger 駆動で着手。
