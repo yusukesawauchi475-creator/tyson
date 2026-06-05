@@ -25,6 +25,7 @@
     "verify:date": "node scripts/verify-date-display.js",
     "verify": "node scripts/verify_all.mjs",
     "test:unread": "node --test tests/unreadState.test.mjs",
+    "test:rules": "PATH=\"${JAVA_HOME:-/opt/homebrew/opt/openjdk@21}/bin:$PATH\" firebase emulators:exec --only firestore,storage \"node --test tests/firebase-rules.test.mjs\"",
     "verify:unread": "npm run test:unread && npm run build",
     "soak:verify": "node scripts/soak_verify.mjs",
     "kill-orange": "node scripts/kill-orange.js",
@@ -45,6 +46,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@firebase/rules-unit-testing": "^5.0.1",
     "@google-cloud/storage": "^7.14.0",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
