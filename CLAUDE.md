@@ -88,6 +88,9 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 | `/#/admin` | AdminPage | 管理画面 |
 | `/#/demo` | DemoPage | デモ |
 | `/#/landing` | LandingPage | ランディングページ |
+| `/#/welcome` | WelcomePage | ウェルカム画面 (新規ペア初回) |
+| `/#/invite` | InvitePage | 招待ページ |
+| `/#/facilities` | FacilitiesPage | 介護施設向けランディング |
 
 ## ペアの仕組み
 - 公開URL: `humfamily.com/pair/{6文字スラグ}` (例: /pair/ulf1q6)
@@ -108,14 +111,30 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 | `src/pages/RoleSelectPage.jsx` | 親/子の役割選択 |
 | `src/pages/LandingPage.jsx` | 初回訪問ランディング |
 | `src/pages/DemoPage.jsx` | デモ体験 |
+| `src/pages/WelcomePage.jsx` | ウェルカム画面 (新規ペア初回) |
+| `src/pages/InvitePage.jsx` | 招待ページ |
+| `src/pages/FacilitiesPage.jsx` | 介護施設向けランディング |
 | `src/components/DailyPromptCard.jsx` | 今日の話題pill (AI話題 + 別の話題ボタン) |
 | `src/components/VoiceLibrary.jsx` | 声の履歴一覧 (アルバム声タブ用) |
 | `src/components/PwaInstallBanner.jsx` | Android PWAインストールバナー |
 | `src/components/WeeklySummary.jsx` | 週次サマリー (日曜のみ) |
+| `src/components/AlbumCalendar.jsx` | アルバムカレンダービュー |
+| `src/components/DemoModal.jsx` | デモ用モーダル |
+| `src/components/FamilyInsightCard.jsx` | 家族インサイト表示カード |
+| `src/components/InviteModal.jsx` | 招待モーダル |
+| `src/components/LanguageSwitch.jsx` | 言語切替 (JP/EN/ES) |
+| `src/components/PairWorld.jsx` | ペアワールドコンテキスト |
+| `src/components/RoleBadge.jsx` | 親/子ロールバッジ |
+| `src/components/UploadErrorModal.jsx` | アップロードエラーモーダル |
+| `src/components/Visualizer.jsx` | 録音波形ビジュアライザー |
 | `src/lib/pairDaily.js` | getPairId, getUserRole, markSeen, uploadAudio, fetchAudio 等 |
 | `src/lib/journal.js` | 写真アップロード, fetchTodayJournalMeta, fetchAlbum |
 | `src/lib/firebase.js` | Firebase初期化, getIdTokenForApi (匿名認証) |
 | `src/lib/i18n.js` | 日英翻訳 |
+| `src/lib/fcm.js` | Firebase Cloud Messaging (プッシュ通知) |
+| `src/lib/indexedDB.js` | IndexedDB キャッシュ |
+| `src/lib/unreadState.js` | 未読状態管理 |
+| `src/lib/voiceRole.js` | 音声ロール判定 |
 | `src/index.css` | グローバルCSS (.page, .bottom-nav 等) |
 
 ### API (Vercel Serverless)
@@ -126,7 +145,9 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 | `api/album.js` | アルバム全日写真取得 |
 | `api/invite.js` | ペア発行(create-numbered), スラグ解決(resolve) |
 | `api/streak.js` | 連続記録ストリーク |
-| `api/daily-theme.js` | AI話題生成 |
+| `api/daily-theme.js` | AI話題生成 (※認証なし — Issue #50 参照) |
+| `api/family-insight.js` | 家族インサイト生成 |
+| `api/journal-analysis.js` | 日記分析 |
 | `api/admin-reset.js` | 管理リセット |
 | `api/admin-restore.js` | 管理復元 |
 | `api/admin-pairs.js` | ペアダッシュボード |
