@@ -2,27 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Outlet, Link } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
 import { db, getIdTokenForApi } from '../lib/firebase'
-
-async function claimPairMembership(slug, idToken) {
-  if (!slug || !idToken) return
-
-  const url = `/api/invite?action=resolve&number=${encodeURIComponent(String(slug))}`
-  let lastError = null
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${idToken}` },
-        redirect: 'manual',
-      })
-      if (response.type === 'opaqueredirect' || (response.status >= 200 && response.status < 400)) return
-      throw new Error(`claim failed: ${response.status}`)
-    } catch (e) {
-      lastError = e
-    }
-  }
-  if (import.meta.env.DEV) console.warn('[PairWorld] membership claim failed:', lastError?.message)
-}
+import { ensureAuthAndMembership } from '../lib/pairMembership'
 
 /**
  * PairWorld — /pair/:slug route のコンテキストプロバイダ。
@@ -34,6 +14,7 @@ export default function PairWorld({ lang = 'ja' }) {
   const [pairId, setPairId] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -43,6 +24,9 @@ export default function PairWorld({ lang = 'ja' }) {
     ;(async () => {
       try {
         const idToken = await getIdTokenForApi()
+        if (!idToken) {
+          throw new Error('認証できません')
+        }
         const snap = await getDoc(doc(db, 'pair_numbers', String(slug)))
         if (cancelled) return
         if (!snap.exists()) {
@@ -53,7 +37,11 @@ export default function PairWorld({ lang = 'ja' }) {
         const data = snap.data() || {}
         // 段階15: deactivated slug は 404 扱い（migratedTo は UI 漏洩禁止）
         if (data.deactivated === true) {
-          try { localStorage.removeItem('hum_last_slug') } catch (_) {}
+          try {
+            localStorage.removeItem('hum_last_slug')
+          } catch {
+            // localStorage 書き込み失敗は無視
+          }
           setError('Pair not found')
           setLoading(false)
           return
@@ -64,7 +52,12 @@ export default function PairWorld({ lang = 'ja' }) {
           setLoading(false)
           return
         }
-        await claimPairMembership(slug, idToken)
+        const membership = await ensureAuthAndMembership(slug, resolvedPairId)
+        if (!membership.success) {
+          setError(membership.error || 'Pair membership unavailable')
+          setLoading(false)
+          return
+        }
         if (cancelled) return
         setPairId(resolvedPairId)
         setLoading(false)
@@ -75,7 +68,7 @@ export default function PairWorld({ lang = 'ja' }) {
       }
     })()
     return () => { cancelled = true }
-  }, [slug])
+  }, [slug, retryKey])
 
   // 段階7: pair 解決成功時のみ slug を localStorage に保存
   // PWA install 後の / アクセスで App.jsx RootOrLanding が読み取り、/pair/:slug に復元する
@@ -86,7 +79,7 @@ export default function PairWorld({ lang = 'ja' }) {
       if (/^[A-Za-z0-9_-]{2,32}$/.test(slug)) {
         localStorage.setItem('hum_last_slug', slug)
       }
-    } catch (_) {
+    } catch {
       // localStorage 書き込み失敗は無視
     }
   }, [slug, pairId])
@@ -101,8 +94,9 @@ export default function PairWorld({ lang = 'ja' }) {
   if (error || !pairId) {
     return (
       <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, color: '#8070A0', fontFamily: 'var(--font-sans)', padding: 24 }}>
-        <p style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Pair not found</p>
+        <p style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Pair not ready</p>
         <p style={{ fontSize: 12, margin: 0, color: '#B0A0C0' }}>{error || 'unknown error'}</p>
+        <button type="button" onClick={() => setRetryKey((v) => v + 1)} style={{ fontSize: 14, color: '#fff', background: '#7050C0', border: 'none', borderRadius: 8, padding: '10px 18px', fontWeight: 700, cursor: 'pointer' }}>再試行</button>
         <Link to="/" style={{ fontSize: 14, color: '#7050C0', textDecoration: 'none' }}>← Go to Home</Link>
       </div>
     )

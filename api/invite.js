@@ -105,6 +105,14 @@ export default async function handler(req, res) {
               role: claimRole,
               claimedAt: admin.firestore.FieldValue.serverTimestamp(),
             });
+          console.log('[AUTH_SELF_HEAL_SERVER]', JSON.stringify({
+            event: 'claim',
+            pairId: resolvedPairId,
+            slug: String(req.query.number),
+            uidPrefix: claimUid.slice(0, 6),
+            role: claimRole,
+            requestId,
+          }));
         } catch (_) {
           // claim 失敗しても resolve UX は維持 (lockout 別 phase で扱う)
         }

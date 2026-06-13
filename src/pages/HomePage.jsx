@@ -11,7 +11,8 @@ import { getFinalOneLiner, getAnalysisPlaceholder } from '../lib/uiCopy'
 import { t, getMonthName } from '../lib/i18n'
 import DailyPromptCard from '../components/DailyPromptCard'
 import LanguageSwitch from '../components/LanguageSwitch'
-import { getIdTokenForApi, auth, isFirebaseConfigured } from '../lib/firebase'
+import { getIdTokenForApi, auth, isFirebaseConfigured, logAuthSelfHealEvent } from '../lib/firebase'
+import { ensureAuthAndMembership } from '../lib/pairMembership'
 import { getAuth } from 'firebase/auth'
 import { formatDeployedAtLocal, getBuildHash } from '../lib/dateFormat'
 import { useAudioLevel } from '../lib/useAudioLevel'
@@ -154,8 +155,14 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
         const durationSec = recordStartRef.current
           ? Math.max(1, Math.min(6000, Math.round((Date.now() - recordStartRef.current) / 1000)))
           : null
-        const result = await uploadAudio(blob, ROLE_PARENT, currentPairId, getDateKey(), reqId)
+        const authReady = await ensureAuthAndMembership(slug, currentPairId)
+        const result = authReady.success
+          ? await uploadAudio(blob, ROLE_PARENT, currentPairId, getDateKey(), reqId)
+          : { success: false, requestId: reqId, error: authReady.error || '認証できません', errorCode: authReady.errorCode || 'auth' }
         if (result.success) {
+          if (authReady.healed) {
+            logAuthSelfHealEvent('send_retry_success', { pairId: currentPairId, slug, role: ROLE_PARENT, kind: 'voice', requestId: result.requestId || reqId })
+          }
           if (oneLinerTimerRef.current) { clearTimeout(oneLinerTimerRef.current); oneLinerTimerRef.current = null }
           if (analysisTimerRef.current) { clearTimeout(analysisTimerRef.current); analysisTimerRef.current = null }
           if (analysisFetchTimerRef.current) { clearTimeout(analysisFetchTimerRef.current); analysisFetchTimerRef.current = null }
@@ -252,6 +259,9 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
           }, 1200 + Math.random() * 300)
         } else {
           const reqId = result.requestId || 'REQ-XXXX'
+          if (result.errorCode === 'auth' || result.errorCode === 'membership') {
+            logAuthSelfHealEvent('send_auth_failure', { pairId: currentPairId, slug, role: ROLE_PARENT, kind: 'voice', requestId: reqId, errorCode: result.errorCode })
+          }
           setErrorLine(t(lang, 'uploadFailed', { id: reqId }))
           if (import.meta.env.DEV) console.error('[HomePage]', result.requestId, result.errorCode, result.error)
           lastFailedAudioRef.current = { blob, reqId }
@@ -300,10 +310,30 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
     setJournalError(null)
     try {
       const reqId = genRequestId()
+      const authReady = await ensureAuthAndMembership(slug, currentPairId)
+      if (!authReady.success) {
+        const errMsg = authReady.error || t(lang, 'uploadError')
+        logAuthSelfHealEvent('send_auth_failure', { pairId: currentPairId, slug, role: ROLE_PARENT, kind, errorCode: authReady.errorCode || null })
+        setJournalUploading(false)
+        setJournalError(errMsg)
+        lastFailedPhotoRef.current = { file, kind }
+        setUploadErrorModal({
+          visible: true,
+          message: errMsg,
+          onRetry: () => {
+            setUploadErrorModal({ visible: false, message: '', onRetry: null })
+            if (lastFailedPhotoRef.current) handleJournalFile(lastFailedPhotoRef.current.file, lastFailedPhotoRef.current.kind)
+          },
+        })
+        return
+      }
       const toUpload = await resizeImageIfNeeded(file)
       const result = await uploadJournalImage(toUpload, reqId, currentPairId, ROLE_PARENT, kind)
       setJournalUploading(false)
       if (result.success) {
+        if (authReady.healed) {
+          logAuthSelfHealEvent('send_retry_success', { pairId: currentPairId, slug, role: ROLE_PARENT, kind, requestId: result.requestId || reqId })
+        }
         setToastMsg(t(lang, 'photoSentToast'))
         setTimeout(() => setToastMsg(null), 3000)
         setJournalRequestId(result.requestId)
@@ -325,6 +355,9 @@ export default function HomePage({ lang = 'ja', onChangeRole }) {
         }
         setLastRequestId(result.requestId)
       } else {
+        if (result.errorCode === 'auth' || result.errorCode === 'membership') {
+          logAuthSelfHealEvent('send_auth_failure', { pairId: currentPairId, slug, role: ROLE_PARENT, kind, requestId: result.requestId || reqId, errorCode: result.errorCode })
+        }
         if (result.errorCode === 'daily_photos_limit' || (result.error && result.error.includes('limit'))) {
           setDailyPhotoLimitMessage(t(lang, 'dailyPhotoLimit'))
         } else {

@@ -107,30 +107,112 @@ export const storage = getStorage(app);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 
+const AUTH_STATE_TIMEOUT_MS = 4000;
+let authSelfHealRevision = 0;
+
+export function logAuthSelfHealEvent(event, details = {}) {
+  try {
+    console.log('[AUTH_SELF_HEAL]', JSON.stringify({
+      event,
+      ts: new Date().toISOString(),
+      ...details,
+    }));
+  } catch {
+    console.log('[AUTH_SELF_HEAL]', event, details);
+  }
+}
+
+export function getAuthSelfHealRevision() {
+  return authSelfHealRevision;
+}
+
+async function waitForAuthState(timeoutMs = AUTH_STATE_TIMEOUT_MS) {
+  if (typeof auth.authStateReady === 'function') {
+    let timedOut = false;
+    let timeoutId = null;
+    await Promise.race([
+      auth.authStateReady(),
+      new Promise((resolve) => {
+        timeoutId = setTimeout(() => {
+          timedOut = true;
+          logAuthSelfHealEvent('auth_restore_timeout', { timeoutMs, hasCurrentUser: !!auth.currentUser });
+          resolve(null);
+        }, timeoutMs);
+      }),
+    ]);
+    if (timeoutId) clearTimeout(timeoutId);
+    if (auth.currentUser || timedOut) return auth.currentUser || null;
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+    let unsubscribe = () => {};
+    const done = (user) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      unsubscribe();
+      resolve(user || null);
+    };
+    const timer = setTimeout(() => {
+      logAuthSelfHealEvent('auth_restore_timeout', { timeoutMs, hasCurrentUser: !!auth.currentUser });
+      done(auth.currentUser || null);
+    }, timeoutMs);
+    unsubscribe = auth.onAuthStateChanged((user) => done(user));
+  });
+}
+
+async function getUserToken(user, forceRefresh) {
+  if (!user) return null;
+  try {
+    if (forceRefresh) {
+      authSelfHealRevision += 1;
+      logAuthSelfHealEvent('forceRefresh', { uidPrefix: user.uid?.slice(0, 6) || null });
+    }
+    return await user.getIdToken(forceRefresh);
+  } catch {
+    return null;
+  }
+}
+
 /** Anonymous認証して idToken を取得。API呼び出し用。未設定時は null */
 export async function getIdTokenForApi() {
   if (!isFirebaseConfigured) return null;
-  try {
-    // auth.currentUser が既にある場合はすぐ返す（キャッシュ利用）
-    if (auth.currentUser) return await auth.currentUser.getIdToken();
 
-    // auth初期化完了を待つ（iPhoneでSPA起動直後にcurrentUserがnullになる問題の対策）
-    const user = await new Promise((resolve) => {
-      const unsubscribe = auth.onAuthStateChanged((u) => {
-        unsubscribe();
-        resolve(u);
-      });
-    });
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      let user = auth.currentUser;
 
-    if (user) return await user.getIdToken();
+      if (!user) {
+        user = await waitForAuthState();
+      }
 
-    // ユーザーなし → anonymous認証してトークン取得
-    const { user: signedIn } = await signInAnonymously(auth);
-    return await signedIn.getIdToken();
-  } catch (e) {
-    if (import.meta.env.DEV) console.warn('getIdTokenForApi failed:', e?.message);
-    return null;
+      if (!user) {
+        user = auth.currentUser;
+      }
+
+      if (!user) {
+        authSelfHealRevision += 1;
+        logAuthSelfHealEvent('reauth', { attempt });
+        const result = await signInAnonymously(auth);
+        user = result.user;
+      }
+
+      const cachedToken = await getUserToken(user, false);
+      if (cachedToken) return cachedToken;
+
+      const refreshedToken = await getUserToken(user, true);
+      if (refreshedToken) return refreshedToken;
+
+      const latestUser = auth.currentUser || await waitForAuthState(300);
+      const latestToken = await getUserToken(latestUser, true);
+      if (latestToken) return latestToken;
+    } catch (e) {
+      if (attempt === 1 && import.meta.env.DEV) console.warn('getIdTokenForApi failed:', e?.message);
+    }
   }
+
+  return null;
 }
 
 // 環境変数の検証結果をエクスポート

@@ -504,6 +504,14 @@ async function handleGet(req, res) {
     }
     initFirebaseAdmin();
     if (!(await isPairAllowed(uid, pairId, firestore))) {
+      console.log('[AUTH_SELF_HEAL_SERVER]', JSON.stringify({
+        event: 'membership_403',
+        endpoint: 'pair-media',
+        pairId,
+        uidPrefix: uid.slice(0, 6),
+        role: listenRole,
+        requestId: reqId,
+      }));
       return res.status(403).json({
         success: false,
         error: 'Not a pair member',
@@ -714,6 +722,15 @@ async function handlePost(req, res) {
     
     initFirebaseAdmin();
     if (!(await isPairAllowed(uid, pairId, firestore))) {
+      console.log('[AUTH_SELF_HEAL_SERVER]', JSON.stringify({
+        event: 'membership_403',
+        endpoint: 'pair-media',
+        method: 'POST',
+        pairId,
+        uidPrefix: uid.slice(0, 6),
+        role,
+        requestId: reqId,
+      }));
       return res.status(403).json({
         success: false,
         error: 'Not a pair member',
