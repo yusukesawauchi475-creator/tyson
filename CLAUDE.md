@@ -88,6 +88,9 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 | `/#/admin` | AdminPage | 管理画面 |
 | `/#/demo` | DemoPage | デモ |
 | `/#/landing` | LandingPage | ランディングページ |
+| `/#/welcome` | WelcomePage | 初回ウェルカム画面 |
+| `/#/facilities` | FacilitiesPage | 介護施設向けマーケティングページ |
+| `/#/invite` | InvitePage | 招待リンク表示ページ（RootRoute ネスト） |
 
 ## ペアの仕組み
 - 公開URL: `humfamily.com/pair/{6文字スラグ}` (例: /pair/ulf1q6)
@@ -102,14 +105,25 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 |---------|------|
 | `src/App.jsx` | ルーティング, NumberResolver, RootRoute (role振り分け) |
 | `src/pages/HomePage.jsx` | 親のホーム画面 (緑/ピンク/紫の3カード) |
-| `src/pages/PairDailyPage.jsx` | 子のホーム画面 (同上) |
+| `src/pages/PairDailyPage.jsx` | 子のホーム画面 (同上) ※bottom-nav欠落バグ #62 |
 | `src/pages/AlbumPage.jsx` | アルバム (写真タブ/声タブ, ライトボックス) |
 | `src/pages/AdminPage.jsx` | 管理画面 (ペア発行, ダッシュボード) |
 | `src/pages/RoleSelectPage.jsx` | 親/子の役割選択 |
 | `src/pages/LandingPage.jsx` | 初回訪問ランディング |
 | `src/pages/DemoPage.jsx` | デモ体験 |
+| `src/pages/WelcomePage.jsx` | 初回ウェルカム画面 ※lang prop 未対応バグ #61 |
+| `src/pages/InvitePage.jsx` | 招待リンク表示 ※lang='ja'固定バグ #61 |
+| `src/pages/FacilitiesPage.jsx` | 介護施設向けマーケティングページ |
+| `src/components/PairWorld.jsx` | Pair 認証・メンバーシップ検証ラッパー ※retryKey UI欠落バグ #61 |
 | `src/components/DailyPromptCard.jsx` | 今日の話題pill (AI話題 + 別の話題ボタン) |
 | `src/components/VoiceLibrary.jsx` | 声の履歴一覧 (アルバム声タブ用) |
+| `src/components/FamilyInsightCard.jsx` | AI ファミリーインサイトカード |
+| `src/components/AlbumCalendar.jsx` | アルバムカレンダービュー |
+| `src/components/Visualizer.jsx` | 録音・再生波形ビジュアライザー |
+| `src/components/InviteModal.jsx` | 招待モーダル |
+| `src/components/DemoModal.jsx` | デモ促進モーダル (PAIR-DEMOTEST 書き込みブロック時 CTA) |
+| `src/components/UploadErrorModal.jsx` | アップロードエラーモーダル |
+| `src/components/LanguageSwitch.jsx` | 言語切り替え (JP/EN/ES) |
 | `src/components/PwaInstallBanner.jsx` | Android PWAインストールバナー |
 | `src/components/WeeklySummary.jsx` | 週次サマリー (日曜のみ) |
 | `src/lib/pairDaily.js` | getPairId, getUserRole, markSeen, uploadAudio, fetchAudio 等 |
@@ -125,10 +139,12 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 | `api/journal.js` | 写真 GET(今日→最新日フォールバック)/POST |
 | `api/album.js` | アルバム全日写真取得 |
 | `api/invite.js` | ペア発行(create-numbered), スラグ解決(resolve) |
-| `api/streak.js` | 連続記録ストリーク |
-| `api/daily-theme.js` | AI話題生成 |
-| `api/admin-reset.js` | 管理リセット |
-| `api/admin-restore.js` | 管理復元 |
+| `api/streak.js` | 連続記録ストリーク ※PAIR-DEMOTEST 書き込みブロック欠落バグ #61 |
+| `api/daily-theme.js` | AI話題生成 ※認証なし・UTC日付バグ #61 |
+| `api/family-insight.js` | AI ファミリーインサイト生成 |
+| `api/journal-analysis.js` | 写真日記の AI 分析 |
+| `api/admin-reset.js` | 管理リセット ※PAIR-DEMOTEST 書き込みブロック欠落バグ #62 |
+| `api/admin-restore.js` | 管理復元 ※PAIR-DEMOTEST 書き込みブロック欠落バグ #62 |
 | `api/admin-pairs.js` | ペアダッシュボード |
 
 ### 設定
@@ -157,7 +173,7 @@ journal/{pairId}/{YYYY-MM}/{YYYY-MM-DD}/{role}/generic_image/photo-0{N}.{ext}
 
 ## 重要な制約
 - **TYSON-ZH90**: legacy/廃止 pair。active/重要 pair として扱わない。data は purge 候補で、勝手に触らない
-- **PAIR-DEMOTEST**: デモ用。READ_ONLY_PAIR_IDS で書き込みブロック
+- **PAIR-DEMOTEST**: デモ用。`pair-media.js` / `journal.js` は READ_ONLY_PAIR_IDS で書き込みブロック済み。ただし `admin-reset.js` / `admin-restore.js` / `streak.js` はブロック未実装（バグ #62/#61）
 - **日付**: 全てNY時間 (America/New_York) の YYYY-MM-DD
 - **音声**: 同じ日に複数回録音可能 (recording_{HHMM}.ext)
 - **写真**: 1日3枚まで (generic_images配列)
