@@ -61,6 +61,7 @@ export default function AlbumPage({ lang = 'ja' }) {
   const [inviteModalOpen, setInviteModalOpen] = useState(false)
   const [inviteUrl, setInviteUrl] = useState(null)
   const [inviteText, setInviteText] = useState(null)
+  const [albumRetryKey, setAlbumRetryKey] = useState(0)
   const voiceAudioRef = useRef(null)
   // pairId は /pair/:slug/album ルート下の outletContext から取得（公理1: URL = Source of Truth）
   const rawPairId = outletContext?.pairId ?? null
@@ -129,16 +130,22 @@ export default function AlbumPage({ lang = 'ja' }) {
 
   useEffect(() => {
     if (!pairId) { setLoading(false); return }
-    fetchAlbum(pairId)
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    fetchAlbum(pairId, undefined, slug)
       .then(({ days: d }) => {
+        if (cancelled) return
         setDays(d)
         setLoading(false)
       })
       .catch((e) => {
+        if (cancelled) return
         setError(e?.message || String(e))
         setLoading(false)
       })
-  }, [])
+    return () => { cancelled = true }
+  }, [pairId, slug, albumRetryKey])
 
   // Flat array of all photos across all days (newest first, matching days order)
   const allPhotos = useMemo(() => {
@@ -368,6 +375,7 @@ export default function AlbumPage({ lang = 'ja' }) {
       {activeTab === 'calendar' && (pairId || isDemo) && (
         <AlbumCalendar
           pairId={isDemo ? 'PAIR-DEMOTEST' : pairId}
+          slug={slug}
           lang={lang}
           onDateClick={(dateKey) => { setInternalScrollDate(dateKey); setActiveTab('photo') }}
           {...(isDemo ? { photoCountMap: demoPhotoCountMap, voiceCountMap: demoVoiceCountMap, photoUrlMap: demoPhotoUrlMap } : {})}
@@ -376,7 +384,7 @@ export default function AlbumPage({ lang = 'ja' }) {
 
       {/* Voice tab */}
       {pairId && !isDemo && activeTab === 'voice' && (
-        <VoiceLibrary lang={lang} pairId={pairId} role={getUserRole()} />
+        <VoiceLibrary lang={lang} pairId={pairId} slug={slug} role={getUserRole()} />
       )}
       {isDemo && activeTab === 'voice' && (
         <section style={{ width: '100%' }}>
@@ -462,6 +470,13 @@ export default function AlbumPage({ lang = 'ja' }) {
               {lang === 'en' ? '📷 Photos' : lang === 'es' ? '📷 Fotos' : '📷 写真'}
             </p>
             <p style={{ fontSize: 13, color: '#E04040', textAlign: 'center', margin: 0 }}>{error}</p>
+            <button
+              type="button"
+              onClick={() => setAlbumRetryKey((v) => v + 1)}
+              style={{ display: 'block', margin: '12px auto 0', padding: '8px 20px', fontSize: 12, fontWeight: 600, color: '#fff', background: 'linear-gradient(135deg,#FF80C0,#A060FF)', border: 'none', borderRadius: 10, cursor: 'pointer' }}
+            >
+              {lang === 'en' ? 'Retry' : lang === 'es' ? 'Reintentar' : '再試行'}
+            </button>
           </section>
         )}
         {!loading && !error && flatPhotos.length === 0 && !isDemo && (

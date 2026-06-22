@@ -1,5 +1,6 @@
 import { getIdTokenForApi } from './firebase.js';
 import { getDateKeyNY, genRequestId } from './pairDaily.js';
+import { ensureAuthAndMembership } from './pairMembership.js';
 
 /** File を data URL (base64) に変換 */
 function fileToDataUrl(file) {
@@ -185,11 +186,14 @@ export async function fetchTodayJournalMeta(pairId, role = 'parent') {
  * @param {string} [month] - YYYY-MM。指定時はその月のみ返す。
  * @returns {Promise<{ days: Array<{ dateKey: string, photos: Array<{ url: string, storagePath: string, role: string, kind: string, updatedAt: number|null }> }> }>}
  */
-export async function fetchAlbum(pairId, month) {
+export async function fetchAlbum(pairId, month, slug) {
   const pid = pairId;
   if (!pid) throw new Error('pairId is required');
-  const idToken = await getIdTokenForApi();
-  if (!idToken) throw new Error('認証できません（idToken取得失敗）');
+  const authReady = await ensureAuthAndMembership(slug, pid);
+  const idToken = authReady?.idToken || null;
+  if (!authReady?.success || !idToken) {
+    throw new Error(authReady?.error || '認証できません（idToken取得失敗）');
+  }
   const url = month
     ? `/api/album?pairId=${encodeURIComponent(pid)}&month=${encodeURIComponent(month)}&v=${Date.now()}`
     : `/api/album?pairId=${encodeURIComponent(pid)}&v=${Date.now()}`;

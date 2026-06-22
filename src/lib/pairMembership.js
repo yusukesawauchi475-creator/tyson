@@ -11,14 +11,30 @@ async function claimPairMembership(slug, idToken, pairId, attempt) {
     uidPrefix: auth.currentUser?.uid?.slice(0, 6) || null,
   })
 
-  const url = `/api/invite?action=resolve&number=${encodeURIComponent(String(slug))}`
+  const url = '/api/invite?action=claim-membership'
   const response = await fetch(url, {
-    method: 'GET',
-    headers: { Authorization: `Bearer ${idToken}` },
-    redirect: 'manual',
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ slug: String(slug), pairId }),
   })
+  const data = await response.json().catch(() => ({}))
 
-  return response.type === 'opaqueredirect' || (response.status >= 200 && response.status < 400)
+  if (!response.ok || data?.success !== true || data?.memberCreated !== true) {
+    logAuthSelfHealEvent('membership_reclaim_failed', {
+      pairId,
+      slug,
+      attempt,
+      status: response.status,
+      errorCode: data?.errorCode || null,
+      requestId: data?.requestId || null,
+    })
+    return false
+  }
+
+  return data?.pairId === pairId
 }
 
 async function hasCurrentUserMembership(pairId) {

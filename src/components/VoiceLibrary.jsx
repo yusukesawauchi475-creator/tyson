@@ -1,14 +1,17 @@
 import { useState, useEffect, useRef } from 'react'
 import { markSeen, getDateKeyNY } from '../lib/pairDaily'
 import { getIdTokenForApi } from '../lib/firebase'
+import { ensureAuthAndMembership } from '../lib/pairMembership'
 import { getEffectiveRole, isCorrected } from '../lib/voiceRole'
 import { formatTime12hLowerFromHHMM } from '../lib/dateFormat'
 import { isVoiceListened, markVoiceListened } from '../lib/listenedTracking'
 import { t } from '../lib/i18n'
 
-export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pairIdProp, onDataLoaded, adminMode = false, onCorrect }) {
+export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pairIdProp, slug, onDataLoaded, adminMode = false, onCorrect }) {
   const [days, setDays] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [retryKey, setRetryKey] = useState(0)
   const [playingKey, setPlayingKey] = useState(null) // url
   const [expandedMonths, setExpandedMonths] = useState(() => new Set())
   const audioRef = useRef(null)
@@ -18,24 +21,42 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      const idToken = await getIdTokenForApi()
-      if (!idToken || cancelled) { setLoading(false); return }
+      setLoading(true)
+      setError(null)
       try {
+        let idToken = null
+        if (adminMode) {
+          idToken = await getIdTokenForApi()
+        } else {
+          const authReady = await ensureAuthAndMembership(slug, effectivePairId)
+          idToken = authReady?.idToken || null
+          if (!authReady?.success || !idToken) {
+            throw new Error(authReady?.error || '認証できません（idToken取得失敗）')
+          }
+        }
+        if (!idToken) throw new Error('認証できません（idToken取得失敗）')
+        if (cancelled) return
         const res = await fetch(`/api/pair-media?action=voice-history&pairId=${encodeURIComponent(effectivePairId)}&limit=365&v=${Date.now()}`, {
           headers: { Authorization: `Bearer ${idToken}`, Pragma: 'no-cache' },
           cache: 'no-store',
         })
-        if (!res.ok) { setLoading(false); return }
-        const data = await res.json()
-        if (!cancelled && data.days) {
-          setDays(data.days)
-          if (onDataLoaded) onDataLoaded(data.days.length > 0)
-        }
-      } catch (_) {}
-      if (!cancelled) { setLoading(false); if (onDataLoaded) onDataLoaded(false) }
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(data?.error || `API error HTTP ${res.status}`)
+        const nextDays = Array.isArray(data?.days) ? data.days : []
+        if (cancelled) return
+        setDays(nextDays)
+        setLoading(false)
+        if (onDataLoaded) onDataLoaded(nextDays.length > 0)
+      } catch (e) {
+        if (cancelled) return
+        setDays([])
+        setError(e?.message || String(e))
+        setLoading(false)
+        if (onDataLoaded) onDataLoaded(false)
+      }
     })()
     return () => { cancelled = true }
-  }, [effectivePairId])
+  }, [effectivePairId, slug, adminMode, retryKey])
 
   const handlePlay = (dateKey, r, url, hhmm) => {
     const key = url
@@ -120,6 +141,21 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
   }
 
   if (loading) return null
+  if (error) return (
+    <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
+      <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        {lang === 'en' ? '🎧 Voice History' : lang === 'es' ? '🎧 Historial de voz' : '🎧 過去の声'}
+      </p>
+      <p style={{ fontSize: 13, color: '#E04040', textAlign: 'center', margin: 0 }}>{error}</p>
+      <button
+        type="button"
+        onClick={() => setRetryKey((v) => v + 1)}
+        style={{ display: 'block', margin: '12px auto 0', padding: '8px 20px', fontSize: 12, fontWeight: 600, color: '#fff', background: 'linear-gradient(135deg,#FF80C0,#A060FF)', border: 'none', borderRadius: 10, cursor: 'pointer' }}
+      >
+        {lang === 'en' ? 'Retry' : lang === 'es' ? 'Reintentar' : '再試行'}
+      </button>
+    </section>
+  )
   if (days.length === 0) return (
     <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
       <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>

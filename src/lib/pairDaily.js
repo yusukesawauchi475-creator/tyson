@@ -1,4 +1,5 @@
 import { getIdTokenForApi } from './firebase.js';
+import { ensureAuthAndMembership } from './pairMembership.js';
 
 /** NY時間（America/New_York、DST対応）で YYYY-MM-DD を返す。単一ソース。 */
 export function getDateKeyNY() {
@@ -412,9 +413,12 @@ export async function getListenRoleMeta(listenRole, pairId) {
  * @param {string} month - YYYY-MM
  * @returns {Promise<{ days: Array<{ date: string, hasParent: boolean, hasChild: boolean }> }>}
  */
-export async function fetchVoiceMonth(pairId, month) {
-  const idToken = await getIdTokenForApi();
-  if (!idToken) throw new Error('認証できません（idToken取得失敗）');
+export async function fetchVoiceMonth(pairId, month, slug) {
+  const authReady = await ensureAuthAndMembership(slug, pairId);
+  const idToken = authReady?.idToken || null;
+  if (!authReady?.success || !idToken) {
+    throw new Error(authReady?.error || '認証できません（idToken取得失敗）');
+  }
   const res = await fetch(
     `/api/pair-media?action=voice-month&pairId=${encodeURIComponent(pairId)}&month=${encodeURIComponent(month)}&v=${Date.now()}`,
     { headers: { Authorization: `Bearer ${idToken}` }, cache: 'no-store' }

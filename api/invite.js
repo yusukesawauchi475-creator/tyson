@@ -63,6 +63,77 @@ async function readJsonBody(req) {
   });
 }
 
+async function claimMembershipForSlug({ slug, idToken, expectedPairId, role, requestId }) {
+  if (!slug) {
+    return { success: false, memberCreated: false, errorCode: 'missing_slug', status: 400, error: 'number is required', requestId };
+  }
+  if (!idToken) {
+    return { success: false, memberCreated: false, errorCode: 'missing_token', status: 401, error: 'Unauthorized', requestId };
+  }
+
+  initFirebaseAdmin();
+  let decoded;
+  try {
+    decoded = await admin.auth().verifyIdToken(idToken);
+  } catch (e) {
+    return { success: false, memberCreated: false, errorCode: 'invalid_token', status: 401, error: e?.message || 'Invalid token', requestId };
+  }
+
+  const numDoc = await firestore.collection('pair_numbers').doc(String(slug)).get();
+  if (!numDoc.exists) {
+    return { success: false, uid: decoded.uid, memberCreated: false, errorCode: 'number_not_found', status: 404, error: 'Number not found', requestId };
+  }
+  const numData = numDoc.data() || {};
+  if (numData.deactivated === true) {
+    return { success: false, uid: decoded.uid, memberCreated: false, errorCode: 'number_not_found', status: 404, error: 'Number not found', requestId };
+  }
+  const resolvedPairId = numData.pairId;
+  if (!resolvedPairId) {
+    return { success: false, uid: decoded.uid, memberCreated: false, errorCode: 'pair_not_found', status: 404, error: 'pairId not found for number', requestId };
+  }
+  if (expectedPairId && expectedPairId !== resolvedPairId) {
+    return { success: false, pairId: resolvedPairId, uid: decoded.uid, memberCreated: false, errorCode: 'pair_mismatch', status: 409, error: 'pairId mismatch', requestId };
+  }
+
+  const claimUid = decoded.uid;
+  const claimRole = role === 'parent' || role === 'child' ? role : 'unknown';
+  const memberRef = firestore
+    .collection('pair_users').doc(resolvedPairId)
+    .collection('members').doc(claimUid);
+
+  try {
+    await memberRef.set({
+      role: claimRole,
+      claimedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (e) {
+    return { success: false, pairId: resolvedPairId, uid: claimUid, memberCreated: false, errorCode: 'member_set_failed', status: 500, error: e?.message || 'member set failed', requestId };
+  }
+
+  let memberSnap;
+  try {
+    memberSnap = await memberRef.get();
+  } catch (e) {
+    return { success: false, pairId: resolvedPairId, uid: claimUid, memberCreated: false, errorCode: 'member_verify_failed', status: 500, error: e?.message || 'member verify failed', requestId };
+  }
+
+  const memberCreated = memberSnap.exists;
+  if (!memberCreated) {
+    return { success: false, pairId: resolvedPairId, uid: claimUid, memberCreated: false, errorCode: 'member_missing_after_set', status: 500, error: 'member doc missing after set', requestId };
+  }
+
+  console.log('[AUTH_SELF_HEAL_SERVER]', JSON.stringify({
+    event: 'claim',
+    pairId: resolvedPairId,
+    slug: String(slug),
+    uidPrefix: claimUid.slice(0, 6),
+    role: claimRole,
+    requestId,
+  }));
+
+  return { success: true, pairId: resolvedPairId, uid: claimUid, memberCreated: true, errorCode: null, status: 200, requestId };
+}
+
 export default async function handler(req, res) {
   const requestId = genRequestId();
 
@@ -72,6 +143,24 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Request-Id');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  if (req.method === 'POST' && req.query?.action === 'claim-membership') {
+    try {
+      const idToken = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+      const body = await readJsonBody(req).catch(() => ({}));
+      const claim = await claimMembershipForSlug({
+        slug: body?.number || body?.slug || req.query?.number,
+        idToken,
+        expectedPairId: body?.pairId || req.query?.pairId,
+        role: body?.role || req.query?.role,
+        requestId,
+      });
+      const { status, ...payload } = claim;
+      return res.status(status).json(payload);
+    } catch (e) {
+      return res.status(500).json({ success: false, memberCreated: false, errorCode: 'claim_unhandled', error: e.message, requestId });
+    }
+  }
 
   // GET ?action=resolve&number=N → redirect (auth optional; if present, claim membership)
   if (req.method === 'GET' && req.query?.action === 'resolve' && req.query?.number) {
@@ -94,27 +183,23 @@ export default async function handler(req, res) {
       // Phase 1 pair-membership: 認証済み uid があれば pair_users/{pairId}/members/{uid} を claim (idempotent)
       const claimToken = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
       if (claimToken) {
-        try {
-          const decoded = await admin.auth().verifyIdToken(claimToken);
-          const claimUid = decoded.uid;
-          const claimRole = req.query.role === 'parent' || req.query.role === 'child' ? req.query.role : 'unknown';
-          await firestore
-            .collection('pair_users').doc(resolvedPairId)
-            .collection('members').doc(claimUid)
-            .set({
-              role: claimRole,
-              claimedAt: admin.firestore.FieldValue.serverTimestamp(),
-            });
-          console.log('[AUTH_SELF_HEAL_SERVER]', JSON.stringify({
-            event: 'claim',
+        const claim = await claimMembershipForSlug({
+          slug: req.query.number,
+          idToken: claimToken,
+          expectedPairId: resolvedPairId,
+          role: req.query.role,
+          requestId,
+        });
+        if (!claim.success) {
+          console.error('[AUTH_SELF_HEAL_SERVER]', JSON.stringify({
+            event: 'claim_failed',
             pairId: resolvedPairId,
             slug: String(req.query.number),
-            uidPrefix: claimUid.slice(0, 6),
-            role: claimRole,
+            uidPrefix: claim.uid ? claim.uid.slice(0, 6) : null,
+            errorCode: claim.errorCode,
+            error: claim.error,
             requestId,
           }));
-        } catch (_) {
-          // claim 失敗しても resolve UX は維持 (lockout 別 phase で扱う)
         }
       }
 

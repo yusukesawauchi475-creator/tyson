@@ -68,14 +68,24 @@ if (missingEnvVars.length > 0) {
 // DEV時: 未設定ならダミーで初期化（画面が開くように）。本番では必須
 const isDev = import.meta.env.DEV;
 
+const cleanFirebaseEnv = (value, fallback) => {
+  const raw = value ?? fallback;
+  return typeof raw === 'string' ? raw.trim() : raw;
+};
+
+const cleanOptionalFirebaseEnv = (value) => {
+  const cleaned = cleanFirebaseEnv(value, undefined);
+  return cleaned || undefined;
+};
+
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || (isDev ? 'dev-dummy' : ''),
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || (isDev ? 'dev-dummy.firebaseapp.com' : ''),
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || (isDev ? 'dev-dummy' : ''),
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || (isDev ? 'dev-dummy.firebasestorage.app' : ''),
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || (isDev ? '0' : ''),
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || (isDev ? 'dev-dummy' : ''),
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || undefined,
+  apiKey: cleanFirebaseEnv(import.meta.env.VITE_FIREBASE_API_KEY, isDev ? 'dev-dummy' : ''),
+  authDomain: cleanFirebaseEnv(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN, isDev ? 'dev-dummy.firebaseapp.com' : ''),
+  projectId: cleanFirebaseEnv(import.meta.env.VITE_FIREBASE_PROJECT_ID, isDev ? 'dev-dummy' : ''),
+  storageBucket: cleanFirebaseEnv(import.meta.env.VITE_FIREBASE_STORAGE_BUCKET, isDev ? 'dev-dummy.firebasestorage.app' : ''),
+  messagingSenderId: cleanFirebaseEnv(import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID, isDev ? '0' : ''),
+  appId: cleanFirebaseEnv(import.meta.env.VITE_FIREBASE_APP_ID, isDev ? 'dev-dummy' : ''),
+  measurementId: cleanOptionalFirebaseEnv(import.meta.env.VITE_FIREBASE_MEASUREMENT_ID),
 };
 
 if (isDev) {

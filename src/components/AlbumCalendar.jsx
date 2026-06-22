@@ -6,7 +6,7 @@ import { fetchVoiceMonth, getDateKeyNY } from '../lib/pairDaily'
  * AlbumCalendar — 月次カレンダーで写真・音声の有無を俯瞰。
  * Philosophy #2: pairId は props のみから受け取り、localStorage は読み書きしない。
  */
-export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoCountMap, voiceCountMap, photoUrlMap }) {
+export default function AlbumCalendar({ pairId, slug, lang = 'ja', onDateClick, photoCountMap, voiceCountMap, photoUrlMap }) {
   const today = getDateKeyNY()
   const todayMonth = today.slice(0, 7)
   const [currentMonth, setCurrentMonth] = useState(todayMonth)
@@ -15,6 +15,7 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoC
   const [fetchedPhotoUrl, setFetchedPhotoUrl] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [retryKey, setRetryKey] = useState(0)
 
   const skipFetch = photoCountMap !== undefined && voiceCountMap !== undefined
 
@@ -25,8 +26,8 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoC
     setLoading(true)
     setError(null)
     Promise.all([
-      fetchAlbum(pairId, currentMonth).catch((e) => { throw e }),
-      fetchVoiceMonth(pairId, currentMonth).catch((e) => { throw e }),
+      fetchAlbum(pairId, currentMonth, slug).catch((e) => { throw e }),
+      fetchVoiceMonth(pairId, currentMonth, slug).catch((e) => { throw e }),
     ]).then(([albumRes, voiceRes]) => {
       if (cancelled) return
       const pc = {}
@@ -58,7 +59,7 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoC
       setLoading(false)
     })
     return () => { cancelled = true }
-  }, [pairId, currentMonth, skipFetch])
+  }, [pairId, slug, currentMonth, skipFetch, retryKey])
 
   const photoCounts = photoCountMap ?? fetchedPhotoCount
   const voiceCounts = voiceCountMap ?? fetchedVoiceCount
@@ -145,7 +146,7 @@ export default function AlbumCalendar({ pairId, lang = 'ja', onDateClick, photoC
           <p style={{ fontSize: 13, color: '#E04040', margin: '0 0 12px' }}>{error}</p>
           <button
             type="button"
-            onClick={() => setCurrentMonth((m) => m)}
+            onClick={() => setRetryKey((v) => v + 1)}
             style={{ padding: '8px 20px', fontSize: 12, fontWeight: 600, color: '#fff', background: 'linear-gradient(135deg,#FF80C0,#A060FF)', border: 'none', borderRadius: 10, cursor: 'pointer' }}
           >
             {lang === 'en' ? 'Retry' : lang === 'es' ? 'Reintentar' : '再試行'}
