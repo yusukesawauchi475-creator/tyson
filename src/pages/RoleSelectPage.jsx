@@ -47,9 +47,6 @@ export default function RoleSelectPage({ onSelect, lang = 'ja', pairId = null })
         <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 8px', color: '#005f80' }}>
           {t(lang, 'roleSelectTitle')}
         </h1>
-        <p style={{ fontSize: 13, color: '#555', margin: '0 0 12px', lineHeight: 1.5, whiteSpace: 'pre-line' }}>
-          {t(lang, 'roleSelectHint')}
-        </p>
         <p style={{ fontSize: 12, color: '#AAA', margin: '0 0 40px', whiteSpace: 'nowrap' }}>
           {t(lang, 'roleSelectChangeable')}
         </p>

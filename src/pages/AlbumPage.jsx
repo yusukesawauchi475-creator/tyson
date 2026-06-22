@@ -456,10 +456,30 @@ export default function AlbumPage({ lang = 'ja' }) {
 
         {loading && (
           <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
+            <style>{`
+              @keyframes humPhotoLoadingBounce { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-5px) scale(1.04); } }
+              @keyframes humPhotoLoadingShimmer { 0% { opacity: .55; transform: translateX(-8px); } 50% { opacity: 1; transform: translateX(0); } 100% { opacity: .55; transform: translateX(8px); } }
+            `}</style>
             <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               {lang === 'en' ? '📷 Photos' : lang === 'es' ? '📷 Fotos' : '📷 写真'}
             </p>
-            <p style={{ fontSize: 13, color: '#8070A0', textAlign: 'center', margin: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0 12px' }}>
+              <span style={{ fontSize: 30, lineHeight: 1, display: 'inline-block', animation: 'humPhotoLoadingBounce 1.2s ease-in-out infinite' }}>🖼️</span>
+            </div>
+            <div style={{ display: 'grid', gap: 8, margin: '0 auto 10px', maxWidth: 320 }}>
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  style={{
+                    height: i === 0 ? 42 : 34,
+                    borderRadius: 12,
+                    background: 'linear-gradient(90deg, #ECE8F8 0%, #FFF8FC 50%, #ECE8F8 100%)',
+                    animation: `humPhotoLoadingShimmer 1.35s ease-in-out ${i * 0.12}s infinite`,
+                  }}
+                />
+              ))}
+            </div>
+            <p style={{ fontSize: 12, color: '#8070A0', textAlign: 'center', margin: 0, fontWeight: 600 }}>
               {lang === 'en' ? 'Loading...' : lang === 'es' ? 'Cargando...' : '読み込み中…'}
             </p>
           </section>
