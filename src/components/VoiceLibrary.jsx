@@ -143,14 +143,17 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
   if (loading) return (
     <section style={{ width: '100%', background: '#F8F6FF', borderRadius: 18, padding: 14, overflow: 'hidden' }}>
       <style>{`
-        @keyframes humVoiceLoadingBounce { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-5px) scale(1.04); } }
+        @keyframes humVoiceLoadingHop { 0%, 100% { transform: translateY(0) rotate(0deg); } 42% { transform: translateY(-14px) rotate(-7deg); } 68% { transform: translateY(2px) rotate(5deg); } }
+        @keyframes humVoiceLoadingTwinkle { 0%, 100% { opacity: .2; transform: scale(.7) rotate(0deg); } 50% { opacity: 1; transform: scale(1.1) rotate(10deg); } }
         @keyframes humVoiceLoadingShimmer { 0% { opacity: .55; transform: translateX(-8px); } 50% { opacity: 1; transform: translateX(0); } 100% { opacity: .55; transform: translateX(8px); } }
       `}</style>
       <p style={{ fontSize: 11, fontWeight: 700, color: '#7050C0', margin: '0 0 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
         {lang === 'en' ? '🎧 Voice History' : lang === 'es' ? '🎧 Historial de voz' : '🎧 過去の声'}
       </p>
-      <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0 12px' }}>
-        <span style={{ fontSize: 30, lineHeight: 1, display: 'inline-block', animation: 'humVoiceLoadingBounce 1.2s ease-in-out infinite' }}>🎙️</span>
+      <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '6px 0 14px', minHeight: 42 }}>
+        <span style={{ position: 'absolute', left: '38%', top: 0, fontSize: 13, animation: 'humVoiceLoadingTwinkle 1s ease-in-out infinite' }}>✨</span>
+        <span style={{ position: 'absolute', right: '38%', bottom: 4, fontSize: 12, animation: 'humVoiceLoadingTwinkle 1s ease-in-out .32s infinite' }}>✨</span>
+        <span style={{ fontSize: 30, lineHeight: 1, display: 'inline-block', animation: 'humVoiceLoadingHop 1s ease-in-out infinite' }}>🎙️</span>
       </div>
       <div style={{ display: 'grid', gap: 8, margin: '0 auto 10px', maxWidth: 320 }}>
         {[0, 1, 2].map((i) => (
@@ -166,7 +169,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
         ))}
       </div>
       <p style={{ fontSize: 12, color: '#8070A0', textAlign: 'center', margin: 0, fontWeight: 600 }}>
-        {lang === 'en' ? 'Loading...' : lang === 'es' ? 'Cargando...' : '読み込み中…'}
+        {lang === 'en' ? 'Loading...' : lang === 'es' ? 'Cargando...' : 'よみこみ中…'}
       </p>
     </section>
   )
