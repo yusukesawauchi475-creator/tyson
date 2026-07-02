@@ -169,7 +169,7 @@ export default function VoiceLibrary({ lang = 'ja', role = 'parent', pairId: pai
         ))}
       </div>
       <p style={{ fontSize: 12, color: '#8070A0', textAlign: 'center', margin: 0, fontWeight: 600 }}>
-        {lang === 'en' ? 'Loading...' : lang === 'es' ? 'Cargando...' : 'よみこみ中…'}
+        {lang === 'en' ? 'Loading...' : lang === 'es' ? 'Cargando...' : '読み込み中…'}
       </p>
     </section>
   )
