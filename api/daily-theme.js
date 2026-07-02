@@ -6,6 +6,7 @@
 import OpenAI from 'openai';
 import admin from 'firebase-admin';
 import { parseFirebaseServiceAccount } from './lib/parseFirebaseServiceAccount.js';
+import { isTysonOnlyBlocked, isPairAllowed } from './lib/pair-access.js';
 
 let adminApp;
 let firestore;
@@ -81,20 +82,60 @@ async function getPersonalizationContext(pairId) {
   }
 }
 
+function genRequestId() {
+  return 'REQ-' + Math.random().toString(36).slice(2, 8).toUpperCase();
+}
+
+async function verifyIdToken(idToken) {
+  initFirebaseAdmin();
+  const decoded = await admin.auth().verifyIdToken(idToken);
+  return { uid: decoded.uid };
+}
+
 export default async function handler(req, res) {
+  const requestId = req.headers['x-request-id'] || genRequestId();
   res.setHeader('Cache-Control', 'no-store');
 
   if (req.method !== 'GET') {
-    return res.status(405).json({ success: false, error: 'Method not allowed' });
+    return res.status(405).json({ success: false, error: 'Method not allowed', requestId });
   }
 
   const lang = (req.query.lang || 'ja').trim();
   const pairId = (req.query.pairId || '').trim();
   const pastTopics = (req.query.pastTopics || '').trim();
   const apiKey = process.env.OPENAI_API_KEY;
+  const idToken = (req.headers.authorization || '').replace(/^Bearer\s+/i, '').trim();
+
+  if (!idToken) {
+    return res.status(401).json({ success: false, error: 'Unauthorized', requestId });
+  }
+
+  let uid;
+  try {
+    ({ uid } = await verifyIdToken(idToken));
+  } catch {
+    return res.status(401).json({ success: false, error: 'Invalid token', requestId });
+  }
+
+  if (pairId) {
+    if (isTysonOnlyBlocked(pairId, uid)) {
+      return res.status(403).json({ success: false, error: 'Access denied', requestId });
+    }
+    initFirebaseAdmin();
+    if (!(await isPairAllowed(uid, pairId, firestore))) {
+      console.log('[AUTH_SELF_HEAL_SERVER]', JSON.stringify({
+        event: 'membership_403',
+        endpoint: 'daily-theme',
+        pairId,
+        uidPrefix: uid.slice(0, 6),
+        requestId,
+      }));
+      return res.status(403).json({ success: false, error: 'Not a pair member', requestId });
+    }
+  }
 
   if (!apiKey) {
-    return res.status(200).json({ success: false, topic: null, reason: 'no_api_key' });
+    return res.status(200).json({ success: false, topic: null, reason: 'no_api_key', requestId });
   }
 
   try {
@@ -125,9 +166,9 @@ export default async function handler(req, res) {
     });
 
     const topic = completion.choices?.[0]?.message?.content?.trim() || null;
-    return res.status(200).json({ success: true, topic, lang });
+    return res.status(200).json({ success: true, topic, lang, requestId });
   } catch (e) {
     console.error('[daily-theme] OpenAI error:', e?.message);
-    return res.status(200).json({ success: false, topic: null, reason: e?.message });
+    return res.status(200).json({ success: false, topic: null, reason: e?.message, requestId });
   }
 }

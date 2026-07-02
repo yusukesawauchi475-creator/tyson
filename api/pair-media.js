@@ -1012,6 +1012,23 @@ async function handleRoleHistoryRecord(req, res) {
 
   try {
     initFirebaseAdmin();
+    if (!(await isPairAllowed(uid, pairId, firestore))) {
+      console.log('[AUTH_SELF_HEAL_SERVER]', JSON.stringify({
+        event: 'membership_403',
+        endpoint: 'pair-media',
+        method: 'POST',
+        action: 'role_history_record',
+        pairId,
+        uidPrefix: uid.slice(0, 6),
+        role: toRole,
+        requestId: reqId,
+      }));
+      return res.status(403).json({
+        success: false,
+        error: 'Not a pair member',
+        requestId: reqId,
+      });
+    }
     // immutable 追記: pair_members/{pairId}/role_history/{autoId}
     await firestore
       .collection('pair_members').doc(pairId)

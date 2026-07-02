@@ -46,6 +46,10 @@ function genRequestId() {
   return 'REQ-' + Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
+function maskSlug(slug) {
+  return String(slug || '').slice(0, 3) + '***';
+}
+
 async function verifyIdToken(idToken) {
   initFirebaseAdmin();
   const decoded = await admin.auth().verifyIdToken(idToken);
@@ -125,7 +129,7 @@ async function claimMembershipForSlug({ slug, idToken, expectedPairId, role, req
   console.log('[AUTH_SELF_HEAL_SERVER]', JSON.stringify({
     event: 'claim',
     pairId: resolvedPairId,
-    slug: String(slug),
+    slug: maskSlug(slug),
     uidPrefix: claimUid.slice(0, 6),
     role: claimRole,
     requestId,
@@ -194,7 +198,7 @@ export default async function handler(req, res) {
           console.error('[AUTH_SELF_HEAL_SERVER]', JSON.stringify({
             event: 'claim_failed',
             pairId: resolvedPairId,
-            slug: String(req.query.number),
+            slug: maskSlug(req.query.number),
             uidPrefix: claim.uid ? claim.uid.slice(0, 6) : null,
             errorCode: claim.errorCode,
             error: claim.error,
@@ -281,7 +285,7 @@ export default async function handler(req, res) {
 
       try {
         const { slug, pairId } = await createPairNumberedDoc({ memo, source: null });
-        console.log('[invite] create-numbered: slug=', slug);
+        console.log('[invite] create-numbered:', JSON.stringify({ slug: maskSlug(slug), pairId, requestId }));
         return res.status(200).json({
           success: true,
           number: slug,
@@ -299,7 +303,7 @@ export default async function handler(req, res) {
     if (action === 'create-welcome') {
       try {
         const { slug, pairId } = await createPairNumberedDoc({ memo: '', source: 'demo-cta' });
-        console.log('[invite] create-welcome: slug=', slug);
+        console.log('[invite] create-welcome:', JSON.stringify({ slug: maskSlug(slug), pairId, requestId }));
         return res.status(200).json({
           success: true,
           slug,
