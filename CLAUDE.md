@@ -72,35 +72,38 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 進行中の将来機能: Memory Surfacing（docs/features/memory-surfacing.md 参照）
 
 ## スタック
-- **フロントエンド**: Vite + React (HashRouter), インラインCSS中心
+- **フロントエンド**: Vite + React (BrowserRouter), インラインCSS中心
 - **バックエンド**: Vercel Serverless Functions (`api/` ディレクトリ)
 - **データ**: Firebase Firestore + Firebase Storage
 - **認証**: Firebase Anonymous Auth
 - **デプロイ**: Vercel Pro（mainブランチ push で自動デプロイ）
 - **フォント**: Nunito (Google Fonts, 700/800)
 
-## ルーティング (HashRouter)
+## ルーティング (BrowserRouter)
 | パス | コンポーネント | 説明 |
 |------|-------------|------|
-| `/#/` | RootOrLanding → RootRoute | pairId有→ホーム, 無→ランディング |
-| `/#/?number=X` | NumberResolver → RootRoute | /pair/X 経由のスラグ解決 |
-| `/#/album` | AlbumPage | 写真・声アルバム |
-| `/#/admin` | AdminPage | 管理画面 |
-| `/#/demo` | DemoPage | デモ |
-| `/#/landing` | LandingPage | ランディングページ |
+| `/` | RootOrLanding → RootRoute | pairId無→ランディング |
+| `/admin` | AdminPage | 管理画面 |
+| `/demo` | DemoPage | デモ体験 |
+| `/landing` | LandingPage | ランディングページ |
+| `/facilities` | FacilitiesPage | 施設向けランディング |
+| `/welcome` | WelcomePage | 新規pair ウェルカム画面 |
+| `/pair/:slug` | PairWorld (layout) | slug→pairId解決, auth+membership, Outlet |
+| `/pair/:slug/` | RootRoute | 役割別ホーム (parent→HomePage, child→PairDailyPage) |
+| `/pair/:slug/album` | AlbumPage | 写真・声アルバム |
+| `/pair/:slug/invite` | InvitePage | 招待リンク共有 |
 
 ## ペアの仕組み
 - 公開URL: `humfamily.com/pair/{6文字スラグ}` (例: /pair/ulf1q6)
-- Vercel redirect → `/api/invite?action=resolve&number=slug`
-- Firestore: `pair_numbers/{slug}` → `pairId` (例: PAIR-H58HTP)
+- Vercel rewrite: 全リクエスト → `index.html` (SPA)。BrowserRouter が `/pair/:slug` を処理
+- PairWorld コンポーネントが Firestore `pair_numbers/{slug}` → `pairId` を解決 (例: PAIR-H58HTP)
 - 内部ID `PAIR-XXXXXX` は URL に露出しない
 
 ## 主要ファイル
 
-### フロントエンド
+### ページ (src/pages/)
 | ファイル | 役割 |
 |---------|------|
-| `src/App.jsx` | ルーティング, NumberResolver, RootRoute (role振り分け) |
 | `src/pages/HomePage.jsx` | 親のホーム画面 (緑/ピンク/紫の3カード) |
 | `src/pages/PairDailyPage.jsx` | 子のホーム画面 (同上) |
 | `src/pages/AlbumPage.jsx` | アルバム (写真タブ/声タブ, ライトボックス) |
@@ -108,28 +111,68 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 | `src/pages/RoleSelectPage.jsx` | 親/子の役割選択 |
 | `src/pages/LandingPage.jsx` | 初回訪問ランディング |
 | `src/pages/DemoPage.jsx` | デモ体験 |
+| `src/pages/FacilitiesPage.jsx` | 施設向けランディング |
+| `src/pages/WelcomePage.jsx` | 新規pair ウェルカム (⚠️ lang prop silent drop — i18n未対応) |
+| `src/pages/InvitePage.jsx` | 招待リンク共有 (/pair/:slug/invite, ja固定) |
+
+### コンポーネント (src/components/)
+| ファイル | 役割 |
+|---------|------|
+| `src/components/PairWorld.jsx` | /pair/:slug レイアウト (slug→pairId解決, auth+membership, Outlet) |
 | `src/components/DailyPromptCard.jsx` | 今日の話題pill (AI話題 + 別の話題ボタン) |
 | `src/components/VoiceLibrary.jsx` | 声の履歴一覧 (アルバム声タブ用) |
+| `src/components/AlbumCalendar.jsx` | 月別カレンダービュー (写真/声カウント表示) |
+| `src/components/DemoModal.jsx` | デモ説明モーダル (PAIR-DEMOTEST書き込みブロック時CTA) |
+| `src/components/FamilyInsightCard.jsx` | AI家族インサイトカード |
+| `src/components/InviteModal.jsx` | 招待リンク共有モーダル |
+| `src/components/LanguageSwitch.jsx` | 言語切替 (ja/en) |
+| `src/components/OneYearAgoBanner.jsx` | 1年前の記録バナー (7日間以上の使用履歴がある場合) |
 | `src/components/PwaInstallBanner.jsx` | Android PWAインストールバナー |
+| `src/components/RoleBadge.jsx` | 役割バッジ (parent/child) |
+| `src/components/UploadErrorModal.jsx` | アップロードエラーモーダル |
+| `src/components/Visualizer.jsx` | 録音/再生音声波形ビジュアライザー |
 | `src/components/WeeklySummary.jsx` | 週次サマリー (日曜のみ) |
+| `src/components/AdminAuth.jsx` | ⚠️ Dead code (src/内でimportなし) |
+
+### ライブラリ (src/lib/)
+| ファイル | 役割 |
+|---------|------|
 | `src/lib/pairDaily.js` | getPairId, getUserRole, markSeen, uploadAudio, fetchAudio 等 |
+| `src/lib/pairMembership.js` | ensureAuthAndMembership (認証+pair membership保証) |
+| `src/lib/pairSlug.js` | pair slug生成ヘルパー (Crockford Base32) |
 | `src/lib/journal.js` | 写真アップロード, fetchTodayJournalMeta, fetchAlbum |
 | `src/lib/firebase.js` | Firebase初期化, getIdTokenForApi (匿名認証) |
+| `src/lib/invite.js` | 招待URL生成/クリップボードコピー |
 | `src/lib/i18n.js` | 日英翻訳 |
+| `src/lib/fcm.js` | FCMプッシュ通知トークン管理 |
+| `src/lib/indexedDB.js` | IndexedDB操作 |
+| `src/lib/unreadState.js`, `unreadStateCore.js` | 未読状態管理 |
+| `src/lib/listenedTracking.js` | 音声再生済みトラッキング |
+| `src/lib/useAudioLevel.js` | 音声レベル検出フック |
+| `src/lib/dateFormat.js` | 日付フォーマットヘルパー |
 | `src/index.css` | グローバルCSS (.page, .bottom-nav 等) |
+
+### App エントリポイント
+| ファイル | 役割 |
+|---------|------|
+| `src/App.jsx` | BrowserRouter ルーティング, RootOrLanding, RootRoute (role振り分け) |
 
 ### API (Vercel Serverless)
 | ファイル | 役割 |
 |---------|------|
-| `api/pair-media.js` | 音声 GET/POST/PATCH(markSeen) + voice-history |
-| `api/journal.js` | 写真 GET(今日→最新日フォールバック)/POST |
-| `api/album.js` | アルバム全日写真取得 |
+| `api/pair-media.js` | 音声 GET/POST/PATCH(markSeen) + voice-history (⚠️ L833,L1110 merge:true残存) |
+| `api/journal.js` | 写真 GET(今日→最新日フォールバック)/POST (⚠️ L553 merge:true残存) |
+| `api/album.js` | アルバム全日写真取得 (⚠️ initFirebaseAdmin順序フラジャイル) |
 | `api/invite.js` | ペア発行(create-numbered), スラグ解決(resolve) |
-| `api/streak.js` | 連続記録ストリーク |
-| `api/daily-theme.js` | AI話題生成 |
-| `api/admin-reset.js` | 管理リセット |
-| `api/admin-restore.js` | 管理復元 |
-| `api/admin-pairs.js` | ペアダッシュボード |
+| `api/streak.js` | 連続記録ストリーク (⚠️ PAIR-DEMOTEST書き込みブロック欠落) |
+| `api/daily-theme.js` | AI話題生成 (⚠️ pairId欠落時もOpenAI呼び出し通過) |
+| `api/family-insight.js` | AI家族インサイト生成 (⚠️ pairId欠落時に400でなく200を返す) |
+| `api/journal-analysis.js` | 写真OCR分析 (⚠️ Firebase Auth未実装・ADMIN_PASSWORDのみ) |
+| `api/admin-reset.js` | 管理リセット (⚠️ PAIR-DEMOTEST書き込みブロック欠落) |
+| `api/admin-restore.js` | 管理復元 (⚠️ PAIR-DEMOTEST書き込みブロック欠落) |
+| `api/admin-pairs.js` | ペアダッシュボード (⚠️ 30日カレンダー日付がUTC) |
+| `api/lib/` | API共通ヘルパー (pair-access.js 等) |
+| `api/_disabled/` | 無効化済み (analyze.js, analysis-comment.js) — フロントに残存fetch呼び出しあり |
 
 ### 設定
 | ファイル | 役割 |
@@ -197,7 +240,7 @@ firebase deploy --only firestore:rules,storage  # ルールデプロイ
 
 ### 5. UIの一貫性
 - BottomNavがHomePage/AlbumPage/PairDailyPageに存在するか確認
-- HashRouter形式（/#/path）が全リンクで使われてるか確認
+- BrowserRouter形式（/pair/:slug/path）が全リンクで使われてるか確認
 - pairId=PAIR-DEMOTESTでデモ写真・音声のフォールバックがあるか確認（他pairIdに漏れてないか）
 
 ### 6. Firestore インデックス
