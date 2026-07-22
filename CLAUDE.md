@@ -72,64 +72,113 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 進行中の将来機能: Memory Surfacing（docs/features/memory-surfacing.md 参照）
 
 ## スタック
-- **フロントエンド**: Vite + React (HashRouter), インラインCSS中心
+- **フロントエンド**: Vite + React (BrowserRouter), インラインCSS中心
 - **バックエンド**: Vercel Serverless Functions (`api/` ディレクトリ)
 - **データ**: Firebase Firestore + Firebase Storage
 - **認証**: Firebase Anonymous Auth
 - **デプロイ**: Vercel Pro（mainブランチ push で自動デプロイ）
 - **フォント**: Nunito (Google Fonts, 700/800)
 
-## ルーティング (HashRouter)
+## ルーティング (BrowserRouter)
 | パス | コンポーネント | 説明 |
 |------|-------------|------|
-| `/#/` | RootOrLanding → RootRoute | pairId有→ホーム, 無→ランディング |
-| `/#/?number=X` | NumberResolver → RootRoute | /pair/X 経由のスラグ解決 |
-| `/#/album` | AlbumPage | 写真・声アルバム |
-| `/#/admin` | AdminPage | 管理画面 |
-| `/#/demo` | DemoPage | デモ |
-| `/#/landing` | LandingPage | ランディングページ |
+| `/` | RootOrLanding → RootRoute | pairId有→ホーム, 無→ランディング |
+| `/admin` | AdminPage | 管理画面 |
+| `/demo` | DemoPage | デモ |
+| `/landing` | LandingPage | ランディングページ |
+| `/facilities` | FacilitiesPage | 介護施設向け紹介ページ |
+| `/welcome` | WelcomePage | ウェルカム画面 |
+| `/pair/:slug` | PairWorld (Outlet) | slug → pairId 解決コンテキスト |
+| `/pair/:slug/` | RootRoute | 親/子ホーム (role振り分け) |
+| `/pair/:slug/album` | AlbumPage | 写真・声アルバム |
+| `/pair/:slug/invite` | InvitePage | 招待ページ |
 
 ## ペアの仕組み
 - 公開URL: `humfamily.com/pair/{6文字スラグ}` (例: /pair/ulf1q6)
-- Vercel redirect → `/api/invite?action=resolve&number=slug`
+- Vercel redirect → slug解決は PairWorld コンポーネントが Firestore から直接取得
 - Firestore: `pair_numbers/{slug}` → `pairId` (例: PAIR-H58HTP)
 - 内部ID `PAIR-XXXXXX` は URL に露出しない
 
 ## 主要ファイル
 
-### フロントエンド
+### ページ
 | ファイル | 役割 |
 |---------|------|
-| `src/App.jsx` | ルーティング, NumberResolver, RootRoute (role振り分け) |
-| `src/pages/HomePage.jsx` | 親のホーム画面 (緑/ピンク/紫の3カード) |
-| `src/pages/PairDailyPage.jsx` | 子のホーム画面 (同上) |
+| `src/App.jsx` | BrowserRouter, AppRoutes, RootOrLanding |
+| `src/pages/HomePage.jsx` | 親のホーム画面 (緑/ピンク/紫の3カード) ⚠️ 無効化済みAPI呼び出しあり |
+| `src/pages/PairDailyPage.jsx` | 子のホーム画面 ⚠️ 無効化済みAPI呼び出しあり (L136,L603,L635,L680) |
 | `src/pages/AlbumPage.jsx` | アルバム (写真タブ/声タブ, ライトボックス) |
 | `src/pages/AdminPage.jsx` | 管理画面 (ペア発行, ダッシュボード) |
 | `src/pages/RoleSelectPage.jsx` | 親/子の役割選択 |
 | `src/pages/LandingPage.jsx` | 初回訪問ランディング |
 | `src/pages/DemoPage.jsx` | デモ体験 |
+| `src/pages/FacilitiesPage.jsx` | 介護施設向け紹介ページ |
+| `src/pages/WelcomePage.jsx` | ウェルカム画面 |
+| `src/pages/InvitePage.jsx` | 招待ページ |
+
+### コンポーネント
+| ファイル | 役割 |
+|---------|------|
+| `src/components/PairWorld.jsx` | /pair/:slug コンテキストプロバイダ (slug→pairId解決) |
 | `src/components/DailyPromptCard.jsx` | 今日の話題pill (AI話題 + 別の話題ボタン) |
 | `src/components/VoiceLibrary.jsx` | 声の履歴一覧 (アルバム声タブ用) |
 | `src/components/PwaInstallBanner.jsx` | Android PWAインストールバナー |
 | `src/components/WeeklySummary.jsx` | 週次サマリー (日曜のみ) |
-| `src/lib/pairDaily.js` | getPairId, getUserRole, markSeen, uploadAudio, fetchAudio 等 |
+| `src/components/AlbumCalendar.jsx` | アルバムカレンダービュー |
+| `src/components/FamilyInsightCard.jsx` | 家族インサイトカード |
+| `src/components/InviteModal.jsx` | 招待モーダル |
+| `src/components/DemoModal.jsx` | デモモーダル |
+| `src/components/UploadErrorModal.jsx` | アップロードエラーモーダル |
+| `src/components/AdminAuth.jsx` | 管理者認証UI (dead code 候補) |
+| `src/components/LanguageSwitch.jsx` | 言語切替 |
+| `src/components/OneYearAgoBanner.jsx` | 1年前の記録バナー |
+| `src/components/RoleBadge.jsx` | 役割バッジ |
+| `src/components/Visualizer.jsx` | 録音波形ビジュアライザー |
+
+### ライブラリ
+| ファイル | 役割 |
+|---------|------|
+| `src/lib/pairDaily.js` | uploadAudio, fetchAudioForPlayback, markSeen, getStreak 等 |
 | `src/lib/journal.js` | 写真アップロード, fetchTodayJournalMeta, fetchAlbum |
 | `src/lib/firebase.js` | Firebase初期化, getIdTokenForApi (匿名認証) |
 | `src/lib/i18n.js` | 日英翻訳 |
+| `src/lib/pairMembership.js` | ensureAuthAndMembership |
+| `src/lib/unreadState.js` | 未読状態管理 |
+| `src/lib/unreadStateCore.js` | 未読状態コアロジック |
+| `src/lib/indexedDB.js` | IndexedDB キャッシュ |
+| `src/lib/useAudioLevel.js` | 録音レベル取得フック |
+| `src/lib/listenedTracking.js` | 再生済みトラッキング |
+| `src/lib/voiceRole.js` | 音声ロール判定 |
+| `src/lib/inviteShare.js` | 招待共有ロジック |
+| `src/lib/tysonThemes.js` | テーマ設定 |
+| `src/lib/uiCopy.js` | UIコピー文字列 |
+| `src/lib/shareTargets.js` | シェアターゲット |
+| `src/lib/fcm.js` | Firebase Cloud Messaging |
+| `src/lib/holidayBanner.js` | 祝日バナー |
+| `src/lib/deployHealthCheck.js` | デプロイ健全性チェック |
+| `src/lib/demoPhotos.js` | デモ写真データ |
+| `src/lib/dateFormat.js` | 日付フォーマット |
+| `src/lib/pairSlug.js` | スラグ生成・検証 |
+| `src/lib/invite.js` | 招待ロジック |
 | `src/index.css` | グローバルCSS (.page, .bottom-nav 等) |
 
 ### API (Vercel Serverless)
 | ファイル | 役割 |
 |---------|------|
-| `api/pair-media.js` | 音声 GET/POST/PATCH(markSeen) + voice-history |
-| `api/journal.js` | 写真 GET(今日→最新日フォールバック)/POST |
-| `api/album.js` | アルバム全日写真取得 |
+| `api/pair-media.js` | 音声 GET/POST/PATCH(markSeen) + voice-history ⚠️ merge:true残存(L833,L1110) |
+| `api/journal.js` | 写真 GET(今日→最新日フォールバック)/POST ⚠️ merge:true残存(L553) |
+| `api/album.js` | アルバム全日写真取得 ⚠️ isPairAllowed/initFirebaseAdmin順序問題 |
 | `api/invite.js` | ペア発行(create-numbered), スラグ解決(resolve) |
-| `api/streak.js` | 連続記録ストリーク |
+| `api/streak.js` | 連続記録ストリーク ⚠️ PAIR-DEMOTEST書き込みブロック欠落 |
 | `api/daily-theme.js` | AI話題生成 |
-| `api/admin-reset.js` | 管理リセット |
-| `api/admin-restore.js` | 管理復元 |
+| `api/admin-reset.js` | 管理リセット ⚠️ PAIR-DEMOTEST書き込みブロック欠落 |
+| `api/admin-restore.js` | 管理復元 ⚠️ PAIR-DEMOTEST書き込みブロック欠落 |
 | `api/admin-pairs.js` | ペアダッシュボード |
+| `api/family-insight.js` | 家族インサイト生成 |
+| `api/journal-analysis.js` | 日記分析 ⚠️ [Critical] Firebase Auth なし・pairId無制限アクセス可能 |
+| `api/lib/pair-access.js` | isPairAllowed, isTysonOnlyBlocked |
+| `api/lib/parseFirebaseServiceAccount.js` | Firebase サービスアカウント解析 |
+| `api/_disabled/` | 無効化済みAPI群 (analyze.js, analysis-comment.js 等) |
 
 ### 設定
 | ファイル | 役割 |
@@ -197,7 +246,7 @@ firebase deploy --only firestore:rules,storage  # ルールデプロイ
 
 ### 5. UIの一貫性
 - BottomNavがHomePage/AlbumPage/PairDailyPageに存在するか確認
-- HashRouter形式（/#/path）が全リンクで使われてるか確認
+- BrowserRouter形式（/pair/:slug/path）が全リンクで使われてるか確認
 - pairId=PAIR-DEMOTESTでデモ写真・音声のフォールバックがあるか確認（他pairIdに漏れてないか）
 
 ### 6. Firestore インデックス
