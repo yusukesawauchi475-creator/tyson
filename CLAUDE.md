@@ -88,6 +88,9 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 | `/#/admin` | AdminPage | 管理画面 |
 | `/#/demo` | DemoPage | デモ |
 | `/#/landing` | LandingPage | ランディングページ |
+| `/#/facilities` | FacilitiesPage | 介護施設向けランディング (問い合わせフォーム付き) |
+| `/#/welcome` | WelcomePage | DEMO CTA経由の新規ペア自動発行ページ |
+| `/#/pair/:slug/invite` | InvitePage | 招待リンクコピーページ |
 
 ## ペアの仕組み
 - 公開URL: `humfamily.com/pair/{6文字スラグ}` (例: /pair/ulf1q6)
@@ -108,6 +111,9 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 | `src/pages/RoleSelectPage.jsx` | 親/子の役割選択 |
 | `src/pages/LandingPage.jsx` | 初回訪問ランディング |
 | `src/pages/DemoPage.jsx` | デモ体験 |
+| `src/pages/FacilitiesPage.jsx` | 介護施設向けランディング (Formspree問い合わせフォーム + デモアニメーション) |
+| `src/pages/WelcomePage.jsx` | DEMO CTA後の新規ペア自動発行ページ (create-welcome endpoint呼び出し) |
+| `src/pages/InvitePage.jsx` | 招待リンクコピーページ (/pair/:slug/invite, Phase 3でlang対応予定) |
 | `src/components/DailyPromptCard.jsx` | 今日の話題pill (AI話題 + 別の話題ボタン) |
 | `src/components/VoiceLibrary.jsx` | 声の履歴一覧 (アルバム声タブ用) |
 | `src/components/PwaInstallBanner.jsx` | Android PWAインストールバナー |
@@ -130,6 +136,8 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 | `api/admin-reset.js` | 管理リセット |
 | `api/admin-restore.js` | 管理復元 |
 | `api/admin-pairs.js` | ペアダッシュボード |
+| `api/family-insight.js` | AI家族インサイト生成 (OpenAI, Bearer auth) |
+| `api/journal-analysis.js` | 日記画像OCR+AI分析 (X-Admin-Password認証のみ, ⚠️セキュリティ懸念あり) |
 
 ### 設定
 | ファイル | 役割 |
