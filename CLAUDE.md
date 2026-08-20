@@ -79,7 +79,7 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 - **デプロイ**: Vercel Pro（mainブランチ push で自動デプロイ）
 - **フォント**: Nunito (Google Fonts, 700/800)
 
-## ルーティング (HashRouter)
+## ルーティング (HashRouter → BrowserRouter)
 | パス | コンポーネント | 説明 |
 |------|-------------|------|
 | `/#/` | RootOrLanding → RootRoute | pairId有→ホーム, 無→ランディング |
@@ -88,6 +88,9 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 | `/#/admin` | AdminPage | 管理画面 |
 | `/#/demo` | DemoPage | デモ |
 | `/#/landing` | LandingPage | ランディングページ |
+| `/#/facilities` | FacilitiesPage | 介護施設向けランディングページ |
+| `/#/welcome` | WelcomePage | 新規ユーザーオンボーディング |
+| `/#/pair/:slug/invite` | InvitePage | 招待フロー（ペアへの参加） |
 
 ## ペアの仕組み
 - 公開URL: `humfamily.com/pair/{6文字スラグ}` (例: /pair/ulf1q6)
@@ -108,6 +111,9 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 | `src/pages/RoleSelectPage.jsx` | 親/子の役割選択 |
 | `src/pages/LandingPage.jsx` | 初回訪問ランディング |
 | `src/pages/DemoPage.jsx` | デモ体験 |
+| `src/pages/FacilitiesPage.jsx` | 介護施設向けランディング (デモアニメーション付き) |
+| `src/pages/WelcomePage.jsx` | 新規ユーザーオンボーディング画面 |
+| `src/pages/InvitePage.jsx` | 招待フロー（ペアへの参加・slug解決） |
 | `src/components/DailyPromptCard.jsx` | 今日の話題pill (AI話題 + 別の話題ボタン) |
 | `src/components/VoiceLibrary.jsx` | 声の履歴一覧 (アルバム声タブ用) |
 | `src/components/PwaInstallBanner.jsx` | Android PWAインストールバナー |
@@ -116,6 +122,22 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 | `src/lib/journal.js` | 写真アップロード, fetchTodayJournalMeta, fetchAlbum |
 | `src/lib/firebase.js` | Firebase初期化, getIdTokenForApi (匿名認証) |
 | `src/lib/i18n.js` | 日英翻訳 |
+| `src/lib/fcm.js` | FCMプッシュ通知トークン登録 |
+| `src/lib/pairMembership.js` | ペアメンバーシップ claim / 確認 |
+| `src/lib/pairSlug.js` | slug ↔ pairId 変換ユーティリティ |
+| `src/lib/indexedDB.js` | 音声・写真のオフラインキャッシュ (IndexedDB) |
+| `src/lib/unreadState.js` | 未読状態管理 (Firestore リアルタイム購読) |
+| `src/lib/listenedTracking.js` | 音声再生済みマーキング |
+| `src/lib/dateFormat.js` | 日付フォーマットユーティリティ (NY時間) |
+| `src/lib/holidayBanner.js` | 祝日バナー表示ロジック |
+| `src/lib/tysonThemes.js` | テーマ色設定 |
+| `src/lib/uiCopy.js` | UI固定コピー文字列 |
+| `src/lib/invite.js` | 招待リンク生成 |
+| `src/lib/inviteShare.js` | Web Share API / クリップボードコピー |
+| `src/lib/shareTargets.js` | シェア先定義 |
+| `src/lib/voiceRole.js` | 音声ロール判定ユーティリティ |
+| `src/lib/deployHealthCheck.js` | デプロイ後ヘルスチェック |
+| `src/lib/useAudioLevel.js` | 録音中の音量レベル取得 (Custom Hook) |
 | `src/index.css` | グローバルCSS (.page, .bottom-nav 等) |
 
 ### API (Vercel Serverless)
@@ -127,6 +149,8 @@ Pair-World Refactor は 2026年4月に完了。詳細は docs/migrations/pair-wo
 | `api/invite.js` | ペア発行(create-numbered), スラグ解決(resolve) |
 | `api/streak.js` | 連続記録ストリーク |
 | `api/daily-theme.js` | AI話題生成 |
+| `api/family-insight.js` | 家族インサイトコメント生成 (OpenAI, Firebase Auth) |
+| `api/journal-analysis.js` | 日記写真OCR・AI分類 (OpenAI Vision, admin-password認証) |
 | `api/admin-reset.js` | 管理リセット |
 | `api/admin-restore.js` | 管理復元 |
 | `api/admin-pairs.js` | ペアダッシュボード |
